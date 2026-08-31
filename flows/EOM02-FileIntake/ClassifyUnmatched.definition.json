@@ -1,0 +1,138 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "EOM02-ClassifyUnmatched. Called by scrUnmatched to attach a queued stray to an EXISTING expected item. It has no path that creates an MF_EOM_Item and never will.",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+  },
+  "triggers": {
+    "When_Power_Apps_calls": {
+      "type": "Request",
+      "kind": "PowerApp",
+      "inputs": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "correlationId": { "type": "string" },
+            "submissionId": { "type": "string" },
+            "eomItemId": { "type": "string" },
+            "resolvedBy": { "type": "string" },
+            "classificationMethod": { "type": "string" },
+            "appVersion": { "type": "string" }
+          },
+          "required": ["submissionId", "eomItemId", "resolvedBy"]
+        }
+      }
+    }
+  },
+  "actions": {
+    "Get_target_item": {
+      "type": "ApiConnection",
+      "runAfter": {},
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+        "queries": { "$filter": "EOM_Item_ID eq '@{triggerBody()['eomItemId']}'", "$top": 1 }
+      }
+    },
+    "Refuse_if_no_item": {
+      "type": "If",
+      "runAfter": { "Get_target_item": ["Succeeded"] },
+      "expression": { "equals": ["@length(body('Get_target_item')?['value'])", 0] },
+      "actions": {
+        "Respond_no_item": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": { "ok": false, "code": "NO_SUCH_ITEM", "message": "That expected item no longer exists. Do not invent a requirement: leave the file in the queue and ask a portfolio manager whether the requirement should exist.", "versionNumber": 0 }
+          }
+        },
+        "Terminate_no_item": { "type": "Terminate", "runAfter": { "Respond_no_item": ["Succeeded"] }, "inputs": { "runStatus": "Succeeded" } }
+      },
+      "else": { "actions": {} }
+    },
+    "Get_current_version": {
+      "type": "ApiConnection",
+      "runAfter": { "Refuse_if_no_item": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Submission'))}/items",
+        "queries": { "$filter": "EOM_Item_ID eq '@{triggerBody()['eomItemId']}' and Is_Current_Version eq 1", "$top": 1 }
+      }
+    },
+    "Compose_next_version": {
+      "type": "Compose",
+      "runAfter": { "Get_current_version": ["Succeeded"] },
+      "inputs": "@add(if(equals(length(body('Get_current_version')?['value']),0), 0, int(first(body('Get_current_version')?['value'])?['Version_Number'])), 1)"
+    },
+    "Demote_previous_version": {
+      "type": "If",
+      "runAfter": { "Compose_next_version": ["Succeeded"] },
+      "expression": { "greater": ["@length(body('Get_current_version')?['value'])", 0] },
+      "actions": {
+        "Patch_previous": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "patch",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Submission'))}/items/@{first(body('Get_current_version')?['value'])?['ID']}",
+            "body": { "Is_Current_Version": false }
+          }
+        }
+      },
+      "else": { "actions": {} }
+    },
+    "Resolve_queued_row": {
+      "type": "ApiConnection",
+      "runAfter": { "Demote_previous_version": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "patch",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Submission'))}/items/@{triggerBody()['submissionId']}",
+        "body": {
+          "EOM_Item_ID": "@{triggerBody()['eomItemId']}",
+          "Title": "@{concat(first(body('Get_target_item')?['value'])?['Title'], '|v', string(outputs('Compose_next_version')))}",
+          "Version_Number": "@{outputs('Compose_next_version')}",
+          "Is_Current_Version": true,
+          "Classification_Status": { "Value": "CLASSIFIED" },
+          "Classification_Method": { "Value": "MANUAL" },
+          "Classification_Confidence": 100,
+          "QC_Status": { "Value": "PENDING" },
+          "Error_Message": ""
+        },
+        "metadata": { "comment": "Patched, not recreated and not deleted. A resolved stray keeps its history, including the fact that it arrived unclassified." }
+      }
+    },
+    "Update_item_status": {
+      "type": "ApiConnection",
+      "runAfter": { "Resolve_queued_row": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "patch",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items/@{first(body('Get_target_item')?['value'])?['ID']}",
+        "body": {
+          "Current_Submission_ID": "@{triggerBody()['submissionId']}",
+          "Current_Version_Number": "@{outputs('Compose_next_version')}",
+          "Status_Code": { "Value": "SUBMITTED" },
+          "Status_Semantic": "Submitted - awaiting review",
+          "Final_Status": { "Value": "Amber" },
+          "Action_Owner_Role": { "Value": "Reviewer" },
+          "Action_Required": true
+        }
+      }
+    },
+    "Respond_ok": {
+      "type": "Response",
+      "kind": "PowerApp",
+      "runAfter": { "Update_item_status": ["Succeeded"] },
+      "inputs": {
+        "statusCode": 200,
+        "body": { "ok": true, "code": "OK", "message": "", "versionNumber": "@{outputs('Compose_next_version')}" }
+      }
+    }
+  }
+}

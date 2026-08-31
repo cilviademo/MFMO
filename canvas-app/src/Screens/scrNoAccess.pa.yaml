@@ -1,0 +1,77 @@
+# =============================================================================
+# scrNoAccess — no security mapping.
+#
+# There is no sign-in. CAC resolved the identity before the app loaded, so
+# reaching this screen does not mean "you are not logged in" — it means the
+# identity is known and has no row in MF_Security_Mapping. Say that, because
+# telling someone to sign in again when signing in is not the problem wastes
+# an afternoon.
+# =============================================================================
+
+Screens:
+  scrNoAccess:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Patch(
+            MF_App_Event_Log, Defaults(MF_App_Event_Log),
+            MF_TelemetryRow("AccessDenied", "Warning", "scrNoAccess", gblCurrentUser.Email,
+                JSON({ reason: "NoSecurityMapping", upn: gblCurrentUser.Email }))
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutJustifyContent: =LayoutJustifyContent.Center
+            LayoutGap: =16
+            PaddingLeft: =24
+            PaddingRight: =24
+            TabIndex: =-1
+          Children:
+            - lblNoAccessHeading:
+                Control: Text
+                Variant: Subtitle
+                Properties:
+                  Text: ="You do not have access yet"
+                  Color: =clrText
+                  Size: =24
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  TabIndex: =0
+            - lblNoAccessBody:
+                Control: Text
+                Variant: Body
+                Properties:
+                  # Specific, and correct about the cause.
+                  Text: |
+                    ="You are signed in as " & gblCurrentUser.Email &
+                     ". Your identity was recognised, but no facility, installation or portfolio has been assigned to you yet. This is not a sign-in problem and signing in again will not change it."
+                  Color: =clrText
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  LayoutMaxWidth: =560
+                  Live: =Live.Polite
+                  TabIndex: =-1
+            - lblNoAccessAction:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Ask your installation manager to add you, or contact " & gblSupportContact & ". Quote the address above."
+                  Color: =clrText
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  LayoutMaxWidth: =560
+                  TabIndex: =-1
+            - btnRecheck:
+                Control: Button
+                Variant: Secondary
+                Properties:
+                  Text: ="Check again"
+                  AccessibleLabel: ="Check again whether access has been granted"
+                  OnSelect: =Refresh(MF_Security_Mapping); Navigate(MF_StartScreen, ScreenTransition.None)
+                  TabIndex: =0

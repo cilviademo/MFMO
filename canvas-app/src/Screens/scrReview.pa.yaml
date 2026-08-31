@@ -1,0 +1,350 @@
+# =============================================================================
+# scrReview — QC.
+#
+# QC decisions are the only human input to status, and they are INPUTS to the
+# engine, not statuses themselves. A reviewer accepts or returns; the engine
+# decides what the row then looks like.
+#
+# A return is blocked without a comment AND a new suspense date. A returned
+# document with no deadline is how items disappear. The button is disabled
+# without both, and EOM04_QCDecision rejects the call without both.
+# =============================================================================
+
+Screens:
+  scrReview:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Concurrent(
+            Set(locQcComment, ""),
+            Set(locQcNewSuspense, Blank()),
+            Set(locQcError, ""),
+            Set(locQcBusy, false),
+            If(
+                MF_ShouldLog("ScreenView"),
+                Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                      MF_TelemetryRow("ScreenView", "Debug", "scrReview", "", ""))
+            )
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            TabIndex: =-1
+          Children:
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =12
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  TabIndex: =-1
+                Children:
+                  - btnBack:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Back"
+                        AccessibleLabel: ="Back to my work"
+                        OnSelect: =Back(ScreenTransition.None)
+                        TabIndex: =0
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Review queue"
+                        TabIndex: =-1
+                  - lblQueueCount:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =Text(CountRows(galReviewQueue.AllItems)) & " awaiting review"
+                        Color: =clrTextSecondary
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+            - conBody:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutWrap: =true
+                  LayoutGap: =16
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - conQueue:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        LayoutGap: =8
+                        TabIndex: =-1
+                      Children:
+                        - galReviewQueue:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Delegable on indexed Is_Current_Version,
+                              # Classification_Status and QC_Status.
+                              Items: =MF_ReviewQueue(Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID))
+                              TemplateSize: =84
+                              Visible: =CountRows(Self.AllItems) > 0
+                              AccessibleLabel: ="Submissions awaiting review"
+                              TabIndex: =0
+                            Children:
+                              - conQueueRow:
+                                  Control: GroupContainer
+                                  Variant: verticalAutoLayoutContainer
+                                  Properties:
+                                    LayoutGap: =2
+                                    PaddingTop: =8
+                                    PaddingBottom: =8
+                                    TabIndex: =-1
+                                  Children:
+                                    - lblQueueRequirement:
+                                        Control: Text
+                                        Variant: Body
+                                        Properties:
+                                          Text: =ThisItem.Title
+                                          FontWeight: =FontWeight.Semibold
+                                          TabIndex: =-1
+                                    - lblQueueMeta:
+                                        Control: Text
+                                        Variant: Caption
+                                        Properties:
+                                          Text: |
+                                            ="v" & ThisItem.Version_Number &
+                                             " - submitted " & Text(ThisItem.Submitted_On, "d mmm yyyy") &
+                                             " by " & ThisItem.Submitted_By_UPN
+                                          Color: =clrTextSecondary
+                                          TabIndex: =-1
+                                    - btnOpenReview:
+                                        Control: Button
+                                        Variant: Secondary
+                                        Properties:
+                                          Text: ="Open"
+                                          AccessibleLabel: ="Open submission " & ThisItem.Title & " version " & ThisItem.Version_Number & " for review"
+                                          OnSelect: |
+                                            =Set(locSubmission, ThisItem);
+                                             Set(locItem, MF_ItemById(ThisItem.EOM_Item_ID));
+                                             Set(locQcComment, "");
+                                             Set(locQcNewSuspense, Blank());
+                                             Set(locQcError, "");
+                                             SetFocus(lblDetailHeading)
+                                          TabIndex: =0
+
+                        - emptyQueue:
+                            Control: Component
+                            ComponentName: cmpEmptyState
+                            Properties:
+                              Visible: =CountRows(galReviewQueue.AllItems) = 0
+                              Title: ="Nothing awaiting review"
+                              Body: ="Every current submission in this period has been accepted or returned. New submissions appear here as they arrive."
+
+                  # --- Detail and decision ---------------------------------
+                  - conDetail:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        LayoutGap: =12
+                        PaddingLeft: =16
+                        PaddingRight: =16
+                        PaddingTop: =16
+                        PaddingBottom: =16
+                        Fill: =clrSurface
+                        BorderThickness: =1
+                        BorderColor: =clrBorder
+                        Visible: =!IsBlank(locSubmission.Submission_ID)
+                        TabIndex: =-1
+                      Children:
+                        - lblDetailHeading:
+                            Control: Text
+                            Variant: Subtitle
+                            Properties:
+                              Text: =locItem.Requirement_Name
+                              TabIndex: =0
+
+                        - badgeCurrent:
+                            Control: Component
+                            ComponentName: cmpStatusBadge
+                            Properties:
+                              StatusCode: =locItem.Status_Code.Value
+                              SuspenseDate: =locItem.Suspense_Date
+
+                        - lblEvidenceLink:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              # The list row is truth; the file path is
+                              # convenience. The link is re-resolved from
+                              # SharePoint_File_ID by the flow, so a moved or
+                              # renamed file still opens.
+                              Text: ="Open the submitted file"
+                              Color: =clrFocus
+                              Underline: =true
+                              AccessibleLabel: ="Open the submitted file, version " & locSubmission.Version_Number & ", in a new tab"
+                              OnSelect: =Launch(locSubmission.SharePoint_File_Url, {}, LaunchTarget.New)
+                              TabIndex: =0
+
+                        - lblFileNameNote:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="File name as submitted: " & locSubmission.File_Name & " (evidence only - not used to classify)"
+                              Color: =clrTextSecondary
+                              AutoHeight: =true
+                              TabIndex: =-1
+
+                        - txtQcComment:
+                            Control: TextInput
+                            Variant: MultiLine
+                            Properties:
+                              Default: =locQcComment
+                              OnChange: =Set(locQcComment, Self.Value)
+                              HintText: ="What needs correcting, and how"
+                              AccessibleLabel: ="Review comment. Required to return a submission."
+                              DisplayMode: =MF_WriteMode
+                              TabIndex: =0
+
+                        - dteNewSuspense:
+                            Control: DatePicker
+                            Properties:
+                              DefaultDate: =locQcNewSuspense
+                              OnChange: =Set(locQcNewSuspense, Self.SelectedDate)
+                              AccessibleLabel: ="New suspense date. Required to return a submission."
+                              DisplayMode: =MF_WriteMode
+                              TabIndex: =0
+
+                        - lblReturnRule:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Returning a submission needs both a comment and a new suspense date. A returned document with no deadline disappears."
+                              Color: =clrTextSecondary
+                              AutoHeight: =true
+                              TabIndex: =-1
+
+                        - lblQcError:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: =locQcError
+                              Color: =clrStatusRed
+                              Visible: =!IsBlank(locQcError)
+                              AutoHeight: =true
+                              Live: =Live.Assertive
+                              AccessibleLabel: ="Error. " & locQcError
+                              TabIndex: =-1
+
+                        - conDecision:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =8
+                              LayoutWrap: =true
+                              TabIndex: =-1
+                            Children:
+                              - btnAccept:
+                                  Control: Button
+                                  Variant: Primary
+                                  Properties:
+                                    Text: ="Accept"
+                                    AccessibleLabel: ="Accept " & locItem.Requirement_Name & " version " & locSubmission.Version_Number
+                                    DisplayMode: =If(MF_ReadOnlyMode || locQcBusy, DisplayMode.Disabled, DisplayMode.Edit)
+                                    TabIndex: =0
+                                    OnSelect: |
+                                      =Set(locQcBusy, true);
+                                       Set(locQcError, "");
+                                       Set(
+                                           locQcResult,
+                                           EOM04_QCDecision.Run(
+                                               {
+                                                   correlationId: Text(gblSessionId),
+                                                   submissionId: locSubmission.Submission_ID,
+                                                   eomItemId:    locSubmission.EOM_Item_ID,
+                                                   decision:     "ACCEPTED",
+                                                   comment:      locQcComment,
+                                                   newSuspenseDate: Blank(),
+                                                   reviewerUpn:  gblCurrentUser.Email,
+                                                   appVersion:   gblAppVersion
+                                               }
+                                           )
+                                       );
+                                       Set(locQcBusy, false);
+                                       If(
+                                           locQcResult.ok,
+                                           Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                                                 MF_TelemetryRow("QCDecision", "Info", "scrReview", locSubmission.Submission_ID,
+                                                     JSON({ decision: "ACCEPTED", version: locSubmission.Version_Number })));
+                                           Notify("Accepted. The item is now " & locQcResult.statusSemantic & ".", NotificationType.Success);
+                                           Set(locSubmission, Blank()),
+                                           Set(locQcError, locQcResult.message)
+                                       )
+
+                              - btnReturn:
+                                  Control: Button
+                                  Variant: Secondary
+                                  Properties:
+                                    Text: ="Return for correction"
+                                    AccessibleLabel: ="Return " & locItem.Requirement_Name & " version " & locSubmission.Version_Number & " for correction"
+                                    # Blocked without both. Repeated in the flow.
+                                    DisplayMode: |
+                                      =If(
+                                          MF_ReadOnlyMode
+                                              || locQcBusy
+                                              || IsBlank(Trim(locQcComment))
+                                              || IsBlank(locQcNewSuspense),
+                                          DisplayMode.Disabled,
+                                          DisplayMode.Edit
+                                      )
+                                    TabIndex: =0
+                                    OnSelect: |
+                                      =Set(locQcBusy, true);
+                                       Set(locQcError, "");
+                                       If(
+                                           IsBlank(Trim(locQcComment)) || IsBlank(locQcNewSuspense),
+                                           Set(locQcError, "A return needs a comment saying what to correct and a new suspense date. Fill in both, then return."),
+                                           Set(
+                                               locQcResult,
+                                               EOM04_QCDecision.Run(
+                                                   {
+                                                       correlationId: Text(gblSessionId),
+                                                       submissionId: locSubmission.Submission_ID,
+                                                       eomItemId:    locSubmission.EOM_Item_ID,
+                                                       decision:     "RETURNED",
+                                                       comment:      locQcComment,
+                                                       newSuspenseDate: locQcNewSuspense,
+                                                       reviewerUpn:  gblCurrentUser.Email,
+                                                       appVersion:   gblAppVersion
+                                                   }
+                                               )
+                                           );
+                                           If(
+                                               locQcResult.ok,
+                                               Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                                                     MF_TelemetryRow("QCDecision", "Info", "scrReview", locSubmission.Submission_ID,
+                                                         JSON({ decision: "RETURNED", newSuspense: Text(locQcNewSuspense, "yyyy-mm-dd") })));
+                                               Notify("Returned. The facility has until " & Text(locQcNewSuspense, "d mmm yyyy") & " to resubmit.", NotificationType.Success);
+                                               Set(locSubmission, Blank()),
+                                               Set(locQcError, locQcResult.message)
+                                           )
+                                       );
+                                       Set(locQcBusy, false)

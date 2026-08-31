@@ -1,0 +1,6 @@
+Title,Installation_ID,Installation_Code,Service_Branch,Region,Portfolio_ID,Is_Active
+Fort Liberty,INST-FTLIB,FTLIB,Army,Southeast,PORT-CONUS-EAST,TRUE
+Joint Base Lewis-McChord,INST-JBLM,JBLM,Joint,Northwest,PORT-CONUS-WEST,TRUE
+Naval Station Norfolk,INST-NSNOR,NSNOR,Navy,Southeast,PORT-CONUS-EAST,TRUE
+Camp Humphreys,INST-CPHUM,CPHUM,Army,Pacific,PORT-OCONUS,TRUE
+Fort Example (decommissioned),INST-FTEXM,FTEXM,Army,Southeast,PORT-CONUS-EAST,FALSE

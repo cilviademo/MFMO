@@ -1,0 +1,278 @@
+# =============================================================================
+# scrHome — My work.
+#
+# The default landing screen. One facility, one period, bounded by construction:
+# at most the requirement count, currently twelve rows. Nothing on this screen
+# can truncate.
+# =============================================================================
+
+Screens:
+  scrHome:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Concurrent(
+            Set(locSelectedItem, Blank()),
+            Set(locDialogOpen, false),
+            If(
+                MF_ShouldLog("ScreenView"),
+                Patch(
+                    MF_App_Event_Log,
+                    Defaults(MF_App_Event_Log),
+                    MF_TelemetryRow("ScreenView", "Debug", "scrHome", gblCurrentFacility.Facility_ID, "")
+                )
+            )
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =0
+            TabIndex: =-1
+          Children:
+
+            # The first tab stop on every screen. Gate A2.
+            - btnSkipToContent:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Skip to main content"
+                  # Visible on focus only — present in the tab order at all times.
+                  Height: =If(Self.Focus, 32, 1)
+                  Opacity: =If(Self.Focus, 1, 0)
+                  OnSelect: =SetFocus(galMyWork)
+                  AccessibleLabel: ="Skip to main content"
+                  TabIndex: =0
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =16
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  BorderThickness: =1
+                  BorderColor: =clrBorder
+                  TabIndex: =-1
+                Children:
+                  - lblAppTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Mission Feeding Operations"
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+                  - cmbFacility:
+                      Control: ComboBox
+                      Properties:
+                        # MF_MyFacilities is already scoped by the security
+                        # mapping. A user cannot select a facility they are not
+                        # mapped to, so there is nothing to re-check downstream.
+                        Items: =MF_MyFacilities
+                        DisplayFields: =["Title"]
+                        SearchFields: =["Title"]
+                        SelectMultiple: =false
+                        DefaultSelectedItems: =[gblCurrentFacility]
+                        OnChange: =Set(gblCurrentFacility, Self.Selected)
+                        AccessibleLabel: ="Facility"
+                        LayoutMinWidth: =220
+                        TabIndex: =0
+                  - cmbPeriod:
+                      Control: ComboBox
+                      Properties:
+                        Items: =MF_SelectablePeriods
+                        DisplayFields: =["Title"]
+                        SelectMultiple: =false
+                        DefaultSelectedItems: =[MF_CurrentPeriod]
+                        OnChange: =Set(locPeriod, Self.Selected)
+                        AccessibleLabel: ="Reporting period"
+                        LayoutMinWidth: =160
+                        TabIndex: =0
+                  - lblReadOnly:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =MF_ReadOnlyBanner
+                        Color: =clrStatusAmber
+                        Visible: =MF_ReadOnlyMode
+                        AutoHeight: =true
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+            - conBody:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =0
+                  LayoutWrap: =true
+                  TabIndex: =-1
+                Children:
+
+                  - conNav:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        LayoutMinWidth: =200
+                        FillPortions: =0
+                        PaddingTop: =12
+                        Fill: =clrSurface
+                        TabIndex: =-1
+                      Children:
+                        - galNav:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Feature-flagged and role-filtered in
+                              # App.Formulas. A flag demonstrably removes the
+                              # destination, not just the button.
+                              Items: =colNavigation
+                              TemplateSize: =44
+                              AccessibleLabel: ="Main navigation"
+                              TabIndex: =0
+                            Children:
+                              - btnNavItem:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: =ThisItem.label
+                                    Align: =Align.Left
+                                    AccessibleLabel: ="Go to " & ThisItem.label
+                                    OnSelect: |
+                                      =Navigate(
+                                          Switch(
+                                              ThisItem.screen,
+                                              "scrUpload", scrUpload,
+                                              "scrInstallation", scrInstallation,
+                                              "scrReview", scrReview,
+                                              "scrUnmatched", scrUnmatched,
+                                              "scrHistory", scrHistory,
+                                              "scrAdminRequirements", scrAdminRequirements,
+                                              "scrDiagnostics", scrDiagnostics,
+                                              scrHome
+                                          ),
+                                          ScreenTransition.None
+                                      )
+                                    TabIndex: =0
+
+                  - conContent:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        LayoutGap: =12
+                        PaddingLeft: =20
+                        PaddingRight: =20
+                        PaddingTop: =16
+                        PaddingBottom: =16
+                        TabIndex: =-1
+                      Children:
+
+                        - conMetrics:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =12
+                              LayoutWrap: =true
+                              TabIndex: =-1
+                            Children:
+                              - cardComplete:
+                                  Control: Component
+                                  ComponentName: cmpMetricCard
+                                  Properties:
+                                    Label: ="This facility, this period"
+                                    Items: |
+                                      =MF_ItemsForFacility(
+                                          gblCurrentFacility.Facility_ID,
+                                          Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
+                                      )
+                                    FillPortions: =1
+                                    LayoutMinWidth: =220
+                              - cardAction:
+                                  Control: Component
+                                  ComponentName: cmpMetricCard
+                                  Properties:
+                                    Label: ="Waiting on you"
+                                    Items: |
+                                      =MF_ActionItemsForFacility(
+                                          gblCurrentFacility.Facility_ID,
+                                          Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
+                                      )
+                                    FillPortions: =1
+                                    LayoutMinWidth: =220
+
+                        - lblCount:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              # The visible count serves two purposes: the
+                              # screen reader gets a total a virtualised
+                              # gallery cannot announce, and a truncated query
+                              # becomes visible instead of silent.
+                              Text: |
+                                =With(
+                                    { n: CountRows(galMyWork.AllItems) },
+                                    Text(n) & If(n = 1, " item", " items") &
+                                    If(n >= MF_DelegationWarnAt, " - result may be truncated, report this", "")
+                                )
+                              Color: =If(CountRows(galMyWork.AllItems) >= MF_DelegationWarnAt, clrStatusRed, clrTextSecondary)
+                              Live: =Live.Polite
+                              TabIndex: =-1
+
+                        - galMyWork:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Delegable: indexed period first, then indexed
+                              # facility, sorted on an indexed date.
+                              Items: |
+                                =MF_ItemsForFacility(
+                                    gblCurrentFacility.Facility_ID,
+                                    Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
+                                )
+                              TemplateSize: =72
+                              Visible: =CountRows(Self.AllItems) > 0
+                              AccessibleLabel: ="Checklist for " & gblCurrentFacility.Title
+                              TabIndex: =0
+                            Children:
+                              - itemRow:
+                                  Control: Component
+                                  ComponentName: cmpEOMItem
+                                  Properties:
+                                    Item: =ThisItem
+                                    ShowFacility: =false
+                                    OnPrimaryAction: |
+                                      =Set(locSelectedItem, ThisItem);
+                                       Navigate(
+                                           If(
+                                               ThisItem.Status_Code.Value in ["SUBMITTED", "IN_REVIEW"]
+                                                   && gblRole in ["Reviewer", "InstallationManager", "Admin"],
+                                               scrReview,
+                                               scrUpload
+                                           ),
+                                           ScreenTransition.None
+                                       )
+
+                        - emptyMyWork:
+                            Control: Component
+                            ComponentName: cmpEmptyState
+                            Properties:
+                              Visible: =CountRows(galMyWork.AllItems) = 0
+                              Title: ="No checklist items for this period"
+                              Body: |
+                                ="Expected items are generated by the nightly run once a reporting period opens. If " &
+                                 Coalesce(locPeriod.Title, MF_CurrentPeriod.Title) &
+                                 " has just opened, they will appear within a day. If this persists, contact " & gblSupportContact & "."
+                              ActionLabel: ="Choose another period"
+                              OnAction: =SetFocus(cmbPeriod)

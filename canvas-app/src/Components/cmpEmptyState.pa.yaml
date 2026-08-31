@@ -1,0 +1,82 @@
+# =============================================================================
+# cmpEmptyState — an accessibility feature, not decoration.
+#
+# An empty gallery with no explanation is indistinguishable from a failed
+# load. This component states what is empty, why, and what to do about it.
+# Every gallery in the app has one.
+# =============================================================================
+
+ComponentDefinitions:
+  cmpEmptyState:
+    DefinitionType: CanvasComponent
+    AccessAppScope: true
+    CustomProperties:
+
+      Title:
+        PropertyKind: Input
+        DataType: Text
+        Default: ="Nothing here"
+
+      Body:
+        PropertyKind: Input
+        Description: Why it is empty and what the user can do. Never blank.
+        DataType: Text
+        Default: =""
+
+      ActionLabel:
+        PropertyKind: Input
+        DataType: Text
+        Default: =""
+
+      OnAction:
+        PropertyKind: Event
+        ReturnType: None
+
+    Properties:
+      Height: =Self.conEmpty.Height
+      Width: =Parent.Width
+
+    Children:
+      - conEmpty:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutGap: =8
+            PaddingTop: =40
+            PaddingBottom: =40
+            PaddingLeft: =24
+            PaddingRight: =24
+            Fill: =clrSurfaceAlt
+            # Announced when the gallery becomes empty, without moving focus.
+            Live: =Live.Polite
+            AccessibleLabel: =cmpEmptyState.Title & ". " & cmpEmptyState.Body
+            TabIndex: =-1
+          Children:
+            - lblEmptyTitle:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: =cmpEmptyState.Title
+                  FontWeight: =FontWeight.Semibold
+                  Color: =clrText
+                  TabIndex: =-1
+            - lblEmptyBody:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: =cmpEmptyState.Body
+                  Color: =clrTextSecondary
+                  AutoHeight: =true
+                  Align: =Align.Center
+                  TabIndex: =-1
+            - btnEmptyAction:
+                Control: Button
+                Variant: Secondary
+                Properties:
+                  Text: =cmpEmptyState.ActionLabel
+                  Visible: =!IsBlank(cmpEmptyState.ActionLabel)
+                  DisplayMode: =MF_WriteMode
+                  AccessibleLabel: =cmpEmptyState.ActionLabel & ". " & cmpEmptyState.Title
+                  OnSelect: =cmpEmptyState.OnAction()
+                  TabIndex: =0

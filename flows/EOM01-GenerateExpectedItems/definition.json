@@ -1,0 +1,325 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "EOM-01 Generate expected items. Reference implementation is scripts/generate_expected_items.py; this is a transliteration of it. No site URL or list name is literal here: everything resolves from MF_App_Config.",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+  },
+  "triggers": {
+    "Nightly": {
+      "type": "Recurrence",
+      "recurrence": { "frequency": "Day", "interval": 1, "schedule": { "hours": ["3"], "minutes": [10] }, "timeZone": "UTC" },
+      "metadata": { "comment": "Runs before EOM-03 so the fact is generated from freshly evaluated items." }
+    }
+  },
+  "actions": {
+    "Init_RunId": {
+      "type": "InitializeVariable",
+      "runAfter": {},
+      "inputs": { "variables": [{ "name": "runId", "type": "string", "value": "@{guid()}" }] }
+    },
+    "Get_config": {
+      "type": "ApiConnection",
+      "runAfter": { "Init_RunId": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Config'))}/items",
+        "queries": { "$filter": "Is_Active eq 1" }
+      },
+      "metadata": { "comment": "First action in every flow. Site and list ids come from the deployment settings file, never from a literal." }
+    },
+    "Compose_config_map": {
+      "type": "Compose",
+      "runAfter": { "Get_config": ["Succeeded"] },
+      "inputs": "@json(concat('{', join(select(body('Get_config')?['value'], concat('\"', item()?['Title'], '\":', string(item()?['Config_Value']))), ','), '}'))"
+    },
+    "Get_open_periods": {
+      "type": "ApiConnection",
+      "runAfter": { "Compose_config_map": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_Reporting_Period'))}/items",
+        "queries": { "$filter": "Period_State eq 'OPEN'" }
+      }
+    },
+    "Get_active_requirements": {
+      "type": "ApiConnection",
+      "runAfter": { "Get_open_periods": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_Requirement'))}/items",
+        "queries": { "$filter": "Is_Active eq 1" }
+      },
+      "metadata": { "comment": "Server-side filter on an indexed column. Three of the twelve seeded rows are inactive and never reach the loop." }
+    },
+    "Get_active_facilities": {
+      "type": "ApiConnection",
+      "runAfter": { "Get_active_requirements": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_Facility'))}/items",
+        "queries": { "$filter": "Is_Active eq 1", "$top": 5000 }
+      }
+    },
+    "Get_active_installations": {
+      "type": "ApiConnection",
+      "runAfter": { "Get_active_facilities": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_Installation'))}/items",
+        "queries": { "$filter": "Is_Active eq 1" }
+      }
+    },
+    "Get_active_contracts": {
+      "type": "ApiConnection",
+      "runAfter": { "Get_active_installations": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_Contract'))}/items",
+        "queries": { "$filter": "Is_Active eq 1" }
+      }
+    },
+    "For_each_period": {
+      "type": "Foreach",
+      "runAfter": { "Get_active_contracts": ["Succeeded"] },
+      "foreach": "@body('Get_open_periods')?['value']",
+      "runtimeConfiguration": { "concurrency": { "repetitions": 1 } },
+      "metadata": { "comment": "Sequential. Concurrency here would race the existing-key read below and create duplicates." },
+      "actions": {
+        "Get_existing_items_for_period": {
+          "type": "ApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "get",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+            "queries": {
+              "$filter": "Reporting_Period_ID eq '@{items('For_each_period')?['Period_ID']}'",
+              "$select": "ID,Title,EOM_Item_ID,Status_Code,Suspense_Date,Current_Submission_ID",
+              "$top": 5000
+            }
+          },
+          "metadata": { "comment": "One paged read per period keyed on the indexed Reporting_Period_ID. Never a per-candidate Get item: that is the difference between a five-minute run and a five-hour one." }
+        },
+        "Compose_existing_keys": {
+          "type": "Compose",
+          "runAfter": { "Get_existing_items_for_period": ["Succeeded"] },
+          "inputs": "@select(body('Get_existing_items_for_period')?['value'], item()?['Title'])"
+        },
+        "For_each_requirement": {
+          "type": "Foreach",
+          "runAfter": { "Compose_existing_keys": ["Succeeded"] },
+          "foreach": "@body('Get_active_requirements')?['value']",
+          "actions": {
+            "Frequency_matches_period_type": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  { "equals": [
+                    "@if(equals(items('For_each_requirement')?['Frequency']?['Value'],'Monthly'),'Month',if(equals(items('For_each_requirement')?['Frequency']?['Value'],'Annual'),'FiscalYear','Quarter'))",
+                    "@items('For_each_period')?['Period_Type']?['Value']"
+                  ] },
+                  { "lessOrEquals": [
+                    "@coalesce(items('For_each_requirement')?['Effective_Start_Date'],'1900-01-01')",
+                    "@items('For_each_period')?['Period_End']"
+                  ] }
+                ]
+              },
+              "actions": {
+                "Compose_dates": {
+                  "type": "Compose",
+                  "inputs": {
+                    "dueDate": "@addDays(items('For_each_period')?['Period_End'], int(items('For_each_requirement')?['Due_Offset_Days']))",
+                    "suspenseDate": "@addDays(items('For_each_period')?['Period_End'], int(items('For_each_requirement')?['Suspense_Offset_Days']))"
+                  }
+                },
+                "Switch_on_scope": {
+                  "type": "Switch",
+                  "runAfter": { "Compose_dates": ["Succeeded"] },
+                  "expression": "@items('For_each_requirement')?['Requirement_Scope']?['Value']",
+                  "cases": {
+                    "Facility": {
+                      "case": "Facility",
+                      "actions": {
+                        "For_each_facility": {
+                          "type": "Foreach",
+                          "foreach": "@body('Get_active_facilities')?['value']",
+                          "actions": {
+                            "Operating_model_applies": {
+                              "type": "If",
+                              "expression": {
+                                "or": [
+                                  { "equals": ["@empty(coalesce(items('For_each_requirement')?['Applies_To_Operating_Model'], ''))", true] },
+                                  { "contains": [
+                                    "@string(items('For_each_requirement')?['Applies_To_Operating_Model'])",
+                                    "@items('For_each_facility')?['Operating_Model']?['Value']"
+                                  ] }
+                                ]
+                              },
+                              "metadata": { "comment": "The operating model lives on the facility. One base can run a legacy DFAC and a Food 2.0 cafe, and this branch is why their requirement sets differ." },
+                              "actions": {
+                                "Upsert_facility_item": {
+                                  "type": "Scope",
+                                  "actions": {
+                                    "Skip_if_key_exists": {
+                                      "type": "If",
+                                      "expression": {
+                                        "equals": [
+                                          "@contains(outputs('Compose_existing_keys'), concat('Facility|', items('For_each_facility')?['Facility_ID'], '|', items('For_each_requirement')?['Requirement_Code'], '|', items('For_each_period')?['Period_ID']))",
+                                          false
+                                        ]
+                                      },
+                                      "metadata": { "comment": "Idempotency. Identity is the compound key, not the run. A second run creates nothing." },
+                                      "actions": {
+                                        "Create_facility_item": {
+                                          "type": "ApiConnection",
+                                          "inputs": {
+                                            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+                                            "method": "post",
+                                            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+                                            "body": {
+                                              "Title": "@{concat('Facility|', items('For_each_facility')?['Facility_ID'], '|', items('For_each_requirement')?['Requirement_Code'], '|', items('For_each_period')?['Period_ID'])}",
+                                              "EOM_Item_ID": "@{guid()}",
+                                              "Requirement_ID": "@{items('For_each_requirement')?['Requirement_ID']}",
+                                              "Requirement_Name": "@{items('For_each_requirement')?['Title']}",
+                                              "Requirement_Scope": { "Value": "Facility" },
+                                              "Requirement_Verification_Status": { "Value": "@{items('For_each_requirement')?['Verification_Status']?['Value']}" },
+                                              "Facility_ID": "@{items('For_each_facility')?['Facility_ID']}",
+                                              "Facility_Name": "@{items('For_each_facility')?['Title']}",
+                                              "Installation_ID": "@{items('For_each_facility')?['Installation_ID']}",
+                                              "Installation_Name": "@{items('For_each_facility')?['Installation_Name']}",
+                                              "Portfolio_ID": "@{items('For_each_facility')?['Portfolio_ID']}",
+                                              "Reporting_Period_ID": "@{items('For_each_period')?['Period_ID']}",
+                                              "Fiscal_Year": "@{items('For_each_period')?['Fiscal_Year']}",
+                                              "Due_Date": "@{outputs('Compose_dates')?['dueDate']}",
+                                              "Suspense_Date": "@{outputs('Compose_dates')?['suspenseDate']}",
+                                              "Current_Version_Number": 0,
+                                              "Generation_Run_ID": "@{variables('runId')}",
+                                              "Status_Code": { "Value": "@{outputs('Evaluate_status_new')?['code']}" },
+                                              "Status_Semantic": "@{outputs('Evaluate_status_new')?['label']}",
+                                              "Final_Status": { "Value": "@{outputs('Evaluate_status_new')?['status']}" },
+                                              "Action_Owner_Role": { "Value": "@{outputs('Evaluate_status_new')?['actionOwner']}" },
+                                              "Action_Required": "@{outputs('Evaluate_status_new')?['actionRequired']}"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Installation": {
+                      "case": "Installation",
+                      "actions": {
+                        "For_each_installation": {
+                          "type": "Foreach",
+                          "foreach": "@body('Get_active_installations')?['value']",
+                          "actions": {
+                            "Create_installation_item": {
+                              "type": "ApiConnection",
+                              "inputs": {
+                                "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+                                "method": "post",
+                                "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+                                "body": {
+                                  "Title": "@{concat('Installation|', items('For_each_installation')?['Installation_ID'], '|', items('For_each_requirement')?['Requirement_Code'], '|', items('For_each_period')?['Period_ID'])}",
+                                  "EOM_Item_ID": "@{guid()}",
+                                  "Requirement_ID": "@{items('For_each_requirement')?['Requirement_ID']}",
+                                  "Requirement_Name": "@{items('For_each_requirement')?['Title']}",
+                                  "Requirement_Scope": { "Value": "Installation" },
+                                  "Requirement_Verification_Status": { "Value": "@{items('For_each_requirement')?['Verification_Status']?['Value']}" },
+                                  "Installation_ID": "@{items('For_each_installation')?['Installation_ID']}",
+                                  "Installation_Name": "@{items('For_each_installation')?['Title']}",
+                                  "Portfolio_ID": "@{items('For_each_installation')?['Portfolio_ID']}",
+                                  "Reporting_Period_ID": "@{items('For_each_period')?['Period_ID']}",
+                                  "Fiscal_Year": "@{items('For_each_period')?['Fiscal_Year']}",
+                                  "Due_Date": "@{outputs('Compose_dates')?['dueDate']}",
+                                  "Suspense_Date": "@{outputs('Compose_dates')?['suspenseDate']}",
+                                  "Current_Version_Number": 0,
+                                  "Generation_Run_ID": "@{variables('runId')}"
+                                }
+                              },
+                              "metadata": { "comment": "Facility_ID and Facility_Name are ABSENT from this body, not empty strings. SharePoint stores absent as null, which is what every downstream Filter() depends on. Do not add them back with '' to make the payload look uniform." }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Contract": {
+                      "case": "Contract",
+                      "actions": {
+                        "For_each_contract": {
+                          "type": "Foreach",
+                          "foreach": "@body('Get_active_contracts')?['value']",
+                          "actions": {
+                            "Create_contract_item": {
+                              "type": "ApiConnection",
+                              "inputs": {
+                                "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+                                "method": "post",
+                                "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+                                "body": {
+                                  "Title": "@{concat('Contract|', items('For_each_contract')?['Contract_ID'], '|', items('For_each_requirement')?['Requirement_Code'], '|', items('For_each_period')?['Period_ID'])}",
+                                  "EOM_Item_ID": "@{guid()}",
+                                  "Requirement_ID": "@{items('For_each_requirement')?['Requirement_ID']}",
+                                  "Requirement_Name": "@{items('For_each_requirement')?['Title']}",
+                                  "Requirement_Scope": { "Value": "Contract" },
+                                  "Requirement_Verification_Status": { "Value": "@{items('For_each_requirement')?['Verification_Status']?['Value']}" },
+                                  "Contract_ID": "@{items('For_each_contract')?['Contract_ID']}",
+                                  "Installation_ID": "@{items('For_each_contract')?['Installation_ID']}",
+                                  "Portfolio_ID": "@{items('For_each_contract')?['Portfolio_ID']}",
+                                  "Reporting_Period_ID": "@{items('For_each_period')?['Period_ID']}",
+                                  "Fiscal_Year": "@{items('For_each_period')?['Fiscal_Year']}",
+                                  "Due_Date": "@{outputs('Compose_dates')?['dueDate']}",
+                                  "Suspense_Date": "@{outputs('Compose_dates')?['suspenseDate']}",
+                                  "Current_Version_Number": 0,
+                                  "Generation_Run_ID": "@{variables('runId')}"
+                                }
+                              },
+                              "metadata": { "comment": "A contractor invoice may cover several facilities under one CLIN, so the obligation attaches to the contract and Facility_ID is null." }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "default": { "actions": {} }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Log_run": {
+      "type": "ApiConnection",
+      "runAfter": { "For_each_period": ["Succeeded", "Failed", "Skipped"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "post",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Event_Log'))}/items",
+        "body": {
+          "Title": "@{concat(variables('runId'), '|FlowRun')}",
+          "Event_Time": "@{utcNow()}",
+          "Event_Type": { "Value": "FlowRun" },
+          "Severity": { "Value": "Info" },
+          "Correlation_ID": "@{variables('runId')}",
+          "Screen_Name": "EOM01-GenerateExpectedItems",
+          "Detail_Json": "@{json(concat('{\"periods\":', string(length(body('Get_open_periods')?['value'])), ',\"requirements\":', string(length(body('Get_active_requirements')?['value'])), '}'))}"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+Title,Facility_ID,Installation_ID,Installation_Name,Portfolio_ID,Facility_Type,Operating_Model,Contract_ID,Manager_UPN,Reviewer_UPN,Go_Live_Date,Is_Active
+Liberty DFAC 1,FAC-FTLIB-01,INST-FTLIB,Fort Liberty,PORT-CONUS-EAST,DFAC,Legacy_DFAC,,dfac1.manager@example.mil,ftlib.reviewer@example.mil,2025-10-01,TRUE
+Liberty Warrior Cafe,FAC-FTLIB-02,INST-FTLIB,Fort Liberty,PORT-CONUS-EAST,Cafe,Food_2_0,,cafe.manager@example.mil,ftlib.reviewer@example.mil,2025-10-01,TRUE
+Liberty Grab and Go North,FAC-FTLIB-03,INST-FTLIB,Fort Liberty,PORT-CONUS-EAST,Grab_and_Go,Hybrid,,gng.manager@example.mil,ftlib.reviewer@example.mil,2025-10-01,TRUE
+JBLM DFAC 4,FAC-JBLM-01,INST-JBLM,Joint Base Lewis-McChord,PORT-CONUS-WEST,DFAC,Legacy_DFAC,,jblm1.manager@example.mil,jblm.reviewer@example.mil,2025-10-01,TRUE
+JBLM Contract Dining,FAC-JBLM-02,INST-JBLM,Joint Base Lewis-McChord,PORT-CONUS-WEST,DFAC,Contractor_Operated,CTR-JBLM-2026,jblm2.manager@example.mil,jblm.reviewer@example.mil,2025-10-01,TRUE
+Norfolk Galley A,FAC-NSNOR-01,INST-NSNOR,Naval Station Norfolk,PORT-CONUS-EAST,DFAC,Legacy_DFAC,,nsnor1.manager@example.mil,nsnor.reviewer@example.mil,2025-10-01,TRUE
+Humphreys Cafe 2.0,FAC-CPHUM-01,INST-CPHUM,Camp Humphreys,PORT-OCONUS,Cafe,Food_2_0,,cphum1.manager@example.mil,cphum.reviewer@example.mil,2026-01-01,TRUE
+Liberty Annex (closed),FAC-FTLIB-99,INST-FTLIB,Fort Liberty,PORT-CONUS-EAST,Other,Legacy_DFAC,,,,2025-10-01,FALSE

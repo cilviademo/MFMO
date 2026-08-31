@@ -1,0 +1,123 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "EOM-02 File intake. LIBRARY-LEVEL trigger: a folder-level trigger silently misses every folder created after the flow was authored, and Portfolio FY folders are created every year by people who do not know a flow exists.",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+  },
+  "triggers": {
+    "When_a_file_is_created_in_the_library": {
+      "type": "ApiConnection",
+      "recurrence": { "frequency": "Minute", "interval": 5 },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/triggers/onnewfile/onnewfileitems",
+        "queries": {
+          "folderId": "@{parameters('evidenceLibraryId')}",
+          "inferContentType": true,
+          "queryParametersSingleEncoded": true
+        }
+      },
+      "metadata": { "comment": "folderId is the LIBRARY root, supplied by the deployment settings file. No subfolder path is bound here, deliberately." }
+    }
+  },
+  "actions": {
+    "Get_config": {
+      "type": "ApiConnection",
+      "runAfter": {},
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Config'))}/items",
+        "queries": { "$filter": "Is_Active eq 1" }
+      }
+    },
+    "Check_for_existing_submission": {
+      "type": "ApiConnection",
+      "runAfter": { "Get_config": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Submission'))}/items",
+        "queries": { "$filter": "SharePoint_File_ID eq '@{triggerOutputs()?['body']?['Id']}'", "$top": 1 }
+      },
+      "metadata": { "comment": "Two jobs: skip the front door's own writes coming back round, and make re-running the flow over a library after an outage safe." }
+    },
+    "Is_new_file": {
+      "type": "If",
+      "runAfter": { "Check_for_existing_submission": ["Succeeded"] },
+      "expression": { "equals": ["@length(body('Check_for_existing_submission')?['value'])", 0] },
+      "actions": {
+        "Parse_folder_hint": {
+          "type": "Compose",
+          "inputs": {
+            "_comment": "TIER 1. The folder path is a convention and conventions drift, so everything derived here is a SUGGESTION and is never applied automatically. The FILENAME is not parsed at all, at any tier.",
+            "segments": "@split(replace(triggerOutputs()?['body']?['Path'], concat(outputs('Get_config'), '/'), ''), '/')",
+            "suggestedPortfolio": "@if(greater(length(split(triggerOutputs()?['body']?['Path'], '/')), 3), split(triggerOutputs()?['body']?['Path'], '/')[3], '')",
+            "suggestedInstallation": "@if(greater(length(split(triggerOutputs()?['body']?['Path'], '/')), 5), split(triggerOutputs()?['body']?['Path'], '/')[5], '')",
+            "suggestedFacility": "@if(greater(length(split(triggerOutputs()?['body']?['Path'], '/')), 6), split(triggerOutputs()?['body']?['Path'], '/')[6], '')",
+            "suggestedPeriod": "@if(greater(length(split(triggerOutputs()?['body']?['Path'], '/')), 7), split(triggerOutputs()?['body']?['Path'], '/')[7], '')"
+          }
+        },
+        "Queue_for_classification": {
+          "type": "ApiConnection",
+          "runAfter": { "Parse_folder_hint": ["Succeeded"] },
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "post",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Submission'))}/items",
+            "body": {
+              "Title": "@{concat('UNMATCHED|', guid())}",
+              "Submission_ID": "@{guid()}",
+              "Version_Number": 0,
+              "Is_Current_Version": false,
+              "File_Name": "@{triggerOutputs()?['body']?['Name']}",
+              "SharePoint_File_ID": "@{triggerOutputs()?['body']?['Id']}",
+              "SharePoint_File_Url": "@{triggerOutputs()?['body']?['Path']}",
+              "File_Size_Bytes": "@{triggerOutputs()?['body']?['Size']}",
+              "Submitted_By_UPN": "@{triggerOutputs()?['body']?['Author']?['Email']}",
+              "Submitted_On": "@{utcNow()}",
+              "Submission_Channel": { "Value": "FOLDER_DROP" },
+              "Classification_Method": { "Value": "@{if(empty(outputs('Parse_folder_hint')?['suggestedFacility']), 'UNCLASSIFIED', 'FOLDER_HINT')}" },
+              "Classification_Status": { "Value": "NEEDS_CLASSIFICATION" },
+              "Classification_Confidence": 0,
+              "Suggested_Facility_ID": "@{outputs('Parse_folder_hint')?['suggestedFacility']}",
+              "Error_Message": "Dropped directly into the library rather than submitted through the app. Someone needs to confirm what this document is."
+            }
+          },
+          "metadata": { "comment": "EOM_Item_ID is ABSENT: this row is the Needs Classification queue, not a submission against an obligation. NEVER INVENT A REQUIREMENT - there is no branch in this flow that creates an MF_EOM_Item, and there must never be one." }
+        },
+        "Log_intake": {
+          "type": "ApiConnection",
+          "runAfter": { "Queue_for_classification": ["Succeeded"] },
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "post",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Event_Log'))}/items",
+            "body": {
+              "Title": "@{concat(workflow()['run']['name'], '|Classification')}",
+              "Event_Time": "@{utcNow()}",
+              "Event_Type": { "Value": "Classification" },
+              "Severity": { "Value": "Info" },
+              "Screen_Name": "EOM02-FileIntake",
+              "Correlation_ID": "@{workflow()['run']['name']}",
+              "Entity_ID": "@{body('Queue_for_classification')?['Submission_ID']}",
+              "Detail_Json": "@{concat('{\"channel\":\"FOLDER_DROP\",\"queued\":true,\"hint\":\"', outputs('Parse_folder_hint')?['suggestedFacility'], '\"}')}"
+            }
+          }
+        }
+      },
+      "else": {
+        "actions": {
+          "Mark_duplicate": {
+            "type": "Compose",
+            "inputs": "Already recorded against submission @{first(body('Check_for_existing_submission')?['value'])?['Submission_ID']}. No action taken.",
+            "metadata": { "comment": "Either the front door's own write, or a re-run over the library. Both are no-ops." }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,217 @@
+# =============================================================================
+# scrDiagnostics — the protected developer surface.
+#
+# GATED TWICE. The EnableDiagnosticsScreen flag AND Developer_Flag on
+# MF_Security_Mapping. A normal user must not reach this screen by any
+# navigation, deep link or keyboard route — that is an acceptance test, not an
+# aspiration, and the OnVisible below enforces it even if a navigation is
+# reached some other way.
+#
+# In a single-environment tenant this screen is how you answer "what is this
+# app actually doing right now" without a second environment to compare
+# against.
+# =============================================================================
+
+Screens:
+  scrDiagnostics:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =If(
+            !MF_IsDeveloper || !MF_FlagEnabled("EnableDiagnosticsScreen"),
+            // Belt and braces. The nav already excludes this screen; this
+            // catches anything that reached it another way.
+            Patch(
+                MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                MF_TelemetryRow("AccessDenied", "Error", "scrDiagnostics", gblCurrentUser.Email,
+                    JSON({ reason: "DiagnosticsWithoutDeveloperFlag" }))
+            );
+            Navigate(MF_StartScreen, ScreenTransition.None)
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =12
+            PaddingLeft: =20
+            PaddingRight: =20
+            PaddingTop: =16
+            PaddingBottom: =16
+            TabIndex: =-1
+          Children:
+            - lblDiagHeading:
+                Control: Text
+                Variant: Subtitle
+                Properties:
+                  Text: ="Diagnostics"
+                  TabIndex: =0
+            - btnDiagBack:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Back"
+                  AccessibleLabel: ="Back to my work"
+                  OnSelect: =Back(ScreenTransition.None)
+                  TabIndex: =0
+
+            - lblIdentity:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: |
+                    ="Identity: " & gblCurrentUser.Email & Char(10) &
+                     "Role: " & gblRole & Char(10) &
+                     "Developer: " & Text(MF_IsDeveloper) & "   Tester: " & Text(MF_IsTester) & Char(10) &
+                     "Mappings: " & Text(CountRows(MF_MyMappings)) & Char(10) &
+                     "Facilities in scope: " & Text(CountRows(MF_MyFacilities))
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            - lblVersions:
+                Control: Text
+                Variant: Body
+                Properties:
+                  # A schema mismatch is the failure that produces baffling
+                  # blank columns. Surface it rather than debugging it twice.
+                  Text: |
+                    ="App version: " & gblAppVersion & Char(10) &
+                     "Schema version expected by config: " & gblSchemaVersion & Char(10) &
+                     "Tenant cloud: " & gblTenantCloud & Char(10) &
+                     "Session: " & Text(gblSessionId) & Char(10) &
+                     "Maintenance: " & Text(MF_MaintenanceMode) & "   Read-only: " & Text(MF_ReadOnlyMode)
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            - lblSchemaWarning:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="WARNING: MF_App_Config.SchemaVersion does not read 2.0. The lists may not match what this app expects."
+                  Color: =clrStatusRed
+                  Visible: =gblSchemaVersion <> "2.0"
+                  AutoHeight: =true
+                  Live: =Live.Polite
+                  TabIndex: =-1
+
+            - lblCapabilityHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Capability gates"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - galCapabilities:
+                Control: Gallery
+                Variant: verticalGallery
+                Properties:
+                  Items: =Filter(MF_ConfigRows, StartsWith(Title, "Capability."))
+                  TemplateSize: =40
+                  AccessibleLabel: ="Capability gate register"
+                  TabIndex: =0
+                Children:
+                  - lblCapabilityRow:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =ThisItem.Title & ": " & ThisItem.Config_Value
+                        Color: =If(ThisItem.Config_Value = "GREEN", clrStatusGreen, If(ThisItem.Config_Value = "RED", clrStatusRed, clrStatusAmber))
+                        AccessibleLabel: =ThisItem.Title & " is " & ThisItem.Config_Value
+                        TabIndex: =-1
+
+            - lblFlagsHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Feature flags, as this session resolves them"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - galFlags:
+                Control: Gallery
+                Variant: verticalGallery
+                Properties:
+                  Items: =MF_FlagRows
+                  TemplateSize: =40
+                  AccessibleLabel: ="Feature flags"
+                  TabIndex: =0
+                Children:
+                  - lblFlagRow:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # Resolved value, not stored value. They differ when a
+                        # capability gate is refusing the flag.
+                        Text: |
+                          =ThisItem.Title & ": stored " & Text(ThisItem.Flag_Value) &
+                           ", resolved " & Text(MF_FlagEnabled(ThisItem.Title)) &
+                           If(IsBlank(ThisItem.Requires_Capability), "", " (gate " & ThisItem.Requires_Capability & ")")
+                        AutoHeight: =true
+                        TabIndex: =-1
+
+            - lblTelemetryHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Last 20 events, this session"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - galTelemetry:
+                Control: Gallery
+                Variant: verticalGallery
+                Properties:
+                  # Delegable: Correlation_ID is indexed.
+                  Items: |
+                    =FirstN(
+                        SortByColumns(
+                            Filter(MF_App_Event_Log, Correlation_ID = Text(gblSessionId)),
+                            "Event_Time", SortOrder.Descending
+                        ),
+                        20
+                    )
+                  TemplateSize: =44
+                  AccessibleLabel: ="Recent telemetry events"
+                  TabIndex: =0
+                Children:
+                  - lblEventRow:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =Text(ThisItem.Event_Time, "hh:nn:ss") & "  " & ThisItem.Event_Type.Value & "  " & ThisItem.Screen_Name & "  " & ThisItem.Detail_Json
+                        AutoHeight: =true
+                        TabIndex: =-1
+
+            - lblDelegationHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Delegation check, current facility and period"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - lblDelegationCheck:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  # The count that would be truncated is the count that tells
+                  # you it was. If this equals the warning threshold, the
+                  # number above it is a lie.
+                  Text: |
+                    =With(
+                        { n: CountRows(MF_ItemsForFacility(gblCurrentFacility.Facility_ID, MF_CurrentPeriod.Period_ID)) },
+                        "Rows returned: " & Text(n) &
+                        "   Warning threshold: " & Text(MF_DelegationWarnAt) &
+                        If(n >= MF_DelegationWarnAt, "   TRUNCATION LIKELY", "   OK")
+                    )
+                  Color: |
+                    =If(
+                        CountRows(MF_ItemsForFacility(gblCurrentFacility.Facility_ID, MF_CurrentPeriod.Period_ID)) >= MF_DelegationWarnAt,
+                        clrStatusRed, clrTextSecondary
+                    )
+                  AutoHeight: =true
+                  TabIndex: =-1

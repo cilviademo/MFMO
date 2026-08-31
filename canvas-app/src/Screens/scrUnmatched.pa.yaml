@@ -1,0 +1,295 @@
+# =============================================================================
+# scrUnmatched — Needs Classification.
+#
+# Files placed directly in a Portfolio FY folder are discovered by EOM-02 and
+# routed here. This queue is deliberately small: tier 0 declaration at upload
+# handles ~95% of volume, so anything here is a stray.
+#
+# NEVER INVENT A REQUIREMENT. Resolving a row here attaches the file to an
+# EXISTING expected item. There is no path on this screen that creates a
+# checklist row, and if no expected item matches, the answer is to say so and
+# escalate — not to manufacture one.
+#
+# Tier 1 folder hints appear as SUGGESTIONS. They are never applied
+# automatically and the person resolving the row has to choose.
+# =============================================================================
+
+Screens:
+  scrUnmatched:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Concurrent(
+            Set(locUnmatched, Blank()),
+            Set(locClassifyError, ""),
+            If(
+                MF_ShouldLog("ScreenView"),
+                Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                      MF_TelemetryRow("ScreenView", "Debug", "scrUnmatched", "", ""))
+            )
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            TabIndex: =-1
+          Children:
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =12
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  TabIndex: =-1
+                Children:
+                  - btnBack:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Back"
+                        AccessibleLabel: ="Back to my work"
+                        OnSelect: =Back(ScreenTransition.None)
+                        TabIndex: =0
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Needs classification"
+                        TabIndex: =-1
+                  - lblQueueSize:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =Text(CountRows(galUnmatched.AllItems)) & " files"
+                        Color: =clrTextSecondary
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+            - conBody:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutWrap: =true
+                  LayoutGap: =16
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - galUnmatched:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        Items: =MF_UnmatchedQueue()
+                        TemplateSize: =88
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        Visible: =CountRows(Self.AllItems) > 0
+                        AccessibleLabel: ="Files awaiting classification"
+                        TabIndex: =0
+                      Children:
+                        - conUnmatchedRow:
+                            Control: GroupContainer
+                            Variant: verticalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =2
+                              PaddingTop: =8
+                              PaddingBottom: =8
+                              TabIndex: =-1
+                            Children:
+                              - lblUnmatchedFile:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: =ThisItem.File_Name
+                                    FontWeight: =FontWeight.Semibold
+                                    TabIndex: =-1
+                              - lblUnmatchedMeta:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: ="Dropped " & Text(ThisItem.Submitted_On, "d mmm yyyy") & " by " & ThisItem.Submitted_By_UPN
+                                    Color: =clrTextSecondary
+                                    TabIndex: =-1
+                              - lblSuggestion:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    # Tier 1. A suggestion, and it says so.
+                                    Text: |
+                                      =If(
+                                          IsBlank(ThisItem.Suggested_Facility_ID) && IsBlank(ThisItem.Suggested_Requirement_ID),
+                                          "No folder hint available",
+                                          "Folder suggests: " &
+                                          Coalesce(ThisItem.Suggested_Facility_ID, "unknown facility") & " / " &
+                                          Coalesce(ThisItem.Suggested_Requirement_ID, "unknown requirement") &
+                                          " - suggestion only, confirm before applying"
+                                      )
+                                    Color: =clrTextSecondary
+                                    AutoHeight: =true
+                                    TabIndex: =-1
+                              - btnResolve:
+                                  Control: Button
+                                  Variant: Secondary
+                                  Properties:
+                                    Text: ="Classify"
+                                    AccessibleLabel: ="Classify the file " & ThisItem.File_Name
+                                    DisplayMode: =MF_WriteMode
+                                    OnSelect: |
+                                      =Set(locUnmatched, ThisItem);
+                                       Set(locClassifyError, "");
+                                       // The hint pre-selects nothing. It is
+                                       // displayed beside the picker so the
+                                       // person chooses with it in view.
+                                       Set(locClassifyFacility, Blank());
+                                       Set(locClassifyItem, Blank());
+                                       SetFocus(cmbClassifyFacility)
+                                    TabIndex: =0
+
+                  - conResolve:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        LayoutGap: =12
+                        PaddingLeft: =16
+                        PaddingRight: =16
+                        PaddingTop: =16
+                        PaddingBottom: =16
+                        Fill: =clrSurface
+                        BorderThickness: =1
+                        BorderColor: =clrBorder
+                        Visible: =!IsBlank(locUnmatched.Submission_ID)
+                        TabIndex: =-1
+                      Children:
+                        - lblResolveHeading:
+                            Control: Text
+                            Variant: Subtitle
+                            Properties:
+                              Text: ="Classify " & locUnmatched.File_Name
+                              AutoHeight: =true
+                              TabIndex: =0
+                        - lblFilenameWarning:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Do not classify from the filename. Open the file and confirm what it is."
+                              Color: =clrTextSecondary
+                              AutoHeight: =true
+                              TabIndex: =-1
+                        - btnOpenUnmatched:
+                            Control: Button
+                            Variant: Subtle
+                            Properties:
+                              Text: ="Open the file"
+                              AccessibleLabel: ="Open " & locUnmatched.File_Name & " in a new tab"
+                              OnSelect: =Launch(locUnmatched.SharePoint_File_Url, {}, LaunchTarget.New)
+                              TabIndex: =0
+                        - cmbClassifyPeriod:
+                            Control: ComboBox
+                            Properties:
+                              Items: =MF_SelectablePeriods
+                              DisplayFields: =["Title"]
+                              SelectMultiple: =false
+                              OnChange: =Set(locClassifyPeriod, Self.Selected)
+                              AccessibleLabel: ="Reporting period. Required."
+                              TabIndex: =0
+                        - cmbClassifyFacility:
+                            Control: ComboBox
+                            Properties:
+                              Items: =MF_MyFacilities
+                              DisplayFields: =["Title"]
+                              SelectMultiple: =false
+                              OnChange: =Set(locClassifyFacility, Self.Selected)
+                              AccessibleLabel: ="Facility. Required."
+                              TabIndex: =0
+                        - cmbClassifyItem:
+                            Control: ComboBox
+                            Properties:
+                              # Existing expected items only. There is no
+                              # "create a requirement" affordance here and
+                              # there never will be.
+                              Items: |
+                                =MF_ItemsForFacility(
+                                    locClassifyFacility.Facility_ID,
+                                    locClassifyPeriod.Period_ID
+                                )
+                              DisplayFields: =["Requirement_Name"]
+                              SelectMultiple: =false
+                              OnChange: =Set(locClassifyItem, Self.Selected)
+                              AccessibleLabel: ="Expected item this file satisfies. Required."
+                              TabIndex: =0
+                        - lblNoMatch:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="No expected item matches. Do not invent a requirement: leave this file in the queue and ask a portfolio manager whether the requirement should exist."
+                              Color: =clrStatusAmber
+                              Visible: =!IsBlank(locClassifyFacility.Facility_ID) && CountRows(cmbClassifyItem.Items) = 0
+                              AutoHeight: =true
+                              Live: =Live.Polite
+                              TabIndex: =-1
+                        - lblClassifyError:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: =locClassifyError
+                              Color: =clrStatusRed
+                              Visible: =!IsBlank(locClassifyError)
+                              AutoHeight: =true
+                              Live: =Live.Assertive
+                              AccessibleLabel: ="Error. " & locClassifyError
+                              TabIndex: =-1
+                        - btnApplyClassification:
+                            Control: Button
+                            Variant: Primary
+                            Properties:
+                              Text: ="Attach to this item"
+                              AccessibleLabel: ="Attach " & locUnmatched.File_Name & " to " & locClassifyItem.Requirement_Name
+                              DisplayMode: =If(MF_ReadOnlyMode || IsBlank(locClassifyItem.EOM_Item_ID), DisplayMode.Disabled, DisplayMode.Edit)
+                              TabIndex: =0
+                              OnSelect: |
+                                =Set(
+                                    locClassifyResult,
+                                    EOM02_ClassifyUnmatched.Run(
+                                        {
+                                            correlationId: Text(gblSessionId),
+                                            submissionId: locUnmatched.Submission_ID,
+                                            eomItemId:    locClassifyItem.EOM_Item_ID,
+                                            resolvedBy:   gblCurrentUser.Email,
+                                            classificationMethod: "MANUAL",
+                                            appVersion:   gblAppVersion
+                                        }
+                                    )
+                                );
+                                 If(
+                                     locClassifyResult.ok,
+                                     Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                                           MF_TelemetryRow("Classification", "Info", "scrUnmatched", locUnmatched.Submission_ID,
+                                               JSON({ method: "MANUAL", itemId: locClassifyItem.EOM_Item_ID })));
+                                     Notify("Attached as version " & locClassifyResult.versionNumber & ".", NotificationType.Success);
+                                     Set(locUnmatched, Blank()),
+                                     Set(locClassifyError, locClassifyResult.message)
+                                 )
+
+                  - emptyUnmatched:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =CountRows(galUnmatched.AllItems) = 0
+                        Title: ="No files awaiting classification"
+                        Body: ="Files uploaded through the app are classified by declaration and never appear here. This queue only collects files dropped straight into a Portfolio folder."

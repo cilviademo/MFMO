@@ -1,0 +1,12 @@
+# Build artifacts — the YAML is the code, these are outputs.
+# dist/ is NOT ignored: R1 definition of done requires the release ZIP be committed.
+*.msapp
+solution/bin/
+solution/obj/
+provisioning/schema.generated.json
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+Thumbs.db

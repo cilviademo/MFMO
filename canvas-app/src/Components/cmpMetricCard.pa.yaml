@@ -1,0 +1,130 @@
+# =============================================================================
+# cmpMetricCard — one rollup figure.
+#
+# Two rules from docs/status-calculation.md are enforced here rather than
+# trusted to the caller:
+#
+#   1. The denominator excludes NOT_DUE, WAIVED, NOT_APPLICABLE and SUPERSEDED.
+#      A colour rollup calls [ACCEPTED, NOT_DUE, NOT_DUE] 33% complete. It is
+#      100% complete.
+#   2. When the denominator is zero the card says "Nothing due" — not 0%,
+#      not 100%. Both of those are figures a manager would act on.
+#
+# The card also carries the scope qualifier: a facility user must not be shown
+# an installation figure derived from their neighbours' rows.
+# =============================================================================
+
+ComponentDefinitions:
+  cmpMetricCard:
+    DefinitionType: CanvasComponent
+    AccessAppScope: true
+    CustomProperties:
+
+      Label:
+        PropertyKind: Input
+        DataType: Text
+        Default: ="Complete"
+
+      Items:
+        PropertyKind: Input
+        Description: An already-delegably-filtered table. The component does not filter; it counts what it is given.
+        DataType: Table
+        Default: =Blank()
+
+      ScopeQualifier:
+        PropertyKind: Input
+        Description: Non-blank when the figure covers less than the scope its label implies. Rendered as text, not hidden in a tooltip.
+        DataType: Text
+        Default: =""
+
+      Complete:
+        PropertyKind: Output
+        DataType: Number
+        Default: =CountRows(Filter(cmpMetricCard.Items, Status_Code.Value = "ACCEPTED"))
+
+      Denominator:
+        PropertyKind: Output
+        DataType: Number
+        Default: |
+          =CountRows(
+              Filter(
+                  cmpMetricCard.Items,
+                  !(Status_Code.Value in ["NOT_DUE", "WAIVED", "NOT_APPLICABLE", "SUPERSEDED"])
+              )
+          )
+
+    Properties:
+      Height: =Self.conCard.Height
+      Width: =Parent.Width
+
+    Children:
+      - conCard:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            LayoutGap: =4
+            PaddingTop: =16
+            PaddingBottom: =16
+            PaddingLeft: =16
+            PaddingRight: =16
+            Fill: =clrSurface
+            BorderThickness: =1
+            BorderColor: =clrBorder
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            AccessibleLabel: |
+              =cmpMetricCard.Label & ": " &
+              If(
+                  cmpMetricCard.Denominator = 0,
+                  "nothing due",
+                  Text(cmpMetricCard.Complete) & " of " & Text(cmpMetricCard.Denominator) & " complete"
+              ) &
+              If(IsBlank(cmpMetricCard.ScopeQualifier), "", ". " & cmpMetricCard.ScopeQualifier)
+            TabIndex: =-1
+          Children:
+            - lblMetricLabel:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: =cmpMetricCard.Label
+                  Color: =clrTextSecondary
+                  TabIndex: =-1
+            - lblMetricValue:
+                Control: Text
+                Variant: Subtitle
+                Properties:
+                  Text: |
+                    =If(
+                        cmpMetricCard.Denominator = 0,
+                        "Nothing due",
+                        Text(cmpMetricCard.Complete / cmpMetricCard.Denominator, "0%")
+                    )
+                  Color: =clrText
+                  Size: =28
+                  FontWeight: =FontWeight.Bold
+                  TabIndex: =-1
+            - lblMetricDetail:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  # The raw counts sit beside the percentage so a truncated
+                  # query is visible rather than silent. Delegation.fx.
+                  Text: |
+                    =If(
+                        cmpMetricCard.Denominator = 0,
+                        "No obligations are due in this period",
+                        Text(cmpMetricCard.Complete) & " of " & Text(cmpMetricCard.Denominator) & " accepted"
+                    )
+                  Color: =clrTextSecondary
+                  TabIndex: =-1
+            - lblScopeQualifier:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: =cmpMetricCard.ScopeQualifier
+                  Color: =clrTextSecondary
+                  Visible: =!IsBlank(cmpMetricCard.ScopeQualifier)
+                  AutoHeight: =true
+                  TabIndex: =-1

@@ -1,0 +1,191 @@
+# =============================================================================
+# cmpEOMItem — one checklist row.
+#
+#   Requirement · Scope · Due · Status · Action
+#
+# This is the row shape R2-R4 reuse without new UX. FMAT, SAIIT, training,
+# equipment, contracts and Five-Year Plans are all the same five columns with
+# a different requirement catalogue behind them. Getting this component right
+# is most of what R1 is for.
+# =============================================================================
+
+ComponentDefinitions:
+  cmpEOMItem:
+    DefinitionType: CanvasComponent
+    AccessAppScope: true
+    CustomProperties:
+
+      Item:
+        PropertyKind: Input
+        DisplayName: Item
+        Description: One MF_EOM_Item record. The component reads the stored status; it never recomputes one.
+        DataType: Record
+        Default: =Blank()
+
+      ShowFacility:
+        PropertyKind: Input
+        DisplayName: ShowFacility
+        Description: False on a facility-scoped screen where every row is the same facility, true on installation and portfolio views.
+        DataType: Boolean
+        Default: =true
+
+      OnPrimaryAction:
+        PropertyKind: Event
+        DisplayName: OnPrimaryAction
+        Description: Raised by the row's primary button. The caller decides what it means; the component does not navigate.
+        ReturnType: None
+
+    Properties:
+      Height: =Self.conItem.Height
+      Width: =Parent.Width
+
+    Children:
+      - conItem:
+          Control: GroupContainer
+          Variant: horizontalAutoLayoutContainer
+          Properties:
+            LayoutDirection: =LayoutDirection.Horizontal
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutGap: =12
+            LayoutWrap: =true          # reflows at 320px rather than clipping
+            PaddingTop: =10
+            PaddingBottom: =10
+            PaddingLeft: =12
+            PaddingRight: =12
+            Fill: =clrSurface
+            BorderThickness: =1
+            BorderColor: =clrBorder
+            TabIndex: =-1
+          Children:
+
+            # --- Requirement -------------------------------------------------
+            - conRequirement:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =3
+                  LayoutMinWidth: =180
+                  LayoutGap: =2
+                  TabIndex: =-1
+                Children:
+                  - lblRequirementName:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: =cmpEOMItem.Item.Requirement_Name
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        AutoHeight: =true
+                        TabIndex: =-1
+                  - lblFacilityName:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # Installation- and Contract-scope rows have a null
+                        # Facility_ID by design. Say what the row IS rather
+                        # than leaving a blank the reader has to interpret.
+                        Text: |
+                          =If(
+                              cmpEOMItem.Item.Requirement_Scope.Value = "Facility",
+                              cmpEOMItem.Item.Facility_Name,
+                              cmpEOMItem.Item.Requirement_Scope.Value & " scope - " & cmpEOMItem.Item.Installation_Name
+                          )
+                        Color: =clrTextSecondary
+                        Visible: =cmpEOMItem.ShowFacility
+                        AutoHeight: =true
+                        TabIndex: =-1
+
+            # --- Scope -------------------------------------------------------
+            - lblScope:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: =cmpEOMItem.Item.Requirement_Scope.Value
+                  Color: =clrTextSecondary
+                  FillPortions: =1
+                  LayoutMinWidth: =90
+                  AccessibleLabel: ="Scope: " & cmpEOMItem.Item.Requirement_Scope.Value
+                  TabIndex: =-1
+
+            # --- Due ---------------------------------------------------------
+            - conDue:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutMinWidth: =110
+                  LayoutGap: =2
+                  TabIndex: =-1
+                Children:
+                  - lblSuspense:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: =Text(cmpEOMItem.Item.Suspense_Date, "d mmm yyyy")
+                        Color: =clrText
+                        # Not "overdue by 5 days" in red text — the chip already
+                        # says overdue, and repeating it in colour alone would
+                        # fail gate A4.
+                        AccessibleLabel: ="Suspense date " & Text(cmpEOMItem.Item.Suspense_Date, "d mmmm yyyy")
+                        TabIndex: =-1
+                  - lblDue:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: ="Due " & Text(cmpEOMItem.Item.Due_Date, "d mmm")
+                        Color: =clrTextSecondary
+                        TabIndex: =-1
+
+            # --- Status ------------------------------------------------------
+            - badgeStatus:
+                Control: Component
+                ComponentName: cmpStatusBadge
+                Properties:
+                  StatusCode: =cmpEOMItem.Item.Status_Code.Value
+                  SuspenseDate: =cmpEOMItem.Item.Suspense_Date
+                  LayoutMinWidth: =170
+                  FillPortions: =2
+
+            # --- Action ------------------------------------------------------
+            - btnPrimary:
+                Control: Button
+                Variant: Primary
+                Properties:
+                  # The action follows the owner, and the owner comes from the
+                  # engine. Nothing here decides a status.
+                  Text: |
+                    =Switch(
+                        cmpEOMItem.Item.Status_Code.Value,
+                        "ACCEPTED",            "View",
+                        "SUBMITTED",           If(gblRole in ["Reviewer","InstallationManager","Admin"], "Review", "View"),
+                        "IN_REVIEW",           If(gblRole in ["Reviewer","InstallationManager","Admin"], "Review", "View"),
+                        "RETURNED",            "Resubmit",
+                        "PROVISIONAL_OVERDUE", If(gblRole in ["Admin","PortfolioManager"], "Verify requirement", "Submit"),
+                        "NOT_APPLICABLE",      "View",
+                        "WAIVED",              "View",
+                        "SUPERSEDED",          "View",
+                        "Submit"
+                    )
+                  # A screen reader user tabbing a gallery must not hear the
+                  # same word twelve times. Gate A6.
+                  AccessibleLabel: |
+                    =Self.Text & " " & cmpEOMItem.Item.Requirement_Name &
+                    ", " & If(
+                        cmpEOMItem.Item.Requirement_Scope.Value = "Facility",
+                        cmpEOMItem.Item.Facility_Name,
+                        cmpEOMItem.Item.Installation_Name
+                    ) &
+                    ", " & cmpEOMItem.Item.Reporting_Period_ID &
+                    ". Current status: " & cmpEOMItem.Item.Status_Semantic
+                  # Read-only mode disables every write affordance. The flow
+                  # enforces the same key; this is the courtesy half.
+                  DisplayMode: |
+                    =If(
+                        MF_ReadOnlyMode && !(Self.Text in ["View"]),
+                        DisplayMode.Disabled,
+                        DisplayMode.Edit
+                    )
+                  OnSelect: =cmpEOMItem.OnPrimaryAction()
+                  LayoutMinWidth: =140
+                  FillPortions: =1
+                  TabIndex: =0

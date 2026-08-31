@@ -1,0 +1,187 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "EOM-03 Status fact. Copies the item's already-evaluated status verbatim into MF_EOM_Status and adds the two rollup flags. It does NOT re-evaluate: a second evaluation is a second engine, and the whole point is that there is one.",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+  },
+  "triggers": {
+    "Nightly_after_EOM01": {
+      "type": "Recurrence",
+      "recurrence": { "frequency": "Day", "interval": 1, "schedule": { "hours": ["4"], "minutes": [30] }, "timeZone": "UTC" },
+      "metadata": { "comment": "80 minutes after EOM-01 starts. If EOM-01 is still running the fact is a day stale, which is visible and recoverable; racing it would produce a fact that disagrees with the app, which is neither." }
+    }
+  },
+  "actions": {
+    "Init_snapshot_date": {
+      "type": "InitializeVariable",
+      "runAfter": {},
+      "inputs": { "variables": [{ "name": "snapshotDate", "type": "string", "value": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}" }] }
+    },
+    "Get_open_periods": {
+      "type": "ApiConnection",
+      "runAfter": { "Init_snapshot_date": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_Reporting_Period'))}/items",
+        "queries": { "$filter": "Period_State eq 'OPEN' or Period_State eq 'CLOSING'" }
+      }
+    },
+    "For_each_period": {
+      "type": "Foreach",
+      "runAfter": { "Get_open_periods": ["Succeeded"] },
+      "foreach": "@body('Get_open_periods')?['value']",
+      "runtimeConfiguration": { "concurrency": { "repetitions": 1 } },
+      "actions": {
+        "Get_items_for_period": {
+          "type": "ApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "get",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+            "queries": { "$filter": "Reporting_Period_ID eq '@{items('For_each_period')?['Period_ID']}'", "$top": 5000 },
+            "paging": { "itemsPerPage": 5000 }
+          },
+          "metadata": { "comment": "Delegable server-side filter on the indexed Reporting_Period_ID, paged. Never an unfiltered read of the item list." }
+        },
+        "Get_existing_fact_keys": {
+          "type": "ApiConnection",
+          "runAfter": { "Get_items_for_period": ["Succeeded"] },
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "get",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Status'))}/items",
+            "queries": {
+              "$filter": "Snapshot_Date eq '@{variables('snapshotDate')}' and Reporting_Period_ID eq '@{items('For_each_period')?['Period_ID']}'",
+              "$select": "ID,Title",
+              "$top": 5000
+            }
+          },
+          "metadata": { "comment": "Idempotency on <EOM_Item_Key>|<Snapshot_Date>. A re-run on the same day updates rather than duplicates - this is the flow most likely to be re-run after a partial failure." }
+        },
+        "For_each_item": {
+          "type": "Foreach",
+          "runAfter": { "Get_existing_fact_keys": ["Succeeded"] },
+          "foreach": "@body('Get_items_for_period')?['value']",
+          "runtimeConfiguration": { "concurrency": { "repetitions": 20 } },
+          "actions": {
+            "Compose_fact_row": {
+              "type": "Compose",
+              "inputs": {
+                "Title": "@{concat(items('For_each_item')?['Title'], '|', variables('snapshotDate'))}",
+                "Snapshot_Date": "@{variables('snapshotDate')}",
+                "EOM_Item_ID": "@{items('For_each_item')?['EOM_Item_ID']}",
+                "EOM_Item_Key": "@{items('For_each_item')?['Title']}",
+                "Reporting_Period_ID": "@{items('For_each_item')?['Reporting_Period_ID']}",
+                "Fiscal_Year": "@{items('For_each_item')?['Fiscal_Year']}",
+                "Portfolio_ID": "@{items('For_each_item')?['Portfolio_ID']}",
+                "Installation_ID": "@{items('For_each_item')?['Installation_ID']}",
+                "Facility_ID": "@{items('For_each_item')?['Facility_ID']}",
+                "Facility_Name": "@{items('For_each_item')?['Facility_Name']}",
+                "Requirement_ID": "@{items('For_each_item')?['Requirement_ID']}",
+                "Requirement_Scope": { "Value": "@{items('For_each_item')?['Requirement_Scope']?['Value']}" },
+                "Requirement_Verification_Status": { "Value": "@{items('For_each_item')?['Requirement_Verification_Status']?['Value']}" },
+                "Status_Code": { "Value": "@{items('For_each_item')?['Status_Code']?['Value']}" },
+                "Status_Semantic": "@{items('For_each_item')?['Status_Semantic']}",
+                "Final_Status": { "Value": "@{items('For_each_item')?['Final_Status']?['Value']}" },
+                "Action_Owner_Role": { "Value": "@{items('For_each_item')?['Action_Owner_Role']?['Value']}" },
+                "Action_Required": "@{items('For_each_item')?['Action_Required']}",
+                "Due_Date": "@{items('For_each_item')?['Due_Date']}",
+                "Suspense_Date": "@{items('For_each_item')?['Suspense_Date']}",
+                "Is_Complete": "@{equals(items('For_each_item')?['Status_Code']?['Value'], 'ACCEPTED')}",
+                "Is_In_Denominator": "@{not(contains(createArray('NOT_DUE','WAIVED','NOT_APPLICABLE','SUPERSEDED'), items('For_each_item')?['Status_Code']?['Value']))}"
+              },
+              "metadata": { "comment": "Status_Code, Status_Semantic, Final_Status and Action_Owner_Role are COPIED VERBATIM. The only things computed here are the two rollup flags, and they are booleans derived from the code - never a percentage." }
+            },
+            "Upsert_fact_row": {
+              "type": "If",
+              "runAfter": { "Compose_fact_row": ["Succeeded"] },
+              "expression": {
+                "equals": [
+                  "@contains(select(body('Get_existing_fact_keys')?['value'], item()?['Title']), outputs('Compose_fact_row')?['Title'])",
+                  false
+                ]
+              },
+              "actions": {
+                "Create_fact_row": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+                    "method": "post",
+                    "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Status'))}/items",
+                    "body": "@outputs('Compose_fact_row')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Update_fact_row": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                      "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+                      "method": "patch",
+                      "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Status'))}/items/@{first(filter(body('Get_existing_fact_keys')?['value'], equals(item()?['Title'], outputs('Compose_fact_row')?['Title'])))?['ID']}",
+                      "body": "@outputs('Compose_fact_row')"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Purge_old_snapshots": {
+      "type": "Scope",
+      "runAfter": { "For_each_period": ["Succeeded"] },
+      "metadata": { "comment": "Deletes by indexed Snapshot_Date beyond SnapshotRetentionDays. Month-end snapshots are exempt: the trend a COP needs is monthly, not daily, and three million rows a year is the largest table here." },
+      "actions": {
+        "Get_expired_snapshots": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+            "method": "get",
+            "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Status'))}/items",
+            "queries": {
+              "$filter": "Snapshot_Date lt '@{formatDateTime(addDays(utcNow(), -400), 'yyyy-MM-dd')}'",
+              "$select": "ID,Snapshot_Date",
+              "$top": 5000
+            }
+          }
+        },
+        "For_each_expired": {
+          "type": "Foreach",
+          "runAfter": { "Get_expired_snapshots": ["Succeeded"] },
+          "foreach": "@body('Get_expired_snapshots')?['value']",
+          "actions": {
+            "Skip_month_end": {
+              "type": "If",
+              "expression": {
+                "not": {
+                  "equals": [
+                    "@formatDateTime(items('For_each_expired')?['Snapshot_Date'], 'yyyy-MM-dd')",
+                    "@formatDateTime(addDays(startOfMonth(addToTime(items('For_each_expired')?['Snapshot_Date'], 1, 'Month')), -1), 'yyyy-MM-dd')"
+                  ]
+                }
+              },
+              "actions": {
+                "Delete_snapshot_row": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+                    "method": "delete",
+                    "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Status'))}/items/@{items('For_each_expired')?['ID']}"
+                  }
+                }
+              },
+              "else": { "actions": {} }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,98 @@
+# =============================================================================
+# scrMaintenance — the kill switch landing.
+#
+# Reached when MF_App_Config.MaintenanceMode is true and the user does not hold
+# Developer_Flag. It is App.StartScreen, not an OnVisible redirect: nobody
+# should briefly see the app before being sent here.
+#
+# No data source is opened on this screen beyond MF_App_Config itself, which
+# named formulas have already read. If the reason the app is in maintenance is
+# that a list is unhealthy, this screen must still render.
+# =============================================================================
+
+Screens:
+  scrMaintenance:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =If(
+            MF_ShouldLog("AppOpen"),
+            Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
+                  MF_TelemetryRow("AppOpen", "Warning", "scrMaintenance", "",
+                      JSON({ reason: "MaintenanceMode", version: gblAppVersion })))
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutJustifyContent: =LayoutJustifyContent.Center
+            LayoutGap: =16
+            PaddingLeft: =24
+            PaddingRight: =24
+            TabIndex: =-1
+          Children:
+            - lblMaintenanceHeading:
+                Control: Text
+                Variant: Subtitle
+                Properties:
+                  Text: ="Mission Feeding Operations is paused"
+                  Color: =clrText
+                  Size: =24
+                  AutoHeight: =true
+                  Align: =Align.Center
+                  # Focus lands here so a screen reader announces the reason
+                  # first rather than the support link.
+                  TabIndex: =0
+            - lblMaintenanceBody:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: =gblMaintenanceText
+                  Color: =clrText
+                  AutoHeight: =true
+                  Align: =Align.Center
+                  LayoutMaxWidth: =520
+                  Live: =Live.Polite
+                  TabIndex: =-1
+            - lblSupport:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: ="If you need to submit a document urgently, contact " & gblSupportContact & "."
+                  Color: =clrTextSecondary
+                  AutoHeight: =true
+                  Align: =Align.Center
+                  TabIndex: =-1
+            - lblVersion:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: ="Version " & gblAppVersion
+                  Color: =clrTextSecondary
+                  TabIndex: =-1
+            - btnRetry:
+                Control: Button
+                Variant: Secondary
+                Properties:
+                  Text: ="Check again"
+                  AccessibleLabel: ="Check again whether maintenance has finished"
+                  # Refresh the config source, then re-evaluate the gate.
+                  OnSelect: =Refresh(MF_App_Config); Navigate(MF_StartScreen, ScreenTransition.None)
+                  TabIndex: =0
+            - btnDeveloperBypass:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Continue as developer"
+                  # Only ever visible to a Developer_Flag holder, who would not
+                  # have landed here anyway. Present for the case where the
+                  # flag is granted while the session is open.
+                  Visible: =MF_IsDeveloper
+                  AccessibleLabel: ="Continue into the app as a developer, bypassing maintenance mode"
+                  OnSelect: =Navigate(scrHome, ScreenTransition.None)
+                  TabIndex: =0

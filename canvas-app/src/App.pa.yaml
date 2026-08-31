@@ -1,0 +1,108 @@
+# =============================================================================
+# App.pa.yaml — application object.
+#
+# The YAML is the code. The .msapp and the solution ZIP are build artifacts;
+# if they ever disagree with this file, this file wins and the artifact is
+# rebuilt.
+#
+# App.Formulas carries everything that can be declarative. OnStart is reduced
+# to the four things that genuinely cannot be:
+#   1. seeding the session id used to correlate app actions with flow runs
+#   2. writing the AppOpen telemetry row (a Patch is a behaviour, not a formula)
+#   3. clearing any collection left by a previous session in the same tab
+#   4. nothing else
+#
+# No data is fetched here. Named formulas fetch lazily, so a fetch in OnStart
+# only delays the first screen.
+# =============================================================================
+
+App:
+  Properties:
+    # The gate. Maintenance and no-access are decided before a screen renders,
+    # not by an OnVisible redirect the user briefly sees through.
+    StartScreen: =MF_StartScreen
+
+    OnStart: |
+      =Concurrent(
+          // Telemetry: app open. Always written, never sampled away.
+          If(
+              MF_ShouldLog("AppOpen"),
+              Patch(
+                  MF_App_Event_Log,
+                  Defaults(MF_App_Event_Log),
+                  MF_TelemetryRow(
+                      "AppOpen",
+                      "Info",
+                      Text(MF_StartScreen),
+                      "",
+                      JSON(
+                          {
+                              role: gblRole,
+                              developer: MF_IsDeveloper,
+                              maintenance: MF_MaintenanceMode,
+                              readOnly: MF_ReadOnlyMode,
+                              schema: gblSchemaVersion,
+                              cloud: gblTenantCloud
+                          }
+                      )
+                  )
+              )
+          ),
+          // A tab reused across sessions must not inherit stale selection.
+          Clear(colRecentUploads)
+      )
+
+    # Fluent 2 native modern controls throughout. If capability gate 8 is not
+    # green, the classic fallback is documented as a variance in the CHANGELOG
+    # and needs AccessibleLabel set on more controls.
+    Theme: =PowerAppsTheme
+    ThemeName: ="Fluent2"
+
+    # 320 CSS px minimum width and 200% zoom are accessibility gate A11.
+    # Auto-layout containers everywhere; no absolute positioning.
+    SizeBreakpoints: =[600, 900, 1200]
+
+ScreenOrder:
+  - scrHome
+  - scrUpload
+  - scrInstallation
+  - scrReview
+  - scrUnmatched
+  - scrHistory
+  - scrAdminRequirements
+  - scrMaintenance
+  - scrNoAccess
+  - scrDiagnostics
+
+# Data sources are bound by connection reference at import time. The list
+# NAMES appear here as Power Fx symbols, which is unavoidable — a canvas app
+# addresses a SharePoint list by its identifier. What does NOT appear anywhere
+# is a site URL, a site GUID, or a list name as a string literal: those come
+# from MF_App_Config at runtime and are checked by scripts/validate_solution.py.
+DataSources:
+  - MF_Installation
+  - MF_Facility
+  - MF_Contract
+  - MF_Requirement
+  - MF_Reporting_Period
+  - MF_EOM_Item
+  - MF_EOM_Submission
+  - MF_EOM_Status
+  - MF_Security_Mapping
+  - MF_App_Config
+  - MF_Feature_Flags
+  - MF_App_Event_Log
+  - EOM05_AppUpload          # Power Automate — the upload path
+  - EOM04_QCDecision         # Power Automate — QC accept / return
+  - EOM02_ClassifyUnmatched  # Power Automate — resolve a Needs Classification row
+  - Office365Users           # Entra identity. CAC resolves it before the app loads.
+
+# App.Formulas is the concatenation of these two files, kept separate in the
+# repository so the engine is reviewable on its own.
+Formulas:
+  - ../formulas/App.Formulas.fx
+  - ../formulas/StatusEngine.fx
+  # Delegation.fx is documentation and approved query definitions. The query
+  # functions it declares are part of App.Formulas; the anti-pattern catalogue
+  # above them is comment.
+  - ../formulas/Delegation.fx

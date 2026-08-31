@@ -1,0 +1,234 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "EOM-04 QC decision. A reviewer accepts or returns; the engine decides what the item looks like. Notifications are behind EnableNotifications, which ships False.",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" }
+  },
+  "triggers": {
+    "When_Power_Apps_calls": {
+      "type": "Request",
+      "kind": "PowerApp",
+      "inputs": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "correlationId": { "type": "string" },
+            "submissionId": { "type": "string" },
+            "eomItemId": { "type": "string" },
+            "decision": { "type": "string" },
+            "comment": { "type": "string" },
+            "newSuspenseDate": { "type": "string" },
+            "reviewerUpn": { "type": "string" },
+            "appVersion": { "type": "string" }
+          },
+          "required": ["submissionId", "eomItemId", "decision", "reviewerUpn"]
+        }
+      }
+    }
+  },
+  "actions": {
+    "Get_config": {
+      "type": "ApiConnection",
+      "runAfter": {},
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Config'))}/items",
+        "queries": { "$filter": "Is_Active eq 1" }
+      }
+    },
+    "Compose_config": {
+      "type": "Compose",
+      "runAfter": { "Get_config": ["Succeeded"] },
+      "inputs": "@json(concat('{', join(select(body('Get_config')?['value'], concat('\"', item()?['Title'], '\":\"', item()?['Config_Value'], '\"')), ','), '}'))"
+    },
+    "Reject_if_read_only": {
+      "type": "If",
+      "runAfter": { "Compose_config": ["Succeeded"] },
+      "expression": { "equals": ["@toLower(string(outputs('Compose_config')?['ReadOnlyMode']))", "true"] },
+      "actions": {
+        "Respond_read_only": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": { "statusCode": 200, "body": { "ok": false, "code": "READ_ONLY", "message": "Read-only mode is on, so reviews are paused. Nothing was recorded.", "statusSemantic": "" } }
+        },
+        "Terminate_read_only": { "type": "Terminate", "runAfter": { "Respond_read_only": ["Succeeded"] }, "inputs": { "runStatus": "Succeeded" } }
+      },
+      "else": { "actions": {} }
+    },
+    "Reject_incomplete_return": {
+      "type": "If",
+      "runAfter": { "Reject_if_read_only": ["Succeeded"] },
+      "expression": {
+        "and": [
+          { "equals": ["@triggerBody()['decision']", "RETURNED"] },
+          { "or": [
+            { "equals": ["@empty(trim(coalesce(triggerBody()['comment'], '')))", true] },
+            { "equals": ["@empty(coalesce(triggerBody()['newSuspenseDate'], ''))", true] }
+          ] }
+        ]
+      },
+      "metadata": { "comment": "A returned document with no deadline is how items disappear. The app disables the button; this refuses the call. Both, always." },
+      "actions": {
+        "Respond_incomplete": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "ok": false,
+              "code": "RETURN_INCOMPLETE",
+              "message": "A return needs a comment saying what to correct and a new suspense date. Nothing was recorded. Fill in both, then return.",
+              "statusSemantic": ""
+            }
+          }
+        },
+        "Terminate_incomplete": { "type": "Terminate", "runAfter": { "Respond_incomplete": ["Succeeded"] }, "inputs": { "runStatus": "Succeeded" } }
+      },
+      "else": { "actions": {} }
+    },
+    "Get_item": {
+      "type": "ApiConnection",
+      "runAfter": { "Reject_incomplete_return": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "get",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items",
+        "queries": { "$filter": "EOM_Item_ID eq '@{triggerBody()['eomItemId']}'", "$top": 1 }
+      }
+    },
+    "Patch_submission": {
+      "type": "ApiConnection",
+      "runAfter": { "Get_item": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "patch",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Submission'))}/items/@{triggerBody()['submissionId']}",
+        "body": {
+          "QC_Status": { "Value": "@{triggerBody()['decision']}" },
+          "QC_Reviewer_UPN": "@{triggerBody()['reviewerUpn']}",
+          "QC_Reviewed_On": "@{utcNow()}",
+          "QC_Comment": "@{triggerBody()['comment']}",
+          "New_Suspense_Date": "@{if(equals(triggerBody()['decision'],'RETURNED'), triggerBody()['newSuspenseDate'], null)}"
+        }
+      }
+    },
+    "Evaluate_status": {
+      "type": "Compose",
+      "runAfter": { "Patch_submission": ["Succeeded"] },
+      "inputs": {
+        "_comment": "The engine, steps 4 and 5 of docs/status-calculation.md. The current-version submission's QC state IS the item's state. Four fields, one evaluation, copied together.",
+        "code": "@{if(equals(triggerBody()['decision'],'ACCEPTED'), 'ACCEPTED', 'RETURNED')}",
+        "status": "@{if(equals(triggerBody()['decision'],'ACCEPTED'), 'Green', 'Amber')}",
+        "label": "@{if(equals(triggerBody()['decision'],'ACCEPTED'), 'Accepted', 'Returned for correction')}",
+        "actionOwner": "@{if(equals(triggerBody()['decision'],'ACCEPTED'), 'None', 'Facility')}",
+        "actionRequired": "@{not(equals(triggerBody()['decision'],'ACCEPTED'))}"
+      }
+    },
+    "Patch_item": {
+      "type": "ApiConnection",
+      "runAfter": { "Evaluate_status": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "patch",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_EOM_Item'))}/items/@{first(body('Get_item')?['value'])?['ID']}",
+        "body": {
+          "Status_Code": { "Value": "@{outputs('Evaluate_status')?['code']}" },
+          "Status_Semantic": "@{outputs('Evaluate_status')?['label']}",
+          "Final_Status": { "Value": "@{outputs('Evaluate_status')?['status']}" },
+          "Action_Owner_Role": { "Value": "@{outputs('Evaluate_status')?['actionOwner']}" },
+          "Action_Required": "@{outputs('Evaluate_status')?['actionRequired']}",
+          "Suspense_Date": "@{if(equals(triggerBody()['decision'],'RETURNED'), triggerBody()['newSuspenseDate'], first(body('Get_item')?['value'])?['Suspense_Date'])}"
+        },
+        "metadata": { "comment": "The new suspense date goes onto the ITEM as well as the submission, because the engine's step 8 reads the item's Suspense_Date." }
+      }
+    },
+    "Log_decision": {
+      "type": "ApiConnection",
+      "runAfter": { "Patch_item": ["Succeeded"] },
+      "inputs": {
+        "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+        "method": "post",
+        "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Event_Log'))}/items",
+        "body": {
+          "Title": "@{concat(triggerBody()['correlationId'], '|QCDecision')}",
+          "Event_Time": "@{utcNow()}",
+          "Event_Type": { "Value": "QCDecision" },
+          "Severity": { "Value": "Info" },
+          "User_UPN": "@{triggerBody()['reviewerUpn']}",
+          "App_Version": "@{triggerBody()['appVersion']}",
+          "Screen_Name": "EOM04-QCDecision",
+          "Correlation_ID": "@{triggerBody()['correlationId']}",
+          "Entity_ID": "@{triggerBody()['submissionId']}",
+          "Detail_Json": "@{concat('{\"decision\":\"', triggerBody()['decision'], '\",\"newSuspense\":\"', coalesce(triggerBody()['newSuspenseDate'],''), '\"}')}"
+        }
+      }
+    },
+    "Notify_or_log_only": {
+      "type": "If",
+      "runAfter": { "Log_decision": ["Succeeded"] },
+      "expression": {
+        "and": [
+          { "equals": ["@triggerBody()['decision']", "RETURNED"] },
+          { "equals": ["@toLower(string(outputs('Compose_config')?['EnableNotifications']))", "true"] },
+          { "equals": ["@string(outputs('Compose_config')?['Capability.7.Outlook'])", "GREEN"] }
+        ]
+      },
+      "metadata": { "comment": "Ships disabled AND capability-gated. When off, the branch below still records what WOULD have been sent, so a full cycle can be inspected before anyone's inbox is involved." },
+      "actions": {
+        "Send_return_notification": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": { "connection": { "name": "@parameters('$connections')['office365']['connectionId']" } },
+            "method": "post",
+            "path": "/v2/Mail",
+            "body": {
+              "To": "@{first(body('Get_item')?['value'])?['Facility_Manager_UPN']}",
+              "Subject": "@{concat('Returned for correction: ', first(body('Get_item')?['value'])?['Requirement_Name'], ' - ', first(body('Get_item')?['value'])?['Reporting_Period_ID'])}",
+              "Body": "<p>@{triggerBody()['comment']}</p><p>New suspense date: @{triggerBody()['newSuspenseDate']}</p><p>Resubmit through Mission Feeding Operations. Your previous version is kept.</p>",
+              "Importance": "Normal"
+            }
+          }
+        }
+      },
+      "else": {
+        "actions": {
+          "Log_suppressed_notification": {
+            "type": "ApiConnection",
+            "inputs": {
+              "host": { "connection": { "name": "@parameters('$connections')['sharepointonline']['connectionId']" } },
+              "method": "post",
+              "path": "/datasets/@{encodeURIComponent(parameters('siteUrl'))}/tables/@{encodeURIComponent(parameters('listId_MF_App_Event_Log'))}/items",
+              "body": {
+                "Title": "@{concat(triggerBody()['correlationId'], '|FlowRun')}",
+                "Event_Time": "@{utcNow()}",
+                "Event_Type": { "Value": "FlowRun" },
+                "Severity": { "Value": "Debug" },
+                "Screen_Name": "EOM04-QCDecision",
+                "Correlation_ID": "@{triggerBody()['correlationId']}",
+                "Entity_ID": "@{triggerBody()['eomItemId']}",
+                "Detail_Json": "@{concat('{\"notificationSuppressed\":true,\"decision\":\"', triggerBody()['decision'], '\",\"wouldNotify\":\"', coalesce(first(body('Get_item')?['value'])?['Facility_Name'],''), '\"}')}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Respond_ok": {
+      "type": "Response",
+      "kind": "PowerApp",
+      "runAfter": { "Notify_or_log_only": ["Succeeded", "Failed", "Skipped"] },
+      "inputs": {
+        "statusCode": 200,
+        "body": {
+          "ok": true,
+          "code": "OK",
+          "message": "",
+          "statusSemantic": "@{outputs('Evaluate_status')?['label']}"
+        }
+      }
+    }
+  }
+}
