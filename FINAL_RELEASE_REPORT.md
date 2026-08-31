@@ -297,7 +297,8 @@ programme decided, on a date, and `Scope_Basis` records it.
 **v22 commits the real pilot site URL to `document-destinations.csv`. This
 build does not.**
 
-`https://usaf.dps.mil/teams/Portfolio2Automation` is a real `.mil` destination,
+A real `.mil` site path — `https://usaf.dps.mil/teams/<pilot-site>`, whose
+last segment this report deliberately does not print — is a destination,
 and that file is committed to a GitHub repository and seeded into SharePoint.
 The build's own rule — and `prerelease_scan.py` rule URL-01, which the earlier
 instruction said to keep blocking — treats a `.mil` site URL in a tracked file

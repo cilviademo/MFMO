@@ -76,8 +76,11 @@ RULES = [
     # assumed to be GCC High (.sharepoint.us). This tenant is DoD, where sites
     # live on .dps.mil — so the rule as written would have watched the one host
     # a leak could not occur on and missed the one it could.
+    # /teams/ as well as /sites/. A Teams-backed site -- which every private
+    # channel is -- lives under /teams/, so a rule watching only /sites/ misses
+    # exactly the URLs the four production portfolios actually use.
     ("URL-01", "FAIL",
-     r"https://[a-z0-9.-]+\.(sharepoint\.us|dps\.mil)/sites/(?!<)",
+     r"https://[a-z0-9.-]+\.(sharepoint\.us|dps\.mil)/(sites|teams)/(?!<)",
      "Hardcoded government SharePoint site. Bind it from an environment "
      "variable — MF_SharePointSiteURL, or MF_Portfolio{n}_SiteURL for a "
      "portfolio destination. A real site URL in source is a destination leak."),

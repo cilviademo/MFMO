@@ -246,6 +246,38 @@ class TheScanStillPasses(unittest.TestCase):
         self.assertTrue(pattern.search(
             "https://tenant.sharepoint.us/sites/MissionFeeding"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
 
+    def test_teams_backed_sites_are_watched_too(self):
+        rules = {r[0]: r for r in SCAN.RULES}
+        pattern = re.compile(rules["URL-01"][2])
+        # Every private channel is a Teams-backed site, and those live under
+        # /teams/, not /sites/. A rule watching only /sites/ misses exactly the
+        # URLs the four production portfolios use -- so the control would have
+        # read PASS over a real destination leak.
+        self.assertTrue(pattern.search(
+            "https://usaf.dps.mil/teams/SomeAutomationSite"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
+        self.assertTrue(pattern.search(
+            "https://tenant.sharepoint.us/teams/MissionFeeding"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
+
+    def test_no_file_is_exempt_from_the_destination_rule(self):
+        """URL-01 has no per-file carve-out, and must not grow one.
+
+        The obvious place to want one is the destination configuration, because
+        that is the file whose whole job is naming destinations. But this
+        repository is PUBLIC, the site URLs are bound at import from
+        MF_Portfolio{n}_SiteURL, and a rule with an exemption for the one file
+        the values would land in is a rule that cannot fire.
+        """
+        with open(os.path.join(ROOT, "scripts", "prerelease_scan.py"),
+                  encoding="utf-8") as fh:
+            src = fh.read()
+        # SKIP_FILES legitimately holds the documents that DEFINE the gate
+        # and must quote what they forbid. The destination configuration is
+        # not one of those, and neither is any rule-scoped exemption.
+        self.assertNotIn("document-destinations", src)
+        for name in SCAN.SKIP_FILES:
+            self.assertNotIn("destination", name.lower())
+        self.assertNotIn("URL_01_EXEMPT", src)
+
     def test_a_placeholder_site_url_is_not_a_leak(self):
         rules = {r[0]: r for r in SCAN.RULES}
         pattern = re.compile(rules["URL-01"][2])
