@@ -236,13 +236,25 @@ class TheScanStillPasses(unittest.TestCase):
             code = SCAN.main()
         self.assertEqual(code, 0, buf.getvalue())
 
+    def test_four_warnings_outside_the_release_report(self):
+        """The report quotes the warnings verbatim, and quoting a prohibited
+        string trips the rule that forbids it -- correct behaviour, since the
+        alternative is a scanner that can be silenced by writing about it. So
+        the number the report states is pinned to the findings that are NOT the
+        report quoting itself."""
+        hits, _ = SCAN.scan_content()
+        warns = [h for h in hits
+                 if h[0] == "WARN" and h[2] != "FINAL_RELEASE_REPORT.md"]
+        self.assertEqual(len(warns), 4,
+                         "\n".join(f"{h[1]} {h[2]}:{h[3]}" for h in warns))
+
     def test_the_dod_host_is_watched(self):
         rules = {r[0]: r for r in SCAN.RULES}
         pattern = re.compile(rules["URL-01"][2])
         # The rule was written for GCC High. This tenant is DoD, where a leaked
         # site URL is on .dps.mil -- the one host the original rule ignored.
         self.assertTrue(pattern.search(
-            "https://usaf.dps.mil/sites/DAFMissionFeeding-Portfolio1"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
+            "https://tenant.dps.mil/sites/ExampleSiteCollection"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
         self.assertTrue(pattern.search(
             "https://tenant.sharepoint.us/sites/MissionFeeding"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
 
@@ -254,7 +266,7 @@ class TheScanStillPasses(unittest.TestCase):
         # URLs the four production portfolios use -- so the control would have
         # read PASS over a real destination leak.
         self.assertTrue(pattern.search(
-            "https://usaf.dps.mil/teams/SomeAutomationSite"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
+            "https://tenant.dps.mil/teams/ExampleTeamSite"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
         self.assertTrue(pattern.search(
             "https://tenant.sharepoint.us/teams/MissionFeeding"))  # prerelease: allow URL-01 the test asserts the rule fires; the string is the specimen, not a destination
 
@@ -281,7 +293,7 @@ class TheScanStillPasses(unittest.TestCase):
     def test_a_placeholder_site_url_is_not_a_leak(self):
         rules = {r[0]: r for r in SCAN.RULES}
         pattern = re.compile(rules["URL-01"][2])
-        self.assertFalse(pattern.search("https://usaf.dps.mil/sites/<site>"))
+        self.assertFalse(pattern.search("https://tenant.dps.mil/sites/<site>"))
 
     def test_naming_the_tenant_in_prose_is_not_a_leak(self):
         rules = {r[0]: r for r in SCAN.RULES}

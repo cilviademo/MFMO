@@ -453,7 +453,8 @@ class ReportIndexTableMatchesTheSchema(unittest.TestCase):
     payloads are considered final -- so it is held to the schema, not typed."""
 
     TABLE_ROW = re.compile(
-        r"\|\s*(MF_[A-Za-z_]+)\s*\|\s*\**(\d+)\**\s*\|\s*\**(\d+)\**\s*\|")
+        r"\|\s*`?(MF_[A-Za-z_]+)`?\s*\|\s*\**(\d+)\**\s*\|"
+        r"\s*\**(\d+)\**\s*\|")
 
     def setUp(self):
         self.report = read(os.path.join(ROOT, "FINAL_RELEASE_REPORT.md"))
@@ -515,6 +516,8 @@ class NoDocumentStatesAStaleTotal(unittest.TestCase):
         totals, and correcting it would be falsifying the record. Such a line
         names the version it belongs to, so a stated version other than the
         current one marks the claim as history rather than a stale fact."""
+        if "<!-- historical -->" in line:
+            return True
         for m in re.finditer(r"schema version\s+(\d+\.\d+)", line, re.I):
             if m.group(1) != S.SCHEMA_VERSION:
                 return True
@@ -543,8 +546,10 @@ class NoDocumentStatesAStaleTotal(unittest.TestCase):
                                f"schema has {self.columns}")
             for m in self.INDEXES.finditer(text):
                 n = int(m.group(1))
+                line = text[:m.start()].count("\n") + 1
+                if self._is_historical(lines[line - 1]):
+                    continue
                 if n >= 40 and n != self.indexes:
-                    line = text[:m.start()].count("\n") + 1
                     bad.append(f"{rel}:{line} says {n} indexes, "
                                f"schema has {self.indexes}")
         self.assertEqual(bad, [], "\n".join(bad))

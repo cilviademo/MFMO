@@ -458,10 +458,61 @@ class LegacyIntakeShipsUnbound(unittest.TestCase):
                              "the legacy intake template must not bind to a "
                              "single portfolio site")
 
-    def test_the_import_checklist_says_to_deploy_it_four_times(self):
-        for rel in (os.path.join("dist", "MissionFeedingOperations_1.0.0",
-                                 "IMPORT_CHECKLIST.md"),):
-            with open(os.path.join(ROOT, rel), encoding="utf-8") as fh:
-                text = " ".join(fh.read().split())
-            self.assertIn("EOM-02b", text)
-            self.assertRegex(text, r"(?i)four (times|copies|instances)")
+    def test_the_import_checklist_gives_the_four_imperative_steps(self):
+        """A template nobody duplicates leaves three portfolios unmonitored and
+        looking exactly like three portfolios with nothing to report. The
+        checklist has to say so as instructions, not as background."""
+        with open(os.path.join(ROOT, "dist", "MissionFeedingOperations_1.0.0",
+                               "IMPORT_CHECKLIST.md"), encoding="utf-8") as fh:
+            text = " ".join(fh.read().split())
+        self.assertIn("EOM-02b", text)
+        for step in (r"(?i)duplicate it three times",
+                     r"(?i)bind each copy to a different site collection",
+                     r"(?i)verify the four copies point at four distinct sites",
+                     r"(?i)leave all four disabled"):
+            self.assertRegex(text, step)
+
+
+class ImportChecklistIsSequenced(unittest.TestCase):
+    """The order is load-bearing, not editorial. Indexes cannot be added once a
+    list passes 5,000 items, so verification has to precede any data; and
+    nothing downstream has anything to act on until EOM-01 has run."""
+
+    STEPS = [
+        "Provision the 17 lists",
+        "Verify the indexes",
+        "Import the six configuration CSVs",
+        "Add the first user to MF Security Mapping",
+        "Import the solution ZIP",
+        "Bind the connection reference and all 24 environment variables",
+        "Duplicate EOM-02b three times",
+        "Build the canvas app in Studio",
+        "Enable EOM-01 only, and run it twice",
+    ]
+
+    def setUp(self):
+        with open(os.path.join(ROOT, "dist", "MissionFeedingOperations_1.0.0",
+                               "IMPORT_CHECKLIST.md"), encoding="utf-8") as fh:
+            self.text = fh.read()
+
+    def test_every_step_appears_in_order(self):
+        at = -1
+        for step in self.STEPS:
+            found = self.text.find(step)
+            self.assertNotEqual(found, -1, f"missing step: {step}")
+            self.assertGreater(found, at, f"step out of order: {step}")
+            at = found
+
+    def test_index_verification_precedes_any_data_load(self):
+        self.assertLess(self.text.find("Verify the indexes"),
+                        self.text.find("Import the six configuration CSVs"))
+
+    def test_it_routes_provisioning_away_from_powershell(self):
+        flat = " ".join(self.text.split())
+        self.assertIn("PROVISION-WITHOUT-POWERSHELL.md", flat)
+        self.assertRegex(flat, r"(?i)PowerShell is unavailable on this network")
+
+    def test_it_states_both_737_expectations(self):
+        flat = " ".join(self.text.split())
+        self.assertRegex(flat, r"(?i)737 .{0,30}rows")
+        self.assertRegex(flat, r"(?i)still 737")

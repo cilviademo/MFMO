@@ -127,6 +127,16 @@ RULES = [
     # ---- fabricated identity --------------------------------------------
     ("IDN-01", "WARN", r"(?i)\b(admin|test|demo|mock)@(us\.af\.mil|example\.)",
      "Placeholder account. Must not reach production."),
+    # A fabricated address in a REAL namespace is the worse half of this
+    # problem, and the rule above missed it: it only watched four prefixes, so
+    # five demo personas shipped as alvarez@us.af.mil and friends in a PUBLIC
+    # repository. A reader cannot tell a fixture from a real person's UPN, and
+    # a made-up name can collide with a real one. Demo identities belong in
+    # example.mil, which exists for this.
+    ("IDN-02", "FAIL", r"[A-Za-z0-9._%+-]+@(us\.af\.mil|mail\.mil|us\.army\.mil|navy\.mil)",
+     "An address in a real .mil namespace. Real or fabricated, it must not be "
+     "committed: use example.mil for fixtures and bind real identities in the "
+     "tenant."),
 
     # ---- dev flags on ----------------------------------------------------
     ("FLG-01", "FAIL", r"(?i)(DeveloperTools|DebugPanel|MockData|RoleSimulator|SyntheticUsers)\s*[:=]\s*(true|TRUE|\"TRUE\")",
