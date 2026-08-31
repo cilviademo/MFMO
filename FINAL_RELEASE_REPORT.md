@@ -141,7 +141,7 @@ Checked by the release gate. Any drift blocks the build.
 
 ```
 dist/MissionFeedingOperations_1.0.0/MissionFeedingOperations_1.0.0.zip
-SHA-256  222e0b85a21abb6fe9451cf49ddb1a6a67f3e5476c838c28213bf07de96c6eea
+SHA-256  1762f78cb629043d25e65808b3a0f33c72278fd9faed67acf6b84a9aa9513024
 ```
 
 Packed from the tagged commit by `scripts/build_release.sh`, not from the
@@ -169,7 +169,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **436 passed**, 0 failed |
+| Unit tests | **445 passed**, 0 failed |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 4 warnings |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |
