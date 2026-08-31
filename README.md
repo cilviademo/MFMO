@@ -12,8 +12,12 @@ Power BI             leadership COP
 SharePoint Lists     configuration, workflow state, security, audit
 ```
 
-Single GCC / GCC High / DoD environment. No Dataverse, no premium connectors,
+Single **DoD** government environment — SharePoint tenant `usaf.dps.mil`, Teams
+`dod.teams.microsoft.us`. Not GCC High. No Dataverse, no premium connectors,
 no AI Builder, no Pipelines.
+
+The four portfolios are **four separate SharePoint site collections**, not four
+channels in one team. `deployment/site-bindings.md`.
 
 ---
 
@@ -63,26 +67,36 @@ the real engine. Open it in a browser.
 ## Build state
 
 ```
-Schema version            3.0  (12 lists, 172 columns)   validated
-Requirement seed          12 rows, all UNVERIFIED, 3 inactive
+Schema version            5.0  (17 lists, 282 columns)   validated
+Requirement seed          13 rows, 8 active, authority and scope tracked apart
+Registry                  103 installations, 154 facilities, from the QRG
 Status engine             reference + Power Fx + prototype, held in agreement
 EOM-01                    reference implementation, idempotency proven
-Canvas app source         10 screens, 4 components, .pa.yaml
+EOM-02                    find-never-create folder resolution, tested
+Canvas app source         12 screens, 4 components, .pa.yaml
 Flows                     5 implementation specs
-Local test suite          99 tests, passing
+Local test suite          185 tests, passing
 Power Platform build      NOT STARTED
 Solution import tested    NO
 PAC CLI authorized        UNKNOWN  — verify
-Tenant cloud              UNKNOWN  — GCC, GCC High or DoD, confirm
+Tenant cloud              DoD (UsGovDod)  — confirmed
+Installations onboarded   0 of 103   (Generation_Enabled ships FALSE)
+Document destinations     4 rows, all unbound, unverified and inactive
+Data-layer permissions    NOT ENFORCED  — docs/security-open-issue.md
 ```
 
-**Two answers gate deployment**: which government cloud this tenant is in, and
-whether PAC CLI may run against it. Neither changes the design; both change the
-deployment scripts.
+**One answer still gates deployment**: whether PAC CLI may run against the
+tenant. It does not change the design, only the deployment scripts.
 
-**And four gate the first generation run**: the grain of SF 1080, GPC and 1038,
-and whether the 1119-1 is conditional. Changing scope after items exist means
+**Four gate the first generation run**: the grain of SF 1080, GPC and 1038, and
+whether the 1119-1 is conditional. Changing scope after items exist means
 regenerating a period.
+
+**One gates the first upload**: somebody has to open each of the four portfolio
+sites and record what is actually there — the site URL, the library, the exact
+root folder, and above all how the month folders inside FY26 are named. Four
+sites, about ten minutes. Without it EOM-02 files everything at the Monthly Data
+Call root and looks broken on day one.
 
 ---
 
@@ -94,9 +108,12 @@ scripts/status_engine.py          the reference status engine
 scripts/generate_expected_items.py  EOM-01 reference implementation
 scripts/validate_solution.py      delegation, accessibility and staleness gate
 scripts/prerelease_scan.py        security gate. A FAIL means do not export.
+scripts/folder_resolver.py        EOM-02 destination resolution. Find, never create.
+scripts/vocabulary_guard.py       a filter that matches nothing must say so
 
 docs/                             settled decisions, runbook, prototype
-docs/handoffs/                    the two handoffs and the reconciliation record
+docs/handoffs/                    the handoffs and the reconciliation record
+deployment/site-bindings.md       the four site collections. Walk them before the first upload.
 configuration/                    the real registry, requirements, config, flags, rules
 data/                             the scrubbed QRG the registry was built from
 security/                         manifest, connector allowlist, role matrix
@@ -106,8 +123,8 @@ canvas-app/src/                   .pa.yaml — the app. This is the code.
 flows/                            five implementation specs
 powerbi/                          semantic model, measures, RLS
 solution/                         packaging envelope and connection references
-reference/v3/, reference/v11/     prior snapshots as delivered. Not live source.
-tests/                            134 tests + the release gate. bash tests/run_tests.sh
+reference/                        v3, v11, v14 and the Figma build, as delivered. Not live source.
+tests/                            248 tests + the release gate. bash tests/run_tests.sh
 dist/                             release ZIPs. Rollback imports from here.
 ```
 

@@ -14,11 +14,18 @@ below is wrong, change it here first, then change the code.
 
 ## Precedence
 
-**v11 for the domain. CODEX for engineering discipline. MASTER for what
-neither covers. V3 only where nothing later contradicts it.**
+**ACTION_DOCUMENT for anything it touches. v14 for the domain. CODEX for
+engineering discipline. MASTER for what neither covers. V3 only where nothing
+later contradicts it.**
 
-v11 and `build-notes.md` are the latest and carry the programme's own rulings,
-so they win on every question of *what the system must do*. CODEX still governs
+`reference/v14/ACTION_DOCUMENT.md` is the latest and is explicitly a delta: it
+carries the routing finding, the rulings on the previous build's findings, and
+the Figma actions. Where it and the v14 handoff disagree — they do, on whether
+the four portfolios are channels or site collections — the action document
+wins, and the handoff's own header says so.
+
+v14 and `build-notes.md` carry the programme's own rulings, so they win on
+every question of *what the system must do*. CODEX still governs
 *how the repository is built* — one engine, delegable queries, no fabricated
 artifacts — because nothing later revisits those.
 
@@ -324,14 +331,44 @@ identical: the decision table is current, the code is stale.
 | C19 | `Operating_Model` required, but 20 registry rows are NO_DFAC | nullable, and reported separately | A base with no feeding facility is a record worth keeping, not a validation failure |
 | C20 | `CHANGELOG.md` and `ROLLBACK.md` are empty files | written | The pre-release scan requires both, and a rollback nobody wrote down is not a rollback |
 
+## Corrections applied to v14
+
+| # | v14 says | Live tree | Why |
+|---|---|---|---|
+| C21 | `EOM02-Submission` builds the path from `{FiscalYear}/{ReportingPeriod}/{InstallationName}/{RequirementCode}` and creates missing folders | folders are **matched**, never constructed; `{FiscalYearShort}/{MonthFolder}` | The same snapshot's `ACTION_DOCUMENT.md` and `document-destinations.csv` both say find-never-create with `Create_Missing_Folders = FALSE`. The action document wins. A flow that creates folders eventually produces `Aug 26` beside someone's `August 2026` |
+| C22 | The flow fails closed on `Channel_Type = 'Unverified'` | fails closed on `Active_Flag`, `Verified_By` and `Site_URL` | `Channel_Type` is not in that snapshot's own schema — it went away with the four-channels-in-one-team model. **A spec that fails closed on an absent column fails open** |
+| C23 | Four portfolio channels in one Teams site | four separate **site collections**, one destination row and one env var each | The routing finding. Portfolio 2's slug carries a `Legacy_` prefix the others do not, so a URL built by pattern 404s on exactly one portfolio — three work and one is a mystery |
+| C24 | Tenant cloud GCC High (or UNKNOWN) | **DoD**, `UsGovDod` | `usaf.dps.mil` / `dod.teams.microsoft.us`. Every GCC High endpoint written before 31 Aug 2026 is wrong for this deployment |
+| C25 | `prerelease_scan` rule URL-01 watches `.sharepoint.us` | watches `.sharepoint.us` **and** `.dps.mil` | Written when the cloud was assumed GCC High, so it watched the one host a leak could not occur on and missed the one it could |
+| C26 | Required release artifacts checked for existence | checked for **content** | `ROLLBACK.md` shipped as a zero-byte file and passed. That is the shape of failure this whole scan exists to prevent, occurring in the scan itself |
+| C27 | Inline scanner exceptions need only a rule id | a **reason string is required**, minimum length enforced | An exception nobody explained silences a rule and leaves nothing to review |
+| C28 | Vocabulary filters are checked by inspection | `scripts/vocabulary_guard.py` asserts every filter matched something, before any row is generated | Twice a filter matched nothing and reported success. A term the data never contains raises; a real term with no selected rows is a legitimate zero and is reported |
+| C29 | Amber `#8A5300`, yellow `#6B5300` — 1.16:1 apart | `#944800` on `#FFF3E6` and `#5A5800` on `#FDFAE0` | Two near-identical browns under a model whose whole point is that colour carries ownership. Also **ΔE 19.5 from red**: the obvious "make amber more orange" fix trades the yellow collision for a red one |
+| C30 | "Verify at least 3:1 between the two text colours" | ΔE2000 ≥ 20 and ≥ 30° of hue, each chip ≥ 4.5:1 on its own background, verified under three CVD simulations | **The 3:1 test cannot be passed.** WCAG contrast is a luminance ratio; two colours differing only in hue sit at 1.0:1, and forcing 3:1 between two chip texts makes one fail 4.5:1 against its own tint. 3:1 is also 1.4.11 Non-text Contrast, which governs *adjacent* colour, not two foregrounds that never touch |
+| C31 | Review age bands `0-1 / 2-3 / 4-5 / 6+` beside a separate "aged 4 days or more" | bands **derived** from `MF_App_Config.ReviewAgeHighlightDays` | Two facts that must agree, with nothing making them agree. Change the threshold to 3 and the queue contradicts its own legend |
+| C32 | Completion shown as a single percentage | every completion figure states its denominator | A not-onboarded installation is not compliant — it has not been asked. All 103 ship `Generation_Enabled = FALSE` and contribute no rows, so a percentage over existing rows reports 100% while the enterprise has barely started |
+| C33 | `EOM-02b Legacy Intake` deduplicates on path | deduplicates on `SharePoint_Unique_ID` | Under FIND_OR_ROOT a file is moved *by design* by the human who files it. A path check would rediscover it as a stray on the day somebody tidied up |
+| C34 | `MF_EOM_Submission` stores `SharePoint_File_ID` | stores `SharePoint_Unique_ID` as the durable handle, `File_ID` alongside | The GUID survives a rename and a move between libraries; the list item ID does not, and moves are now part of the design |
+| C35 | `MF_EOM_Data_Dictionary.csv` reports 15 lists / 212 columns | regenerated: 17 lists, 282 columns | A generated file committed before its generator ran |
+
 ## Still open
 
 Unchanged from both handoffs, and neither design nor code can close them:
 
-1. **The data layer does not enforce installation scope.** The single most
-   important item — `docs/security-open-issue.md`. An ISSM will find it.
-2. Which government cloud — GCC High or DoD. Commercial is not supported.
-3. Whether PAC CLI is authorized against the tenant.
+1. **The data layer does not enforce installation scope.** Still the single
+   most important item — `docs/security-open-issue.md` — but **narrowed**. The
+   four portfolios turned out to be four separate site collections, so the
+   portfolio boundary is now a site boundary that SharePoint enforces natively.
+   What remains is installation scope *within* a portfolio site. Smaller, and
+   still the thing an ISSM will ask about.
+2. Whether PAC CLI is authorized against the tenant. *(The cloud question is
+   closed: DoD, `UsGovDod`.)*
+3. **The four site bindings.** Somebody has to open each of the four portfolio
+   site collections and record the site URL, the library, the exact root folder
+   and — the item nobody will guess right — **how the month folders inside FY26
+   are actually named**. Four sites, about ten minutes.
+   `deployment/site-bindings.md`. Without it EOM-02 files everything at the
+   Monthly Data Call root and looks broken on day one.
 4. **Scope confirmation for SF 1080, GPC and 1038**, all still `Proposed`, and
    confirmation of the three facility-grain proposals. Getting these wrong is
    not cosmetic: facility scope on a three-DFAC base means three expected rows

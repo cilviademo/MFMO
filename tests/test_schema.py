@@ -33,15 +33,16 @@ class TestSchemaItself(unittest.TestCase):
     def test_validates(self):
         self.assertEqual(S.validate(), [])
 
-    def test_sixteen_lists(self):
-        self.assertEqual(len(S.LISTS), 16)
+    def test_seventeen_lists(self):
+        self.assertEqual(len(S.LISTS), 17)
         self.assertEqual(
             {l.name for l in S.LISTS},
             {"MF_Installation", "MF_Facility", "MF_EOM_Requirement", "MF_EOM_Item",
              "MF_EOM_Submission", "MF_Unmatched_File", "MF_Security_Mapping",
              "MF_EOM_Audit", "MF_App_Config", "MF_Feature_Flags",
              "MF_App_Event_Log", "MF_EOM_Status", "MF_Non_Duty_Day",
-             "MF_Calendar_Event", "MF_Access_Request", "MF_Notification_Rule"})
+             "MF_Calendar_Event", "MF_Access_Request", "MF_Notification_Rule",
+             "MF_Document_Destination"})
 
     def test_every_list_declares_a_grain_and_a_unique_key(self):
         for l in S.LISTS:
@@ -115,7 +116,7 @@ class TestSchemaItself(unittest.TestCase):
     def test_json_is_serialisable_for_the_provisioning_script(self):
         d = S.to_dict()
         json.dumps(d)
-        self.assertEqual(d["list_count"], 16)
+        self.assertEqual(d["list_count"], 17)
         self.assertEqual(d["column_count"], S.total_columns())
 
 
@@ -221,9 +222,18 @@ class TestConfigurationSeeds(unittest.TestCase):
             declared = [c.name for c in S.LISTS_BY_NAME[list_name].columns]
             self.assertEqual(list(rows[0].keys()), declared, filename)
 
-    def test_the_two_gating_answers_ship_unknown(self):
+    def test_the_cloud_is_answered_and_it_is_dod(self):
+        # This shipped UNKNOWN for most of the programme, and several documents
+        # guessed GCC High while it was. The tenant is usaf.dps.mil, which is
+        # DoD -- so every GCC High endpoint written before 31 Aug 2026 is wrong
+        # for this deployment.
         cfg = {r["Config_Key"]: r["Config_Value"] for r in read_csv("app-config.csv")}
-        self.assertEqual(cfg["TenantCloud"], "UNKNOWN")
+        self.assertEqual(cfg["TenantCloud"], "UsGovDod")
+
+    def test_pac_cli_authorisation_still_ships_unknown(self):
+        # Microsoft supports PAC CLI in DoD. Local governance may still forbid
+        # it, and Microsoft availability is not DAF authorisation.
+        cfg = {r["Config_Key"]: r["Config_Value"] for r in read_csv("app-config.csv")}
         self.assertEqual(cfg["PacCliAuthorized"], "UNKNOWN")
 
     def test_the_kill_switch_ships_off(self):
@@ -384,8 +394,8 @@ class TestNoHardCodedEnvironment(unittest.TestCase):
 
 
 class TestFlowSpecs(unittest.TestCase):
-    FLOWS = ("EOM01-ExpectedPackage", "EOM02-FileIntake", "EOM03-Reconciliation",
-             "EOM04-Notifications", "EOM05-AppUpload")
+    FLOWS = ("EOM01-ExpectedPackage", "EOM02b-LegacyIntake", "EOM03-Reconciliation",
+             "EOM04-Notifications", "EOM02-Submission")
 
     def test_all_five_specs_exist(self):
         for flow in self.FLOWS:
@@ -399,18 +409,18 @@ class TestFlowSpecs(unittest.TestCase):
         self.assertEqual(stray, [])
 
     def test_the_intake_flow_binds_at_library_level(self):
-        text = read("flows", "EOM02-FileIntake", "definition.md")
+        text = read("flows", "EOM02b-LegacyIntake", "definition.md")
         self.assertIn("Library level, not folder level", text)
         self.assertIn("does not fire recursively", text)
 
     def test_no_flow_creates_a_requirement_from_a_file(self):
-        text = read("flows", "EOM02-FileIntake", "definition.md")
+        text = read("flows", "EOM02b-LegacyIntake", "definition.md")
         self.assertIn("Never invent a requirement", text)
         self.assertIn("There is no branch in this flow that creates an `MF_EOM_Item`", text)
 
     def test_the_upload_flow_checks_read_only_server_side(self):
         # The disabled control is a courtesy; the flow check is the control.
-        text = read("flows", "EOM05-AppUpload", "definition.md")
+        text = read("flows", "EOM02-Submission", "definition.md")
         self.assertIn("ReadOnlyMode", text)
         self.assertIn("READ_ONLY", text)
 
@@ -432,11 +442,11 @@ class TestFlowSpecs(unittest.TestCase):
                          "everything else is tuned once the queue behaves")
 
     def test_the_upload_flow_does_not_use_the_attachments_control(self):
-        text = read("flows", "EOM05-AppUpload", "definition.md")
+        text = read("flows", "EOM02-Submission", "definition.md")
         self.assertIn("Attachments control", text)
         app = read("canvas-app", "src", "Screens", "scrUpload.pa.yaml")
         self.assertNotIn("Control: Attachments", app)
-        self.assertIn("EOM05_AppUpload.Run", app)
+        self.assertIn("EOM02_Submission.Run", app)
 
 
 class TestAppSource(unittest.TestCase):

@@ -56,6 +56,37 @@ gblReadOnlyMode    = MF_ConfigBool("ReadOnlyMode", false);
 gblRequireQC       = MF_ConfigBool("RequireQC", true);
 
 MF_MaxUploadBytes  = MF_ConfigNumber("MaxUploadSizeMB", 50) * 1024 * 1024;
+
+// --- review queue ageing -------------------------------------------------
+// ONE number an admin can retune. The bands are DERIVED from it, so they can
+// never drift out of line with the threshold printed beside them -- which is
+// what happens when a developer hardcodes "0-1 / 2-3 / 4-5 / 6+" next to a
+// separate "aged 4 days or more" and somebody later changes one of them.
+gblReviewAgeDays   = MF_ConfigNumber("ReviewAgeHighlightDays", 4);
+
+MF_ReviewAgeBands =
+    With( { n: gblReviewAgeDays },
+        Table(
+            { Ord: 1, Low: 0,     High: n - 3, Late: false },
+            { Ord: 2, Low: n - 2, High: n - 1, Late: false },
+            { Ord: 3, Low: n,     High: n + 1, Late: true  },
+            { Ord: 4, Low: n + 2, High: Blank(), Late: true } ) );
+
+MF_ReviewAgeLabel(Days: Number): Text =
+    With( { b: LookUp(MF_ReviewAgeBands,
+                      Days >= Low && (IsBlank(High) || Days <= High)) },
+        If( IsBlank(b), "",
+            IsBlank(b.High), $"{b.Low}+ days",
+            b.Low = b.High,  $"{b.Low} day",
+                             $"{b.Low}-{b.High} days" ) );
+
+// Ageing does NOT change the chip. An item awaiting review is yellow because
+// AFSVC owns it, and that comes from the status engine -- ageing is a fact
+// about the queue, not a status. It is drawn as emphasis on the ROW (weight
+// and a leading rule), never by recolouring the chip. A screen that recoloured
+// it would be a second status engine, which is how a status engine starts
+// lying.
+MF_ReviewIsAged(Days: Number): Boolean = Days >= gblReviewAgeDays;
 MF_DelegationWarnAt = MF_ConfigNumber("DelegationWarningThreshold", 2000);
 
 
@@ -212,14 +243,26 @@ colNavigation =
 
 
 // --- colour tokens -------------------------------------------------------
-// Declared once. No screen may use a colour literal. Ratios verified in
-// docs/accessibility.md.
+// Declared once. No screen may use a colour literal. Every ratio is verified by
+// tests/test_design_tokens.py and recorded in docs/accessibility.md.
 clrStatusBlue    = ColorValue("#0F548C");   clrStatusBlueBg   = ColorValue("#EFF6FC");
-clrStatusAmber   = ColorValue("#8A5300");   clrStatusAmberBg  = ColorValue("#FFF9F0");
-// Yellow is NOT amber. Amber means the base has time risk; yellow means AFSVC
-// has the document. They must be distinguishable at a glance and in greyscale,
-// so yellow is cooler and lighter and its chip carries a different icon.
-clrStatusYellow  = ColorValue("#6B5300");   clrStatusYellowBg = ColorValue("#FFFBEA");
+
+// AMBER AND YELLOW ARE THE WHOLE POINT OF SIX STATES, and they were 1.16:1
+// apart until this was fixed -- two near-identical browns telling a DFAC
+// manager that a document they filed on time and one they never sent are the
+// same kind of problem.
+//
+// Amber: the base still owes it and still has runway.   Amber is ORANGE.
+// Yellow: AFSVC has it and the base owes nothing.       Yellow is GOLD.
+//
+// They are 48 degrees apart in hue and dE2000 30 apart, which holds up under
+// deuteranopia, protanopia and tritanopia (dE 15-19). Luminance contrast
+// BETWEEN them is only 1.06:1 and cannot usefully be raised -- see
+// docs/accessibility.md -- so hue does the separating and the label and the
+// icon do the guaranteeing. Neither chip is ever colour alone.
+clrStatusAmber   = ColorValue("#944800");   clrStatusAmberBg  = ColorValue("#FFF3E6");
+clrStatusYellow  = ColorValue("#5A5800");   clrStatusYellowBg = ColorValue("#FDFAE0");
+
 clrStatusRed     = ColorValue("#A4262C");   clrStatusRedBg   = ColorValue("#FDF3F4");
 clrStatusGreen   = ColorValue("#0E700E");   clrStatusGreenBg = ColorValue("#F1FAF1");
 clrStatusGray    = ColorValue("#424242");   clrStatusGrayBg  = ColorValue("#F5F5F5");

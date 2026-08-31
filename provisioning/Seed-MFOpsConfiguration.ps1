@@ -22,6 +22,7 @@ param(
     [Parameter(Mandatory = $true)][string] $SiteUrl,
     [Parameter(Mandatory = $true)][ValidateSet('UsGov', 'UsGovHigh', 'UsGovDod')][string] $TenantCloud,
     [string] $ConfigDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'configuration'),
+    [switch] $IncludeRegistry,
     [switch] $IncludeSampleData
 )
 
@@ -37,14 +38,24 @@ $pnpEnv = switch ($TenantCloud) {
 # list -> (csv, unique key). The key matches unique_key in scripts/eom_schema.py
 # and is what makes this idempotent.
 $core = @(
-    @{ List = 'MF_App_Config';      File = 'app-config.csv';    Key = 'Config_Key' },
-    @{ List = 'MF_Feature_Flags';   File = 'feature-flags.csv'; Key = 'Feature_Key' },
-    @{ List = 'MF_EOM_Requirement'; File = 'requirements.csv';  Key = 'Requirement_ID' }
+    @{ List = 'MF_App_Config';          File = 'app-config.csv';             Key = 'Config_Key' },
+    @{ List = 'MF_Feature_Flags';       File = 'feature-flags.csv';          Key = 'Feature_Key' },
+    @{ List = 'MF_EOM_Requirement';     File = 'requirements.csv';           Key = 'Requirement_ID' },
+    @{ List = 'MF_Notification_Rule';   File = 'notification-rules.csv';     Key = 'Rule_ID' },
+    @{ List = 'MF_Document_Destination'; File = 'document-destinations.csv'; Key = 'Destination_ID' }
 )
+
+# The registry is real, seeded from the QRG by scripts/gen_registry.py. It is not
+# sample data. Every installation row carries Generation_Enabled FALSE, so
+# importing it onboards nobody -- see Gate 3 in docs/DEPLOYMENT.md.
+$registry = @(
+    @{ List = 'MF_Installation'; File = 'installations.csv'; Key = 'Installation_ID' },
+    @{ List = 'MF_Facility';     File = 'facilities.csv';    Key = 'Facility_ID' }
+)
+
 $samples = @(
-    @{ List = 'MF_Installation';     File = 'installations.sample.csv';    Key = 'Installation_ID' },
-    @{ List = 'MF_Facility';         File = 'facilities.sample.csv';       Key = 'Facility_ID' },
-    @{ List = 'MF_Security_Mapping'; File = 'security-mapping.sample.csv'; Key = 'Security_ID' }
+    @{ List = 'MF_Security_Mapping'; File = 'security-mapping.sample.csv'; Key = 'Security_ID' },
+    @{ List = 'MF_Non_Duty_Day';     File = 'non-duty-days.sample.csv';    Key = 'Non_Duty_ID' }
 )
 
 # Columns that must be written as a real null rather than an empty string.
@@ -115,6 +126,11 @@ Connect-PnPOnline -Url $SiteUrl -Interactive -AzureEnvironment $pnpEnv
 foreach ($seed in $core) {
     Import-Seed -ListName $seed.List -CsvPath (Join-Path $ConfigDir $seed.File) -KeyColumn $seed.Key
 }
+if ($IncludeRegistry) {
+    foreach ($seed in $registry) {
+        Import-Seed -ListName $seed.List -CsvPath (Join-Path $ConfigDir $seed.File) -KeyColumn $seed.Key
+    }
+}
 if ($IncludeSampleData) {
     Write-Warning 'Seeding SAMPLE dimension data. Do not do this in production.'
     foreach ($seed in $samples) {
@@ -132,6 +148,13 @@ if ($cloudRow.Count -eq 1) {
 
 Write-Host ''
 Write-Host 'Seeding complete.' -ForegroundColor Green
-Write-Host 'All twelve requirements seed as UNVERIFIED. None of them can drive an adverse' -ForegroundColor Yellow
-Write-Host 'status until an authority reference is confirmed on scrAdminRequirements.'      -ForegroundColor Yellow
-Write-Host 'That is deliberate, not an incomplete seed.'                                    -ForegroundColor Yellow
+Write-Host ''
+Write-Host 'Two things ship deliberately switched off. Neither is an incomplete seed.' -ForegroundColor Yellow
+Write-Host ''
+Write-Host '  Requirements whose authority is UNVERIFIED cannot drive an adverse status'   -ForegroundColor Yellow
+Write-Host '  until a reference is confirmed on scrAdminRequirements.'                     -ForegroundColor Yellow
+Write-Host ''
+Write-Host '  All four document destinations ship with Site_URL blank and Active_Flag'     -ForegroundColor Yellow
+Write-Host '  FALSE. EOM-02 fails closed until somebody opens each of the four SITE'       -ForegroundColor Yellow
+Write-Host '  COLLECTIONS -- they are not four channels in one team -- and records what'   -ForegroundColor Yellow
+Write-Host '  is actually there. deployment/site-bindings.md is the checklist.'            -ForegroundColor Yellow

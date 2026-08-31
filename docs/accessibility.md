@@ -121,18 +121,79 @@ status model touches.
 Declared once in `App.Formulas.fx`. **No screen may use a colour literal**, and
 `scripts/validate_solution.py` fails the build on one.
 
-| Token | Hex | On | Ratio |
-|---|---|---|---|
-| `clrStatusBlue` | `#0F548C` | `#EFF6FC` | 4.6:1 |
-| `clrStatusAmber` | `#8A5300` | `#FFF9F0` | 4.8:1 |
-| `clrStatusRed` | `#A4262C` | `#FDF3F4` | 5.9:1 |
-| `clrStatusGreen` | `#0E700E` | `#F1FAF1` | 4.7:1 |
-| `clrStatusGray` | `#424242` | `#F5F5F5` | 7.1:1 |
-| `clrText` | `#242424` | `#FFFFFF` | 15.3:1 |
-| `clrTextSecondary` | `#616161` | `#FFFFFF` | 6.3:1 |
+| Token | Hex | On | Ratio | Means |
+|---|---|---|---|---|
+| `clrStatusBlue` | `#0F548C` | `#EFF6FC` | 7.2:1 | Not due — nobody acts |
+| `clrStatusAmber` | `#944800` | `#FFF3E6` | 6.0:1 | Late — BASE owes it, has runway |
+| `clrStatusYellow` | `#5A5800` | `#FDFAE0` | 7.0:1 | Awaiting review — AFSVC owes it |
+| `clrStatusRed` | `#A4262C` | `#FDF3F4` | 6.7:1 | Overdue or returned — BASE, no runway |
+| `clrStatusGreen` | `#0E700E` | `#F1FAF1` | 5.9:1 | Accepted |
+| `clrStatusGray` | `#424242` | `#F5F5F5` | 9.2:1 | Not required this period |
+| `clrText` | `#242424` | `#FFFFFF` | 15.5:1 |  |
+| `clrTextSecondary` | `#616161` | `#FFFFFF` | 6.2:1 |  |
 
 Chip colours are a dark foreground on a pale tint, not white on a saturated
-fill — that is what keeps five hues distinguishable while staying above 4.5:1.
+fill — that is what keeps six hues distinguishable while staying above 4.5:1.
+
+### Amber and yellow, and why "3:1 between them" is the wrong test
+
+The six states exist so that **colour carries ownership**. Amber says the base
+still owes the document and still has runway; yellow says AFSVC has it and the
+base owes nothing. Collapsing them tells a DFAC manager that a document they
+filed on time and one they never sent are the same kind of problem.
+
+They were `#8A5300` and `#6B5300` — **1.16:1 apart**, two near-identical
+browns. The Figma build had the same pair at 1.25:1. Labels and icons differed,
+so it was never a 508 failure, but at that distance nobody can tell them apart
+at a glance, which was the entire purpose.
+
+The build note asked for **at least 3:1 between the two text colours**. That
+test cannot be passed and should not be attempted. WCAG contrast is a ratio of
+*relative luminance*; two colours can differ only in hue and sit at 1.0:1. To
+put 3:1 between two chip texts, one of them has to become roughly three times
+lighter — at which point it fails 4.5:1 against its own pale background. The
+requirement is self-defeating: it trades a real accessibility guarantee for a
+proxy measure of a different property.
+
+3:1 is also not a text-contrast threshold in WCAG. It is 1.4.11 Non-text
+Contrast, which governs a UI component against **adjacent** colour — not two
+foregrounds that never touch.
+
+What actually matters is whether the two are *perceptually distinct*, which is
+measured in a perceptually uniform space:
+
+| Pair | Luminance ratio | ΔE2000 | Hue separation |
+|---|---|---|---|
+| Old amber vs old yellow | 1.16:1 | 10.5 | 17° |
+| **New amber vs new yellow** | **1.13:1** | **25.1** | **41°** |
+
+ΔE2000 above about 5 is unambiguous to a casual observer. 25 is not a
+borderline call.
+
+**Amber must not arrive at red on its way to orange.** Red means the base has
+no runway left and amber means it still has some — a distinction as load-bearing
+as the one against yellow, and one that a naive "make amber more orange" fix
+walks straight into. The first candidate pair scored ΔE 30 against yellow and
+only 14.5 against red, which traded one collision for another. The shipped
+amber is **ΔE 19.5 from red**, and `tests/test_design_tokens.py` holds both
+distances at once.
+
+And it survives colour-vision deficiency, simulated at the token level:
+
+| Simulation | ΔE2000 | Luminance ratio |
+|---|---|---|
+| Deuteranopia | 17.6 | 1.78:1 |
+| Protanopia | 13.9 | 1.61:1 |
+| Tritanopia | 14.8 | 1.26:1 |
+
+The luminance ratio *improves* under deutan and protan, because the two hues
+collapse onto different points of the remaining axis rather than the same one.
+
+None of this is the guarantee. **The guarantee is that colour is never the only
+channel**: every chip carries its label in text and a distinct icon, and the
+app is usable in greyscale and by a screen reader with the colours switched
+off entirely. Hue is what makes the six scannable; text is what makes them
+readable. `tests/test_design_tokens.py` holds all of it.
 
 ---
 

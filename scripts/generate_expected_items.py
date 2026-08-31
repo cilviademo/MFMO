@@ -43,6 +43,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from status_engine import item_status, resolve_dates  # noqa: E402
+from vocabulary_guard import check_requirement_filters  # noqa: E402
 
 # Frequency decides whether a requirement expands in this period. Nothing is
 # inferred from the period's name.
@@ -233,6 +234,12 @@ def generate(
     """
     today = today or _dt.date.today()
     existing = existing or {}
+
+    # BEFORE anything is generated. A filter that matches nothing must say so:
+    # twice now, a generator has filtered on a vocabulary the data does not use
+    # and reported "created 0" as success. See scripts/vocabulary_guard.py.
+    check_requirement_filters(requirements, facilities)
+
     installations_by_id = {i["Installation_ID"]: i for i in installations}
     facilities_by_id = {f["Facility_ID"]: f for f in facilities}
 
@@ -240,7 +247,8 @@ def generate(
     stats = {"created": 0, "retained": 0, "skipped_inactive": 0,
              "skipped_frequency": 0, "skipped_conditional": 0, "period": period,
              "installations_not_onboarded": [], "facilities_with_no_requirements": [],
-             "facilities_without_model": [], "facilities_without_type": []}
+             "facilities_without_model": [], "facilities_without_type": [],
+             "requirements_matching_nothing": []}
 
     onboarded = {i["Installation_ID"] for i in installations
                  if _bool(i["Active_Flag"]) and _bool(i["Generation_Enabled"])}

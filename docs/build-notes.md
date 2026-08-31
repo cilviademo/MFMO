@@ -130,9 +130,17 @@ how a notification system gets muted in week one.
 
 ### Folder structure
 
-One site, one Teams: **DAF Mission Feeding**. Four portfolio channels. Within a
-portfolio: monthly docs folder → month. No naming conventions anywhere, and none
-assumed.
+> **Superseded on 31 Aug 2026.** The programme's answer here said one Teams
+> site with four portfolio channels. It is **four separate SharePoint site
+> collections**, with four different root folder names and one inconsistent
+> slug. `deployment/site-bindings.md` carries the real structure; everything
+> below about *what the path tells you* still holds. Kept because the reasoning
+> about signals is the part that mattered and is unaffected.
+
+Four site collections, one per portfolio. Within each: a Monthly Data Call
+folder → fiscal year → month. No naming conventions anywhere, and none assumed —
+which is exactly why the FY and month folders are **matched** against what is on
+the site rather than constructed.
 
 The path gives **portfolio and month**. It does not give installation. That
 matters, and it resolves neatly:

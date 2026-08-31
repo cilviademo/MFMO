@@ -1,14 +1,26 @@
-# EOM-02 — File Intake
+# EOM-02b — Legacy Intake (the exception route)
 
-**Trigger:** *When a file is created (properties only)* on the **Portfolio
-document library** — not on an FY folder.
+**Trigger:** *When a file is created (properties only)* on each portfolio's
+document library — not on an FY folder.
+
+**Was `EOM-02 File Intake`.** Renamed when EOM-02 became the app's submission
+path. This is the discovery route for files that arrive without a declaration,
+and it is an exception route, not the normal one.
 
 ```
-Trigger:  Portfolio Documents library
-Filter:   path starts with MF_App_Config.EOM_Root_Path
-          AND path contains MF_App_Config.CurrentFiscalYear
+Trigger:  the Shared Documents library on ONE portfolio site
+Filter:   path starts with the destination's Root_Folder
 Else:     exit silently
 ```
+
+## Four sites means four instances of this flow
+
+The four portfolios are four separate **site collections**. A SharePoint trigger
+binds to one site, so this flow is deployed once per portfolio, each bound to
+its own `MF_Portfolio{n}_SiteURL` and its own `MF_Document_Destination` row.
+
+One instance covering all four is not an option the connector offers, and a
+build that assumed it would have silently discovered files in Portfolio 1 only.
 
 ## Library level, not folder level
 
@@ -26,23 +38,28 @@ second path, not the fallback for a failure of the first: people will keep
 copying files into folders, and a system that loses them is worse than one that
 queues them.
 
-Files uploaded through the app are already declared and must be ignored — they
-land under `MF_App_Config.EvidenceRootPath`, which is the first thing this flow
-checks.
+Files uploaded through the app are already declared and must be ignored. EOM-02
+writes a `MF_EOM_Submission` row carrying the file's `SharePoint_Unique_ID`
+before this flow ever sees the file, so **the check is "does a submission
+already own this GUID"**, not a path comparison.
+
+That matters under `FIND_OR_ROOT`: a file EOM-02 filed at the root, and a human
+later moved into the right month folder, changes path twice and keeps its GUID
+throughout. A path-based check would rediscover it as an unmatched stray on the
+day somebody tidied up.
 
 ## Logic
 
 ```
-if the file sits under EvidenceRootPath:
-        exit — EOM-05 wrote it, nothing to classify
-
-if a submission already carries this SharePoint_File_ID:
-        exit — a re-run over the library after an outage is a no-op
+if a submission already carries this SharePoint_Unique_ID:
+        exit — EOM-02 wrote it, or a human moved it, or this is a re-run
+               over the library after an outage. All three are no-ops.
 
 else:
-    store SharePoint_File_ID   — it survives a rename or a move; the URL does not
-    portfolio  = segment 1 of the folder path
-    fiscalYear = segment 2 of the folder path
+    store SharePoint_Unique_ID — the GUID survives a rename and a move;
+                                 the URL and the path survive neither
+    portfolio  = the destination row this instance is bound to
+    fiscalYear = matched from the folder path, never parsed positionally
     uploader   = file.Author
 
     // Weak hints only. NEVER auto-applied. No filename convention exists and

@@ -19,8 +19,9 @@ not been said out loud:
 **The data layer does not currently enforce installation scope, and the
 confirmed folder structure prevents it from doing so.**
 
-The structure is one Teams site, four portfolio channels, monthly docs folder,
-month folder. Every base user with access to a portfolio channel can see every
+The structure is **four separate SharePoint site collections**, one per
+portfolio, each with a Monthly Data Call folder, fiscal year, then month. Every
+base user with access to a portfolio's library can see every
 other base's documents in that channel — in Teams, in SharePoint, and through
 any client that speaks to the library. The app can show a DFAC manager only
 Lackland. SharePoint will still hand them Creech's 1119 if they browse to it.
@@ -144,7 +145,7 @@ Deployment must configure SharePoint permissions that mirror the app's scope
 model. Until that is done, the app's scope claim is presentational.
 
 See docs/security-open-issue.md — the current folder structure gives every base
-user visibility of their whole portfolio channel, which the app cannot fix.
+user visibility of their whole portfolio site, which the app cannot fix.
 
 ==================================================
 5. SYSTEM-DERIVED FIELDS

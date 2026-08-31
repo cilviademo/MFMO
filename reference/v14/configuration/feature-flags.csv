@@ -1,0 +1,9 @@
+﻿Feature_Key,Feature_Name,Enabled_Prod,Enabled_Testers,Minimum_Role,Effective_Date,Notes
+EOM_UPLOAD,EOM upload screen,TRUE,TRUE,DFAC Manager,2026-09-01,
+EOM_QC,Review queue,TRUE,TRUE,Portfolio Manager,2026-09-01,
+EOM_UNMATCHED,Needs classification queue,TRUE,TRUE,Portfolio Manager,2026-09-01,
+EOM_ADMIN_REQS,Requirements admin,TRUE,TRUE,Admin,2026-09-01,
+EOM_DIAGNOSTICS,Diagnostics screen,FALSE,TRUE,Developer,,Developer surface. Never enable in prod.
+EOM_WAIVERS,Requirement waivers,FALSE,TRUE,Portfolio Manager,,"Built, not released — no admin UI yet"
+EOM_CONTENT_CLASSIFY,Content-based classification,FALSE,FALSE,Developer,,Tier 2. Not built in R1.
+FMAT_MODULE,FMAT module (R2),FALSE,FALSE,Developer,,Placeholder for the next release

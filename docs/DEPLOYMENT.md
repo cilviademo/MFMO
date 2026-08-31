@@ -1,8 +1,16 @@
 # Deployment
 
-Read `government-environment-mode.md` first. **Two answers gate everything:**
-which government cloud this tenant is in, and whether PAC CLI is authorized
-against it. Both currently read `UNKNOWN` in `configuration/app-config.csv`.
+Read `government-environment-mode.md` first, then `deployment/site-bindings.md`.
+
+**The cloud is DoD** — `usaf.dps.mil` / `dod.teams.microsoft.us`, `UsGovDod`.
+Not GCC High; every GCC High endpoint in a document dated before 31 Aug 2026 is
+wrong for this deployment. Whether PAC CLI is authorized against the tenant is
+still `UNKNOWN` in `configuration/app-config.csv`, and nothing in the design
+depends on it.
+
+**The four portfolios are four separate SharePoint site collections.** Four
+connection targets, four sets of permissions, four things to bind at import.
+Gate 3b below is not optional and cannot be derived from a pattern.
 
 **Do not promise zero-touch deployment.** Tenant-specific SharePoint rebinding
 after import is a real manual step and is listed below.
@@ -20,7 +28,7 @@ not adjusted.
 
 ```powershell
 pwsh provisioning/Verify-MFOpsCapabilities.ps1 `
-    -SiteUrl <site> -TenantCloud <UsGov|UsGovHigh|UsGovDod>
+    -SiteUrl <site> -TenantCloud UsGovDod
 ```
 
 **Stop if any MVP dependency is unavailable.** SharePoint, Power Apps, Power
@@ -31,11 +39,11 @@ flag.
 
 ```powershell
 python3 scripts/eom_schema.py --json > provisioning/schema.generated.json
-pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud <cloud> -WhatIf
-pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud <cloud>
+pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud UsGovDod -WhatIf
+pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud UsGovDod
 ```
 
-Expected: **16 lists, 263 columns**, plus the evidence library with versioning
+Expected: **17 lists, 282 columns**, plus the evidence library with versioning
 on.
 
 **Confirm the indexes were created.** The script verifies them and throws if
@@ -57,7 +65,7 @@ The app build does not wait on this. The deployment does.
 ### 3. Seed configuration
 
 ```powershell
-pwsh provisioning/Seed-MFOpsConfiguration.ps1 -SiteUrl <site> -TenantCloud <cloud>
+pwsh provisioning/Seed-MFOpsConfiguration.ps1 -SiteUrl <site> -TenantCloud UsGovDod
 ```
 
 Seeds `MF_App_Config`, `MF_Feature_Flags` and the twelve requirements. Then
@@ -78,6 +86,38 @@ populate its facilities and operating models, validate them, set
 **Nothing generates for a base until that flag is set**, and a base with it
 FALSE reads as *not yet onboarded*, never as compliant. Expect the first
 version to be wrong at a handful of bases.
+
+### 3b. Walk the four sites and bind the destinations
+
+**Ten minutes of somebody's time, and everything downstream depends on it.**
+
+The four portfolios are four **separate SharePoint site collections**, not four
+channels in one team. Nothing here is derivable: Portfolio 2's slug carries a
+`Legacy_` prefix the other three do not, and all four root folder names differ,
+two of them with sort prefixes (`H.`, `5.`) that no rule produces.
+
+For each of the four, per `deployment/site-bindings.md`:
+
+- [ ] Open the site and record the exact site collection URL
+- [ ] Confirm the library name (assumed `Shared Documents` — verify)
+- [ ] Record the exact root folder name **including the sort prefix**
+- [ ] **Record how the month folders inside FY26 are actually named** —
+      `Aug 26`? `August 2026`? `08. August`? This is the one nobody will guess
+- [ ] Confirm FY25, FY26 and FY27 all exist
+- [ ] Note who administers permissions on that site
+- [ ] Bind `MF_Portfolio{n}_SiteURL` at import; set `Site_URL`,
+      `Month_Folder_Pattern_Note`, `Verified_By`, `Verified_Date` and
+      `Active_Flag = TRUE` on the destination row
+- [ ] Upload one test file per portfolio and confirm it lands in the month
+      folder, not at the root
+
+**Every row ships `Site_URL` blank, `Verified_By` blank and `Active_Flag`
+FALSE**, and EOM-02 fails closed on all three. An unverified site cannot
+silently receive files — but it also cannot receive them at all, so nobody can
+upload until this is done.
+
+Confirm the Power Platform environment is in the **same tenant** as the
+SharePoint sites. Same cloud does not guarantee same tenant.
 
 ### 4. Build EOM-01 and run it
 
@@ -105,11 +145,26 @@ Then, **before building any UI**, verify in the tenant:
 `App.Formulas` (all four `.fx` files), `App.OnStart`, the containers, the four
 components, then `scrHome`, `scrMaintenance`, `scrNoAccess`.
 
-### 6. Build `scrUpload` and EOM-05
+### 6. Build `scrUpload` and EOM-02
 
 **Test with an arbitrary filename** — `Copy of copy FINAL(2).xlsx`. It must
 upload correctly, because the declaration classified it and the filename was
 never read.
+
+Then test the routing, which is where this breaks on day one:
+
+- [ ] One upload per portfolio lands in the **matched** month folder
+- [ ] Upload against a period whose month folder does not exist: the file lands
+      at the Monthly Data Call root, `Needs_Filing = TRUE`, `Filing_Note` says
+      what was looked for, and Admin shows the count
+- [ ] **No folder was created** by any of it — compare the folder listing before
+      and after
+- [ ] An upload to a portfolio whose destination row is still inactive is
+      refused with `DESTINATION_NOT_CONFIGURED`, and the message shows no path
+      and no URL
+- [ ] `SharePoint_Unique_ID` is populated on every submission row
+- [ ] Move a filed document by hand, then re-run EOM-02b: it is **not**
+      rediscovered as a stray, because deduplication is on the GUID
 
 ### 7. Build `scrInstallation` and `scrReview`
 
@@ -200,6 +255,13 @@ sufficient.
 | S5 | An upload with no matching expected item is refused and creates no tracker row |
 | S6 | A folder hint is displayed as a suggestion and is never auto-applied |
 | S7 | On-behalf submission records both the uploader and the target location |
+| S8 | One upload per portfolio lands in the **matched** month folder on that portfolio's own site collection |
+| S9 | An upload for a period whose month folder is absent lands at the Monthly Data Call root with `Needs_Filing`, a `Filing_Note` naming what was searched for, and a visible Admin count |
+| S10 | **No folder was created** by any submission — folder listings before and after are identical |
+| S11 | An upload to a portfolio whose destination is inactive, unverified or unbound is refused, and the message shows no path, no site URL and no connector text |
+| S12 | `SharePoint_Unique_ID` is populated on every submission row |
+| S13 | A filed document moved by hand is **not** rediscovered as a stray on the next EOM-02b run — deduplication is on the GUID, not the path |
+| S14 | A file created but a record write that fails returns `SUBMISSION_NOT_CONFIRMED` with a correlation ID, and never reports success |
 
 ### QC and status
 
@@ -215,6 +277,7 @@ sufficient.
 | Q10 | Both on-time facts are recorded independently on a returned-then-accepted item |
 | Q5 | Marking a requirement Verified lets a past-suspense item go Red on the next run |
 | Q6 | An accepted item stays Green after its due date passes |
+| Q11 | Amber and yellow chips are told apart at a glance by three people who did not build the app, on the real screen, at the real size |
 
 ### Rollups and the COP
 
@@ -246,7 +309,7 @@ it lies without an error.
 | E1 | `MaintenanceMode` sends a normal user to `scrMaintenance` before any data loads |
 | E2 | A `Developer_Flag` holder still gets in |
 | E3 | `ReadOnlyMode` disables every write affordance |
-| E4 | `ReadOnlyMode` makes EOM-04 and EOM-05 **refuse**, tested by calling them directly, not through the app |
+| E4 | `ReadOnlyMode` makes EOM-04 and EOM-02 **refuse**, tested by calling them directly, not through the app |
 | E5 | A normal user cannot reach `scrDiagnostics` by navigation, deep link or keyboard |
 | E6 | Turning a feature flag off removes the destination from the nav |
 | E7 | Telemetry writes on app open, upload and QC decision |

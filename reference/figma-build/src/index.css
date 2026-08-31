@@ -1,0 +1,113 @@
+/*
+  Production font: Segoe UI Variable (Windows 11+) / Segoe UI (Windows 7–10).
+  Inter is the Figma design substitute only — it is not a production dependency
+  and must not be loaded from a CDN in any deployed environment.
+  The Google Fonts @import has been removed intentionally.
+*/
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+:root {
+  --bg: #faf9f8;
+  --surface: #ffffff;
+  --border: #d1d1d1;
+  --text: #242424;
+  --secondary: #616161;
+  --accent: #0f548c;
+  --hover: rgba(0, 0, 0, 0.03);
+  --pressed: rgba(0, 0, 0, 0.07);
+
+  /* Blue — submission window open, nobody acts */
+  --status-open-text: #0f548c;
+  --status-open-bg: #eff6fc;
+  --status-open-border: #0f548c;
+
+  /* Amber — late, initial suspense passed, BASE acts */
+  --status-late-text: #8a5300;
+  --status-late-bg: #fff4e5;
+  --status-late-border: #c07000;
+
+  /* Red — overdue or correction required, BASE acts */
+  --status-overdue-text: #a4262c;
+  --status-overdue-bg: #fdf3f4;
+  --status-overdue-border: #a4262c;
+
+  /* Yellow — awaiting AFSVC review, AFSVC acts */
+  --status-review-text: #6b4c00;
+  --status-review-bg: #fefce8;
+  --status-review-border: #c49400;
+
+  /* Green — accepted, done */
+  --status-accepted-text: #0e700e;
+  --status-accepted-bg: #f1faf1;
+  --status-accepted-border: #0e700e;
+
+  /* Gray — not required this period */
+  --status-na-text: #484848;
+  --status-na-bg: #f5f5f5;
+  --status-na-border: #8a8a8a;
+}
+
+.dark {
+  --bg: #1f1f1f;
+  --surface: #292929;
+  --border: #3d3d3d;
+  --text: #ffffff;
+  --secondary: #adadad;
+  --accent: #4ea0d4;
+  --hover: rgba(255, 255, 255, 0.05);
+  --pressed: rgba(255, 255, 255, 0.1);
+
+  --status-open-text: #4ea0d4;
+  --status-open-bg: #071c30;
+  --status-open-border: #4ea0d4;
+
+  --status-late-text: #e09d4a;
+  --status-late-bg: #2a1e00;
+  --status-late-border: #e09d4a;
+
+  --status-overdue-text: #e06c75;
+  --status-overdue-bg: #2a0f10;
+  --status-overdue-border: #e06c75;
+
+  --status-review-text: #e8c84a;
+  --status-review-bg: #252000;
+  --status-review-border: #c49400;
+
+  --status-accepted-text: #6cbb6c;
+  --status-accepted-bg: #142814;
+  --status-accepted-border: #6cbb6c;
+
+  --status-na-text: #adadad;
+  --status-na-bg: #272727;
+  --status-na-border: #6a6a6a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars: hidden at rest, visible on hover */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+*:hover::-webkit-scrollbar-thumb { background: var(--border); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

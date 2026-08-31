@@ -9,10 +9,42 @@
       "required": true
     },
     {
+      "schemaName": "mfops_MF_Portfolio1_SiteURL",
+      "displayName": "MF_Portfolio1_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 1. The four portfolios are four SEPARATE site collections with inconsistent slugs \u2014 bind each one from what is on the site, never by pattern from another. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio2_SiteURL",
+      "displayName": "MF_Portfolio2_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 2. THIS IS THE ODD ONE: its slug carries a 'Legacy_' prefix the other three do not. A URL built by pattern 404s here and nowhere else. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio3_SiteURL",
+      "displayName": "MF_Portfolio3_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 3. The four portfolios are four SEPARATE site collections with inconsistent slugs \u2014 bind each one from what is on the site, never by pattern from another. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio4_SiteURL",
+      "displayName": "MF_Portfolio4_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 4. The four portfolios are four SEPARATE site collections with inconsistent slugs \u2014 bind each one from what is on the site, never by pattern from another. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
       "schemaName": "mfops_MF_FileIntakeLibrary",
       "displayName": "MF_FileIntakeLibrary",
       "type": "String",
-      "description": "Document library where FY folders live",
+      "description": "Legacy folder-drop discovery library for EOM-02b only. The normal path writes to the portfolio destination.",
       "defaultValue": "",
       "required": true
     },
@@ -124,7 +156,7 @@
       "schemaName": "mfops_MF_TenantCloud",
       "displayName": "MF_TenantCloud",
       "type": "String",
-      "description": "UsGov | UsGovHigh | UsGovDod. Must be answered before provisioning.",
+      "description": "UsGov | UsGovHigh | UsGovDod. This deployment is UsGovDod. Confirm the Power Platform environment is in the same tenant as the SharePoint sites.",
       "defaultValue": "",
       "required": true
     }

@@ -33,7 +33,13 @@ TEXT_EXT = {".md", ".txt", ".csv", ".json", ".yaml", ".yml", ".ps1", ".fx",
 #
 # Only WARN-able intent is expressible this way; the scanner still counts and
 # reports every one, so an exception cannot be added quietly.
-ALLOW_RE = re.compile(r"prerelease:\s*allow\s+([A-Z]{3}-\d{2})\b[^\n]*")
+# prerelease: allow XXX-00 <reason>
+# The rule id, then a reason. The reason is REQUIRED and must be substantive:
+# an exception nobody explained is an exception nobody can review, and the
+# whole point of preferring inline markers over whole-file skips was that each
+# one stays auditable. A marker with no reason FAILS the scan.
+ALLOW_RE = re.compile(r"prerelease:\s*allow\s+([A-Z]{3}-\d{2})\b[ \t]*([^\n]*)")
+MIN_ALLOW_REASON = 12
 
 # (id, severity, pattern, message)
 RULES = [
@@ -49,18 +55,31 @@ RULES = [
 
     # ---- commercial cloud: FAIL ----------------------------------------
     ("CLD-01", "FAIL", r"make\.powerapps\.com|flow\.microsoft\.com(?!\.us)",
-     "Commercial Power Platform endpoint — this package is GCC High / DoD only"),
+     "Commercial Power Platform endpoint. This deployment is DoD: "
+     "make.apps.appsplatform.us, flow.appsplatform.us."),
     ("CLD-02", "FAIL", r"app\.powerbi\.com",
      "Commercial Power BI endpoint. Government uses a different service URL."),
     ("CLD-03", "FAIL", r"\.sharepoint\.com(?!\.)",
-     "Commercial SharePoint host. Government is .sharepoint.us"),
+     "Commercial SharePoint host. GCC High is .sharepoint.us; this "
+     "deployment's DoD tenant is .dps.mil"),
     ("CLD-04", "FAIL", r"azurewebsites\.net",
      "Commercial Azure endpoint"),
 
     # ---- hardcoded destinations: FAIL ----------------------------------
-    ("URL-01", "FAIL", r"https://[a-z0-9-]+\.sharepoint\.us/sites/(?!<)",
-     "Hardcoded government SharePoint site. Use the MF_SharePointSiteURL "
-     "environment variable — a real site URL in source is a destination leak."),
+    # Both government SharePoint hosts. The rule was written when the cloud was
+    # assumed to be GCC High (.sharepoint.us). This tenant is DoD, where sites
+    # live on .dps.mil — so the rule as written would have watched the one host
+    # a leak could not occur on and missed the one it could.
+    ("URL-01", "FAIL",
+     r"https://[a-z0-9.-]+\.(sharepoint\.us|dps\.mil)/sites/(?!<)",
+     "Hardcoded government SharePoint site. Bind it from an environment "
+     "variable — MF_SharePointSiteURL, or MF_Portfolio{n}_SiteURL for a "
+     "portfolio destination. A real site URL in source is a destination leak."),
+    ("URL-02", "FAIL",
+     r"(?i)DAFMissionFeeding-(Legacy_)?Portfolio[1-4]\s*(/|\\|\.)",
+     "A portfolio site slug used as a path. The four portfolios are four "
+     "separate site collections bound at import; a slug in a path is a "
+     "destination built by pattern, which is how Portfolio 2 breaks."),
 
     # ---- prohibited connectors: FAIL ------------------------------------
     ("CON-01", "FAIL", r"shared_(webcontents|dropbox|googledrive|onedrive)\b",
@@ -123,6 +142,10 @@ MANIFEST_CHECKS = [
     ("MAN-11", "rmf.ato_claimed", False),
 ]
 
+# A required artifact has to say something. 200 bytes is well under any real
+# document and well over an accidental heading.
+MIN_ARTIFACT_BYTES = 200
+
 REQUIRED_FILES = [
     "security/security-manifest.yaml",
     "security/connector-allowlist.yaml",
@@ -130,6 +153,7 @@ REQUIRED_FILES = [
     "docs/accessibility.md",
     "CHANGELOG.md",
     "ROLLBACK.md",
+    "deployment/site-bindings.md",
 ]
 
 
@@ -157,15 +181,30 @@ def scan_content():
                 line = text[:m.start()].count("\n") + 1
                 source = lines[line - 1]
                 snippet = source.strip()[:90]
-                # An inline exception must name THIS rule on THIS line. It is
-                # recorded and reported, never silent.
+                # An inline exception must name THIS rule on THIS line, and it
+                # must give a reason. It is recorded and reported, never silent.
                 exception = next((a for a in ALLOW_RE.finditer(source)
                                   if a.group(1) == rid), None)
                 if exception:
-                    allowed.append((rid, rel, line, exception.group(0).strip()))
+                    reason = _clean_reason(exception.group(2))
+                    if len(reason) < MIN_ALLOW_REASON:
+                        # An unexplained exception is worse than no exception:
+                        # it silences a rule and leaves nothing to review.
+                        hits.append(("FAIL", "EXC-01", rel, line,
+                                     f"Inline exception for {rid} gives no reason. "
+                                     f"Write 'prerelease: allow {rid} <why this "
+                                     f"line is not the thing the rule is for>'.",
+                                     snippet))
+                        continue
+                    allowed.append((rid, rel, line, reason))
                     continue
                 hits.append((sev, rid, rel, line, msg, snippet))
     return hits, allowed
+
+
+def _clean_reason(raw):
+    """Strip the comment closers a marker picks up from its host syntax."""
+    return raw.strip().rstrip("-->").rstrip("*/").rstrip("#").strip(" \t-*/<>").strip()
 
 
 def get(d, dotted):
@@ -229,16 +268,35 @@ def main():
             if actual != expected:
                 fails.append(f"  [{rid}] manifest {key} = {actual!r}, must be {expected!r}")
 
+    # Existence was never the question. ROLLBACK.md shipped as a zero-byte file
+    # and passed a check that only asked whether the path resolved -- which is
+    # exactly the shape of failure this whole scan exists to prevent, in the
+    # scan itself.
     for rf in REQUIRED_FILES:
-        if not os.path.exists(os.path.join(ROOT, rf)):
-            warns.append(f"  [REQ-01] required release artifact missing: {rf}")
+        full = os.path.join(ROOT, rf)
+        if not os.path.exists(full):
+            fails.append(f"  [REQ-01] required release artifact missing: {rf}")
+            continue
+        try:
+            with open(full, encoding="utf-8", errors="ignore") as fh:
+                body = fh.read()
+        except OSError as exc:
+            fails.append(f"  [REQ-01] required release artifact unreadable: {rf} ({exc})")
+            continue
+        substantive = [ln for ln in body.splitlines()
+                       if ln.strip() and not ln.lstrip().startswith("#")]
+        if len(body.strip()) < MIN_ARTIFACT_BYTES or not substantive:
+            fails.append(
+                f"  [REQ-02] required release artifact is empty or a stub: {rf}\n"
+                f"        {len(body.strip())} bytes, {len(substantive)} substantive line(s). "
+                f"A rollback procedure nobody wrote is not a rollback procedure.")
 
     if allowed:
         # Reported every run, so an exception cannot be added quietly and a
         # reviewer sees the whole set in one place.
         print(f"\nALLOWED BY INLINE EXCEPTION ({len(allowed)})")
-        for rid, rel, line, marker in allowed:
-            print(f"  [{rid}] {rel}:{line}  {marker}")
+        for rid, rel, line, reason in allowed:
+            print(f"  [{rid}] {rel}:{line}\n        {reason}")
 
     if warns:
         print(f"\nWARN ({len(warns)})")

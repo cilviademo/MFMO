@@ -93,10 +93,76 @@ CALCULATE (
     MF_EOM_Status[Package_State] = "ACTION_REQUIRED"
 )
 
+### Every completion figure states its denominator
+
+**A not-onboarded installation is not compliant. It has not been asked.**
+
+All 103 installations ship `Generation_Enabled = FALSE`. EOM-01 generates
+nothing for them, so they contribute no rows to `MF_EOM_Status` — and a
+percentage computed over the rows that exist reports 100% while most of the
+enterprise has never been brought into the system. That is not a rounding
+problem. It is a card that says the programme is finished when it has barely
+started.
+
+The fix is not a caveat in a tooltip. It is two measures, and the report shows
+both:
+
+```dax
+-- Every package the onboarded population owes this period. Not "packages we
+-- have rows for" -- MF_EOM_Status only holds rows for onboarded installations,
+-- which is precisely why the denominator has to be named rather than inferred
+-- from the fact table's row count.
+Packages expected =
+CALCULATE (
+    DISTINCTCOUNT ( MF_EOM_Status[Facility_ID] ),
+    MF_EOM_Status[Required_Flag] = TRUE ()
+)
+
+Installations onboarded =
+CALCULATE ( COUNTROWS ( MF_Installation ),
+            MF_Installation[Generation_Enabled] = TRUE (),
+            MF_Installation[Active_Flag]        = TRUE () )
+
+Installations not yet onboarded =
+CALCULATE ( COUNTROWS ( MF_Installation ),
+            MF_Installation[Generation_Enabled] = FALSE (),
+            MF_Installation[Active_Flag]        = TRUE () )
+
+-- The percentage, with the denominator it was computed over stated in the
+-- same string. A caller cannot use this number without also carrying the
+-- population it describes.
+Completion statement =
+VAR Onboarded = [Installations onboarded]
+VAR Waiting   = [Installations not yet onboarded]
+VAR Done      = [Packages complete]
+VAR Expected  = [Packages expected]
+RETURN
+    IF ( Expected = 0,
+         "No packages expected — " & Onboarded & " installations onboarded",
+         FORMAT ( DIVIDE ( Done, Expected ), "0%" )
+           & " of " & Expected & " packages across "
+           & Onboarded & " onboarded installations"
+           & IF ( Waiting > 0,
+                  " · " & Waiting & " installations not yet onboarded", "" ) )
+```
+
+Rendered:
+
+```
+84% of 180 packages across 43 onboarded installations
+60 installations not yet onboarded
+```
+
+**Never one number.** A card visual has room for exactly one figure, which is
+exactly why the temptation is strongest here — put the second line in the card's
+subtitle rather than dropping it.
+
+The same rule governs the in-app visuals. `docs/native-visuals.md`.
+
 Package Status Color =
 SWITCH ( SELECTEDVALUE ( MF_EOM_Status[Package_State] ),
     "COMPLETE",        "#0E700E",
-    "IN_REVIEW",       "#8A5300",
+    "IN_REVIEW",       "#5A5800",   -- yellow: AFSVC holds it
     "ACTION_REQUIRED", "#A4262C",
     "IN_PROGRESS",     "#0F548C",
     "#424242" )
@@ -239,8 +305,22 @@ The gov Power BI service URL differs by cloud. It comes from
 | Onboarding | Installation | `Generation_Enabled` — who is not yet asked, which is not the same as compliant |
 | Timeliness | Period | `Days_Late`, `On_Time_Flag`, aging |
 
-Conditional formatting comes from `Status_Code` — six values, and Amber must
-be visually distinct from Yellow in the theme or the split is lost. The label
+Conditional formatting comes from `Status_Code` — six values. Use the app's
+tokens verbatim so a chip and a report cell for the same item are the same
+colour:
+
+```
+0 Gray    #424242 on #F5F5F5     not required
+1 Red     #A4262C on #FDF3F4     base owes it, no runway
+2 Yellow  #5A5800 on #FDFAE0     AFSVC owes it
+3 Green   #0E700E on #F1FAF1     accepted
+4 Blue    #0F548C on #EFF6FC     not due
+5 Amber   #944800 on #FFF3E6     base owes it, has runway
+```
+
+**Amber and yellow must stay 48 degrees apart in hue**; they were two
+near-identical browns 1.16:1 apart, which is a split nobody can read at a
+glance. Do not let a report theme "harmonise" them back together. The label
 beside it comes from `Final_Status`. **Status is never colour-only in the report either** — a green
 square with no text fails the same gate in Power BI as it does in the app.
 Every chart carries a text summary and a data-table alternative.

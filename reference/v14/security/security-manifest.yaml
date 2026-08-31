@@ -1,0 +1,82 @@
+# Mission Feeding Operations — security manifest
+# Machine-readable claims about the package. scripts/prerelease_scan.py verifies
+# every one of them against the repository and fails the build on a mismatch.
+# A claim here that the scanner cannot verify is marked verify: manual.
+
+application:
+  name: MissionFeedingOperations
+  version: 0.6.0
+  production_ready_candidate: false      # flips to true only after Gate 1
+  contains_cui: false
+  contains_secrets: false
+  contains_operational_data: false
+
+cloud:
+  supported: [GCC_HIGH, DOD]
+  commercial_cloud_supported: false
+  commercial_endpoints_embedded: false
+  # GCC High and DoD have different maker, flow, admin and SharePoint domains.
+  # Nothing in source may name any of them.
+  hardcoded_urls_permitted: false
+
+authentication:
+  provider: ENTRA_GOVERNMENT
+  local_authentication: prohibited
+  custom_login_screen: prohibited
+  identity_source: "User().Email via CAC/Entra"
+  # The QRG POC column is a display name. It is never an identity.
+  poc_field_as_identity: prohibited
+
+authorization:
+  default: deny
+  scope_model: installation_and_portfolio
+  fail_closed: true
+  # THE critical claim. Power Apps Visible/Filter is not a security boundary.
+  # Microsoft is explicit: hiding a record in the app does not remove the user's
+  # permission to the underlying SharePoint data.
+  app_filtering_is_not_a_boundary: true
+  data_layer_permissions_required: true
+  data_layer_permissions_verified: false   # SEE docs/security-open-issue.md
+  user_may_assign_own_role: false
+  user_may_assign_own_installation: false
+  user_may_edit_audit_author: false
+  user_may_edit_reviewer_identity: false
+
+connectors:
+  allowed: [SharePoint]
+  conditional: [Office365Users, Office365Outlook, PowerBI]
+  prohibited: [HTTP, HTTPWithEntraID, CustomConnector, Dropbox, GoogleDrive,
+               ConsumerOneDrive, ExternalAI, AIBuilder, ThirdPartySaaS]
+
+cui:
+  framework_enabled: true
+  default_cui_flag: false
+  embedded_cui_data: false
+  # CUI applies only where an authorised category and authority exist.
+  # Do not designate by assumption, and do not treat legacy sensitivity
+  # markings as equivalent to CUI.
+  auto_designation: prohibited
+  protected_fields_nullable: true
+
+data:
+  destructive_user_delete: false
+  versions_immutable: true
+  anonymous_sharing: prohibited
+  external_telemetry: false
+  external_fonts: false          # the Figma build loads Inter from Google Fonts
+  public_cdn_runtime: false
+
+release:
+  debug_mode: false
+  mock_data: false
+  role_simulator_prod: disabled
+  bypass_security: false
+  synthetic_users: false
+
+rmf:
+  # Import success is not authorisation. RMF registration, control assessment
+  # and the AO decision are lifecycle activities on the .mil side.
+  ato_claimed: false
+  inherits_platform_authorisation: true
+  evidence_folder: docs/rmf/
+  stig_compliance_claimed: false

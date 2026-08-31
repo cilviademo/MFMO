@@ -38,12 +38,18 @@ COLOUR — LIGHT THEME
 Background #FAF9F8. Surface #FFFFFF. Border #D1D1D1.
 Text #242424. Secondary text #616161.
 Accent #0F548C used sparingly — links, focus rings, one primary button.
-Status, five states, each with its own text label always visible:
-  Green  #0E700E on #F1FAF1  accepted
-  Amber  #8A5300 on #FFF9F0  awaiting review or correction needed
-  Red    #A4262C on #FDF3F4  overdue
-  Blue   #0F548C on #EFF6FC  not due yet
-  Gray   #424242 on #F5F5F5  not applicable
+Status, SIX states. Colour carries OWNERSHIP, not severity. Each has its own
+text label, always visible:
+  Green  #0E700E on #F1FAF1  accepted, done
+  Blue   #0F548C on #EFF6FC  not due yet, nobody acts
+  Amber  #944800 on #FFF3E6  late: the BASE owes it and still has runway
+  Yellow #5A5800 on #FDFAE0  awaiting review: AFSVC owes it, the base owes nothing
+  Red    #A4262C on #FDF3F4  overdue or returned: the BASE owes it, no runway
+  Gray   #424242 on #F5F5F5  not required this period
+AMBER AND YELLOW MUST NOT CONVERGE. Amber is orange, yellow is gold, 48 degrees
+apart in hue. Every previous build drew them as two near-identical browns about
+1.2:1 apart, which tells a DFAC manager that a document they filed on time and
+one they never sent are the same kind of problem.
 Status is never conveyed by colour alone. Every status chip carries a text
 label and a small outline glyph. The design must survive being viewed in
 greyscale.
@@ -125,7 +131,7 @@ One row is amber and expands into a bordered warning panel explaining a
 configuration problem in plain language.
 
 COMPONENTS TO PUBLISH AS A LIBRARY
-Status chip in all five states, both themes. Metric tile. Data table row.
+Status chip in all six states, both themes. Metric tile. Data table row.
 Panel with header and optional right slot. Tab strip. Period selector.
 Identity block. Drop target. Version history row. Radio decision row.
 Calendar day cell. Calendar event bar. Empty state. Warning panel.

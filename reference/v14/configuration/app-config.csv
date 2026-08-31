@@ -1,0 +1,14 @@
+﻿Config_Key,Config_Value,Config_Type,Description,Admin_Only,Active_Flag
+CurrentFiscalYear,FY2027,String,Fiscal year for folder scoping,TRUE,TRUE
+OpenReportingPeriod,2026-08,String,The period the app defaults to,TRUE,TRUE
+MaintenanceMode,False,Boolean,Locks the app except developers and admins,TRUE,TRUE
+ReadOnlyMode,False,Boolean,"Status visible, writes blocked",TRUE,TRUE
+AppVersion,0.5.0,String,Stamped on every telemetry event,TRUE,TRUE
+MinimumSupportedVersion,0.4.0,String,Older cached clients are told to reload,TRUE,TRUE
+SupportMessage,Mission Feeding Operations is briefly unavailable for maintenance.,String,Shown on scrMaintenance,TRUE,TRUE
+RequireQC,True,Boolean,Whether submissions need review to reach Accepted,TRUE,TRUE
+EnableAIBuilder,False,Boolean,Tier 3 classification. Verify tenant authorization first.,TRUE,TRUE
+EnableDocumentContentAI,False,Boolean,Tier 2 content classification,TRUE,TRUE
+EOM_Root_Path,/EOM,String,Subtree the intake flow watches. Everything outside is ignored.,TRUE,TRUE
+PowerBIReportURL,,String,Government Power BI service URL differs by cloud. Never hard-code a commercial endpoint.,TRUE,TRUE
+EscalationDaysOverdue,5,Number,Days past suspense before portfolio escalation,TRUE,TRUE

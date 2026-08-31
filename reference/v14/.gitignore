@@ -1,0 +1,14 @@
+data/QRG__Scrubbed_.csv
+data/envision-raw/
+data/real/
+production-data/
+cui/
+credentials/
+exports/raw/
+local-connections/
+*.secret.*
+.env
+.env.*
+*.token
+*.pbix
+__pycache__/

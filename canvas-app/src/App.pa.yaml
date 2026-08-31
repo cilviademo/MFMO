@@ -86,7 +86,7 @@ DataSources:
   - 'MF Calendar Event'
   - 'MF Access Request'
   - 'MF Notification Rule'
-  - EOM05_AppUpload          # Power Automate — the front door
+  - EOM02_Submission          # Power Automate — the front door
   - Office365Users           # Entra identity. CAC resolves it before the app loads.
 
 # App.Formulas is the concatenation of these files, kept separate in the

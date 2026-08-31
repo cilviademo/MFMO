@@ -17,7 +17,7 @@
     <Descriptions>
       <Description description="End of month and end of year document requirement, evidence, versioning, QC and common operational picture for mission feeding facilities. Release 1." languagecode="1033" />
     </Descriptions>
-    <Version>0.6.0</Version>
+    <Version>0.8.0</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>MissionFeeding</UniqueName>

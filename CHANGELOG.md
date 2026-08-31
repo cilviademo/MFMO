@@ -6,6 +6,161 @@ retired column is marked unused, never deleted.
 
 ---
 
+## [0.8.0] — The routing finding. Four site collections, not four channels.
+
+Integrates v12, v13 and v14 with their action document, and the Figma design
+build. One structural finding invalidates an assumption every earlier document
+was built on; the rest is hardening the two failure shapes that keep recurring.
+
+`docs/handoffs/RECONCILIATION.md` C21–C35 records every decision.
+
+**No Power Platform environment has been touched.** `dist/` holds no ZIP.
+
+### The four portfolios are four separate SharePoint site collections
+
+Not four channels in one team. Every prior document assumed one site, and that
+assumption invalidated every single-site provisioning plan built on it.
+
+```
+1  DAFMissionFeeding-Portfolio1          Legacy_Portfolio 1/H. Monthly Data Call
+2  DAFMissionFeeding-Legacy_Portfolio2   Legacy_Portfolio 2/5. Monthly Data Call
+3  DAFMissionFeeding-Portfolio3          Legacy_Portfolio 3/Monthly Data Call
+4  DAFMissionFeeding-Portfolio4          Legacy_Portfolio 4/Monthly Data Call
+```
+
+Three things there break a naive build. **Portfolio 2's slug carries `Legacy_`
+and the others do not** — a URL built by pattern 404s on exactly one portfolio,
+which is the worst failure shape there is: three work and one is a mystery.
+**All four root folder names differ**, two with sort prefixes no rule derives.
+And **this is the DoD cloud, not GCC High**.
+
+New list `MF_Document_Destination` (17 lists, 282 columns), one row per
+portfolio, every one shipping `Site_URL` blank, `Verified_By` blank and
+`Active_Flag` FALSE. EOM-02 fails closed on all three.
+`deployment/site-bindings.md` is the walkthrough, and it is now a required
+release artifact.
+
+One thing got easier: a portfolio boundary is now a **site** boundary, which
+SharePoint enforces natively. The data-layer scope gap is narrowed to
+installation scope *within* a portfolio site. Not closed —
+`data_layer_permissions_verified` stays false.
+
+### Find, never create
+
+`Create_Missing_Folders` is FALSE permanently, with `FIND_OR_ROOT` as the
+fallback. The FY and month folders are curated by hand; the flow matches them.
+
+A flow that creates folders will eventually produce `Aug 26` beside someone's
+`August 2026`. Both look right, half the submissions go to each, and nobody
+notices for a month.
+
+`scripts/folder_resolver.py` matches `FY26` / `FY 26` / `FY2026`, then the
+month by full name, three-letter form and two-digit number in that order,
+rejecting a folder that states the wrong year. When nothing matches, the file
+lands at the Monthly Data Call root with `Needs_Filing` and a note saying what
+was searched for. **A submission that lands somewhere findable beats one that
+fails** — the base did their part, and the mess is ours, visibly.
+
+The v14 spec said the opposite in the same snapshot as the action document, and
+also failed closed on `Channel_Type`, a column that snapshot's own schema no
+longer defines. A spec that fails closed on an absent column fails open.
+
+### A filter that matches nothing must say so
+
+Twice a generator filtered on a vocabulary the data does not use and reported
+"created 0" as success — first `Legacy/APF` against a registry saying `Legacy`,
+then facility types the QRG does not carry at all.
+
+`scripts/vocabulary_guard.py` runs before any row is generated and separates the
+two zeroes: a term the data contains **nowhere** raises; a real term that no
+currently-onboarded row happens to carry is reported, not raised. Failing the
+second would make onboarding one base at a time impossible; passing the first
+cost a month.
+
+And the corollary, now tested: **an empty filter column means "no constraint",
+never "no match"**. Under-generating is worse than over-generating.
+
+### The release gate checks content, not just paths
+
+`ROLLBACK.md` once shipped as a zero-byte file and passed a check that only
+asked whether the path resolved — the exact shape of failure the scan exists to
+prevent, occurring in the scan itself. Required artifacts are now checked for
+substance.
+
+Inline scanner exceptions now **require a reason string**. An exception nobody
+explained silences a rule and leaves nothing to review.
+
+`URL-01` was written for GCC High and watched `.sharepoint.us`. This tenant is
+DoD, so it watched the one host a leak could not occur on and missed the one it
+could. It now watches both, and `URL-02` catches a portfolio slug used as a
+path.
+
+### Amber and yellow are finally different colours
+
+They were `#8A5300` and `#6B5300` — **1.16:1 apart**, two near-identical browns
+under a model whose entire point is that colour carries ownership. Amber says
+the base still owes it and has runway; yellow says AFSVC has it.
+
+Now `#944800` on `#FFF3E6` and `#5A5800` on `#FDFAE0`: ΔE2000 25, 41° of hue,
+each above 6:1 on its own background, and still 14–18 ΔE apart under
+deuteranopia, protanopia and tritanopia.
+
+The build note asked for 3:1 between the two text colours. **That test cannot be
+passed and should not be attempted** — WCAG contrast is a luminance ratio, two
+colours differing only in hue sit at 1.0:1, and forcing 3:1 makes one fail 4.5:1
+against its own tint. `docs/accessibility.md` gives the measure that does answer
+the question.
+
+The obvious fix has a second trap: amber pushed toward orange lands near red,
+and red-versus-amber is the *no runway* / *has runway* distinction. The first
+candidate scored ΔE 30 against yellow and 14.5 against red. The shipped amber
+holds 19.5 against red, and the tests hold both distances at once.
+
+### Configuration, not code
+
+`ReviewAgeHighlightDays` is new, and the review-age bands are **derived** from
+it rather than listed beside it — four hardcoded buckets next to a separately
+hardcoded threshold is two facts that must agree with nothing making them.
+
+Upload size, accepted file types and both suspense days already lived in
+configuration. The suspense days stay on the requirement row, never as a default
+in the date code: the 5th and the 10th do not have the same standing, and a
+shared default makes both unchallengeable.
+
+### Any percentage states its denominator
+
+**A not-onboarded installation is not compliant. It has not been asked.** All
+103 ship `Generation_Enabled = FALSE` and contribute no rows, so a percentage
+over existing rows reports 100% while the enterprise has barely started.
+
+```
+43 of 43 onboarded installations complete
+60 installations not yet onboarded
+```
+
+Never one number. In the Power BI measures as well as the tests.
+
+### Also
+
+- `docs/native-visuals.md`: build in-app visuals from containers and
+  `FillPortions`, not the chart controls — ~50-row cap, no theming, poor
+  screen-reader support. At 103 installations a portfolio comparison silently
+  shows part of the data and reports success.
+- `EOM-05 App Upload` is now `EOM-02 Submission`; `EOM-02 File Intake` is now
+  `EOM-02b Legacy Intake`. EOM-02b is deployed **four times**, once per site.
+- `SharePoint_Unique_ID` is the durable handle. Under FIND_OR_ROOT files get
+  moved by design, and a build storing only the URL would lose the audit trail
+  on exactly the submissions somebody had to rescue.
+- `Seed-MFOpsConfiguration.ps1` pointed at `installations.sample.csv` and
+  `facilities.sample.csv`, renamed two releases ago. Fixed, with the real
+  registry behind `-IncludeRegistry`.
+- The Figma build's other two defects — a hardcoded four-month period selector
+  and zero accessible names across 31 buttons — do not exist in the canvas
+  source. Both now have regression tests so they cannot appear.
+- 248 tests, up from 134.
+
+---
+
 ## [0.7.0] — v7-v11 integration. The programme's answers, and the AFSVC deck.
 
 Integrates four later solution snapshots, the programme's answers to twenty

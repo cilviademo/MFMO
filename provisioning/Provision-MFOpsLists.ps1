@@ -23,8 +23,8 @@
 
 .PARAMETER TenantCloud
     UsGov, UsGovHigh or UsGovDod. Must match the tenant. The endpoints differ
-    per cloud and pointing the commercial endpoints at a GCC High tenant
-    fails in ways that look like a permissions problem.
+    per cloud. This deployment is UsGovDod. Pointing the wrong cloud's endpoints
+    at a tenant fails in ways that look like a permissions problem.
 
 .PARAMETER EvidenceLibraryPath
     Server-relative path of the evidence document library to create or verify.
@@ -39,7 +39,7 @@
 .EXAMPLE
     pwsh provisioning/Provision-MFOpsLists.ps1 `
         -SiteUrl <your-site-collection-url> `
-        -TenantCloud UsGovHigh -WhatIf
+        -TenantCloud UsGovDod -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -54,9 +54,9 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$script:ExpectedSchemaVersion = '4.0'
-$script:ExpectedListCount     = 16
-$script:ExpectedColumnCount   = 263
+$script:ExpectedSchemaVersion = '5.0'
+$script:ExpectedListCount     = 17
+$script:ExpectedColumnCount   = 282
 
 # PnP's cloud identifier differs from the PAC CLI's.
 $script:PnPEnvironment = switch ($TenantCloud) {
@@ -258,7 +258,7 @@ function New-EvidenceLibrary {
     # EOM-02 triggers at library level, not folder level: a folder-level
     # trigger silently misses everything dropped into a folder created after
     # the flow was authored.
-    Write-Skip 'EOM-02 binds to this library at library level (see flows/EOM02-FileIntake)'
+    Write-Skip 'EOM-02 binds to this library at library level (see flows/EOM02b-LegacyIntake)'
 }
 
 function Test-Indexes {

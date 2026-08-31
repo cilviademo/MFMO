@@ -105,23 +105,30 @@ gblAccent    = If( gblDark, ColorValue("#4EA0D4"), ColorValue("#0F548C") );
 
 // Six states. Fill, text and border from one code — never three lookups.
 StatusFill( code: Number ): Color =
-    Switch( code, 3, ColorValue("#F1FAF1"), 2, ColorValue("#FFFBEB"),
-                  1, ColorValue("#FDF3F4"), 5, ColorValue("#FFF9F0"),
-                  4, ColorValue("#EFF6FC"), ColorValue("#F5F5F5") );
+    Switch( code, 3, clrStatusGreenBg, 2, clrStatusYellowBg,
+                  1, clrStatusRedBg,   5, clrStatusAmberBg,
+                  4, clrStatusBlueBg,  clrStatusGrayBg );
 
 StatusText( code: Number ): Color =
-    Switch( code, 3, ColorValue("#0E700E"), 2, ColorValue("#7A5C00"),
-                  1, ColorValue("#A4262C"), 5, ColorValue("#8A5300"),
-                  4, ColorValue("#0F548C"), ColorValue("#424242") );
+    Switch( code, 3, clrStatusGreen, 2, clrStatusYellow,
+                  1, clrStatusRed,   5, clrStatusAmber,
+                  4, clrStatusBlue,  clrStatusGray );
 
 StatusLabel( code: Number ): Text =
     Switch( code, 3, "Accepted", 2, "Awaiting review", 1, "Overdue",
                   5, "Late", 4, "Not due", "Not required" );
 ```
 
-**Amber (5) and yellow (2) need distinct hex values.** The current prototype
-maps both to `#8A5300` / `#FFF9F0`, which is the collision. Yellow moves toward
-`#7A5C00` on `#FFFBEB`; verify 4.5:1 on both themes before committing.
+**The tokens, never literals.** `App.Formulas.fx` declares them once and
+`scripts/validate_solution.py` fails the build on a colour literal in a screen.
+A `Switch` full of hex is how two screens drift apart.
+
+**Amber (5) and yellow (2) are the pair to watch.** Both the prototype and the
+Figma build mapped them to near-identical browns — 1.16:1 and 1.25:1 apart —
+which collapses the one distinction the six states exist to make. They are now
+`#944800` on `#FFF3E6` and `#5A5800` on `#FDFAE0`, 48° apart in hue and ΔE2000
+30 apart, and `docs/accessibility.md` explains why hue rather than luminance is
+the right measure here.
 
 ---
 
@@ -155,3 +162,39 @@ information hierarchy — not aesthetics.
 
 Steps 2 and 3 can happen in the Figma file. Steps 1 and 5 onward are canvas
 work and do not need Figma to finish first.
+
+
+---
+
+## Five values the design build hardcoded
+
+Every one of these is a number or list somebody will want to change after the
+pilot. **An admin edits a list row; a developer does not edit Power Fx.** The
+defaults below are fine — what matters is where they live.
+
+| Value in the Figma build | Reads from |
+|---|---|
+| `Max 50 MB` | `MF_App_Config.MaxUploadSizeMB` |
+| `PDF, XLSX, DOCX` | `MF_EOM_Requirement.Accepted_File_Types` — per requirement, because a 1119 and a bank statement are not the same kind of file |
+| `aged 4 days or more` | `MF_App_Config.ReviewAgeHighlightDays` |
+| `initialDay = 5, finalDay = 10` | `MF_EOM_Requirement.Due_Day` / `Final_Due_Day`, on the requirement row — **never a default in the date code** |
+| Age bands `0-1 / 2-3 / 4-5 / 6+` | derived from `ReviewAgeHighlightDays` by `MF_ReviewAgeBands` |
+
+The last two are the ones that matter.
+
+**The suspense days belong to the requirement, not to the engine.** The 5th and
+the 10th do not have the same standing — the 5 calendar days is VERIFIED from
+procedure language, the 10th is a MANAGEMENT_RULE from the programme — and a
+default buried in a date function makes both unchallengeable and identical. A
+requirement whose suspense differs is then a data change, not a code change.
+
+**The age bands are derived rather than listed.** Four hardcoded buckets beside
+a separately hardcoded threshold is two facts that must agree and nothing making
+them. Change the threshold to 3 and the bands still say `4-5`, and the queue
+quietly contradicts its own legend. `MF_ReviewAgeBands` computes them from the
+one number.
+
+Ageing never recolours a chip. An item awaiting review is yellow because AFSVC
+owns it — that comes from the status engine — and the ageing is drawn as
+emphasis on the row. A screen that recoloured the chip would be a second status
+engine.

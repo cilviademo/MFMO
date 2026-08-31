@@ -5,35 +5,57 @@ premium or custom connectors, AI Builder, PCF components, service principals,
 app registrations, the HTTP or Graph connectors, Dataverse, or more than one
 Power Platform environment.
 
-It must deploy into a **single GCC / GCC High / DoD production environment** by
-manual solution import, or by PAC CLI where the tenant authorizes it.
+It must deploy into a **single government production environment** by manual
+solution import, or by PAC CLI where the tenant authorizes it.
 
 ---
 
-## Two answers gate everything
+## The cloud is DoD. It is not GCC High.
+
+The SharePoint tenant is `usaf.dps.mil` and Teams resolves to
+`dod.teams.microsoft.us`. That is the **DoD** cloud.
+
+This was open for most of the programme and several documents guessed GCC High
+while it was. **Every GCC High endpoint in a document dated before 31 Aug 2026
+is wrong for this deployment.** The table below is kept complete because the
+solution supports all three clouds and hard-codes none — but only one column
+applies here.
+
+```
+Maker   make.apps.appsplatform.us
+Flow    flow.appsplatform.us
+Admin   admin.appsplatform.us
+```
+
+**Confirm the Power Platform environment sits in the same tenant as the
+SharePoint sites.** Same cloud does not guarantee same tenant, and a
+cross-tenant connection fails in a way that reads like a permissions problem
+for a week.
+
+### One answer still gates the build
 
 | Question | Status | Recorded in |
 |---|---|---|
-| Which government cloud — GCC, GCC High, or DoD? | **UNKNOWN — confirm** | `MF_App_Config.TenantCloud` |
+| Which government cloud? | **DoD** — `UsGovDod` | `MF_App_Config.TenantCloud` |
 | May the build run PAC CLI against the tenant? | **UNKNOWN — verify** | `MF_App_Config.PacCliAuthorized` |
 
-Neither changes the design; both change the deployment scripts. Do not guess
-either one — `Provision-MFOpsLists.ps1` takes the cloud as a mandatory
-parameter for exactly this reason, because a script pointed at the commercial
-endpoints from a GCC High tenant fails in ways that look like a permissions
-problem.
+Neither changes the design; both change the deployment scripts.
+`Provision-MFOpsLists.ps1` takes the cloud as a mandatory parameter for exactly
+this reason: a script pointed at the wrong cloud's endpoints fails in ways that
+look like a permissions problem.
 
-Microsoft supports PAC CLI in GCC and GCC High. **Local governance may still
-forbid it**, and Microsoft availability does not equal local DAF authorization.
+Microsoft supports PAC CLI in GCC, GCC High and DoD. **Local governance may
+still forbid it**, and Microsoft availability does not equal local DAF
+authorization.
 
-### Endpoints by cloud
+### Endpoints by cloud — the DoD column is the one that applies
 
 | | GCC | GCC High | DoD |
 |---|---|---|---|
 | SharePoint admin | `*-admin.sharepoint.com` | `*-admin.sharepoint.us` | `*-admin.dps.mil` | <!-- prerelease: allow CLD-03 the endpoint table IS the policy that forbids the commercial host -->
 | Power Platform API | `api.gov.powerplatform.microsoft.us` | `api.high.powerplatform.microsoft.us` | `api.appsplatform.us` |
-| PAC CLI `--cloud` | `UsGov` | `UsGovHigh` | `UsGovDod` |
-| PnP `-AzureEnvironment` | `USGovernment` | `USGovernmentHigh` | `USGovernmentDoD` |
+| PAC CLI `--cloud` | `UsGov` | `UsGovHigh` | **`UsGovDod`** |
+| PnP `-AzureEnvironment` | `USGovernment` | `USGovernmentHigh` | **`USGovernmentDoD`** |
 | Login authority | `login.microsoftonline.com` | `login.microsoftonline.us` | `login.microsoftonline.us` |
 
 ### If PAC CLI is not authorized
@@ -128,7 +150,7 @@ stale in an OnStart:
 | Key | Effect |
 |---|---|
 | `MaintenanceMode` = `True` | Everyone except developers and admins lands on `scrMaintenance`, before any business data source is opened |
-| `ReadOnlyMode` = `True` | The app loads, every write affordance is disabled and visibly labelled, and EOM-04 and EOM-05 refuse to write |
+| `ReadOnlyMode` = `True` | The app loads, every write affordance is disabled and visibly labelled, and EOM-04 and EOM-02 refuse to write |
 
 `ReadOnlyMode` matters more than it looks. When something is wrong but not
 broken, people still need to see where their package stands. Locking writes

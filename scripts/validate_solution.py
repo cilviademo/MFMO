@@ -294,8 +294,8 @@ def check_feature_flags():
 
 
 def check_flows():
-    expected = ("EOM01-ExpectedPackage", "EOM02-FileIntake", "EOM03-Reconciliation",
-                "EOM04-Notifications", "EOM05-AppUpload")
+    expected = ("EOM01-ExpectedPackage", "EOM02b-LegacyIntake", "EOM03-Reconciliation",
+                "EOM04-Notifications", "EOM02-Submission")
     missing = [f for f in expected
                if not os.path.exists(os.path.join(ROOT, "flows", f, "definition.md"))]
     for f in missing:

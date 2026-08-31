@@ -51,8 +51,8 @@ import json
 import sys
 from dataclasses import dataclass, asdict
 
-SCHEMA_VERSION = "4.0"
-EXPECTED_LIST_COUNT = 16
+SCHEMA_VERSION = "5.0"
+EXPECTED_LIST_COUNT = 17
 MAX_INDEXES_PER_LIST = 20
 MAX_INTERNAL_NAME = 32
 
@@ -263,6 +263,14 @@ CLASSIFICATION_METHOD = ("Declared at upload", "Folder context",
 CLASSIFICATION_STATUS = ("Pending", "Classified", "Needs Review", "Failed")
 
 CLASSIFICATION_CONFIDENCE = ("Declared", "High", "Low", "Unresolved")
+
+DOCUMENT_DOMAIN = ("EOM", "EOY", "FMAT", "Other")
+
+FALLBACK_POLICY = ("FIND_OR_ROOT", "FIND_OR_FAIL")
+# FIND_OR_ROOT is the R1 policy. When the fiscal-year or month folder cannot be
+# matched, the file lands at the Monthly Data Call root flagged Needs_Filing and
+# a human moves it. A submission that lands somewhere findable beats one that
+# fails: the base did their part, and the failure is ours to clean up.
 
 RESOLUTION_STATUS = ("Needs Classification", "Classified",
                      "Not an EOM document", "Duplicate")
@@ -634,10 +642,34 @@ MF_EOM_Submission = ListDef(
           note="User-facing, plain language. Never a raw HTTP status."),
         c("Last_Processing_DateTime", "DateTime"),
         c("Retry_Count", "Number"),
+        c("Destination_ID", "Text", indexed=True,
+          note="FK to MF_Document_Destination. Which configured destination "
+               "received this file, so a routing change is auditable after the "
+               "fact rather than inferred from a path."),
+        c("Source_Library", "Text",
+          note="The library the file landed in. Recorded because the four "
+               "portfolios are four separate site collections and 'Shared "
+               "Documents' is an assumption until each site is walked."),
         c("Source_Path", "Text",
-          note="Where the file was found. Diagnostic only — the list row is truth."),
+          note="Where the file was found or placed. Diagnostic only — the list "
+               "row is truth."),
+        c("Needs_Filing", "Boolean", indexed=True,
+          note="TRUE when the fiscal-year or month folder could not be matched "
+               "and the file landed at the Monthly Data Call root under "
+               "FIND_OR_ROOT. Indexed because Admin filters on it, and the "
+               "count is the whole point: a file nobody knows is misfiled is "
+               "worse than one that failed to upload."),
+        c("Filing_Note", "Text",
+          note="What was looked for and not found — 'no child of FY26 matched "
+               "August 2026'. The person moving the file needs to know whether "
+               "to move it or fix the configuration."),
+        c("SharePoint_Unique_ID", "Text", indexed=True,
+          note="THE DURABLE HANDLE. The document GUID survives a rename and a "
+               "move; File_URL survives neither, and under FIND_OR_ROOT files "
+               "get moved by design. Store the GUID, resolve the URL from it."),
         c("SharePoint_File_ID", "Text", indexed=True,
-          note="Survives a rename or move; the URL does not."),
+          note="List item ID. Convenient for a lookup within one library; not "
+               "durable across a move between libraries or sites."),
         c("Is_Current", "Boolean", req=True, indexed=True),
         c("Superseded_By", "Text",
           note="Submission_ID of the version that replaced this one"),
@@ -1028,6 +1060,72 @@ MF_Notification_Rule = ListDef(
 )
 
 
+MF_Document_Destination = ListDef(
+    name="MF_Document_Destination",
+    title="MF Document Destination",
+    grain="One row per portfolio per document domain",
+    volume_estimate=20,
+    unique_key=("Destination_ID",),
+    note="THE FOUR PORTFOLIOS ARE FOUR SEPARATE SITE COLLECTIONS, not four "
+         "channels in one team and not four folders in one library. Every "
+         "earlier document in this programme assumed one site; that assumption "
+         "was wrong and it invalidated every single-site provisioning plan. "
+         "Site, library and root folder are configured per portfolio and never "
+         "derived: Portfolio 2's site slug carries a 'Legacy_' prefix the other "
+         "three do not, so a URL built by pattern 404s on exactly one "
+         "portfolio — three work and one is a mystery, which is the worst "
+         "failure shape there is. EOM-02 fails closed on an unbound, "
+         "unverified or inactive row.",
+    columns=(
+        c("Destination_ID", "Text", req=True, indexed=True, note="PORT2-EOM"),
+        c("Portfolio_ID", "Text", req=True, indexed=True),
+        c("Document_Domain", "Choice", req=True, choices=DOCUMENT_DOMAIN, indexed=True,
+          note="EOY shares the EOM destination unless a row says otherwise."),
+        c("Site_URL", "Text",
+          note="BLANK IN SOURCE, ALWAYS. Bound at import from the environment "
+               "variable for this portfolio. A .mil site URL committed to "
+               "source is a destination leak and the pre-release scan blocks "
+               "it. Never a literal in Power Fx."),
+        c("Library_Name", "Text", req=True,
+          note="Assumed 'Shared Documents'. Verify per site — assumption is "
+               "how this breaks on the first real upload."),
+        c("Root_Folder", "Text", req=True,
+          note="All four differ: 'Legacy_Portfolio 1/H. Monthly Data Call', "
+               "'Legacy_Portfolio 2/5. Monthly Data Call', and two without a "
+               "prefix. The 'H.' and '5.' are sort-order prefixes. No rule "
+               "derives these; they are configuration."),
+        c("Folder_Template", "Text", req=True,
+          note="{FiscalYearShort}/{MonthFolder}. These are the names of "
+               "folders that ALREADY EXIST and are matched, never rendered "
+               "into a path and created. EOM-02 resolves the tokens; the app "
+               "never sees them."),
+        c("Create_Missing_Folders", "Boolean", req=True,
+          note="FALSE, permanently. The FY and month folders are curated by "
+               "hand. A flow that creates folders will eventually produce "
+               "'Aug 26' beside someone's 'August 2026' and nobody notices for "
+               "a month. The column exists so the decision is visible and "
+               "auditable, not so it can be flipped."),
+        c("Fallback_Policy", "Choice", req=True, choices=FALLBACK_POLICY,
+          note="FIND_OR_ROOT for R1. See the vocabulary note above."),
+        c("Month_Folder_Pattern_Note", "Text",
+          note="THE ONE FIELD NOBODY WILL GUESS RIGHT. What the month folders "
+               "inside FY26 are actually called on this site — 'Aug 26', "
+               "'August 2026', '08. August' are all plausible. Recorded by the "
+               "person who walks the site, for the next person who has to "
+               "debug a file at root."),
+        c("Site_Note", "Text",
+          note="Which site collection this portfolio lives on, in words."),
+        c("Verified_By", "Text",
+          note="Who opened this site and read its real structure. Blank means "
+               "nobody has, and EOM-02 will not write here."),
+        c("Verified_Date", "DateTime"),
+        c("Active_Flag", "Boolean", req=True,
+          note="FALSE until verified. An unverified site cannot silently "
+               "receive files."),
+    ),
+)
+
+
 LISTS = (
     MF_Installation,
     MF_Facility,
@@ -1045,6 +1143,7 @@ LISTS = (
     MF_Calendar_Event,
     MF_Access_Request,
     MF_Notification_Rule,
+    MF_Document_Destination,
 )
 
 LISTS_BY_NAME = {l.name: l for l in LISTS}
@@ -1127,6 +1226,42 @@ def validate():
         errs.append("MF_EOM_Status carries both Final_Status and Status_Semantic; "
                     "two columns that must always agree are a defect waiting to happen")
 
+    # Routing. The app supplies logical identifiers; EOM-02 resolves the rest.
+    dest = LISTS_BY_NAME["MF_Document_Destination"]
+    dest_by_name = {c.name: c for c in dest.columns}
+
+    # Site_URL must be nullable or the seed cannot ship blank, and a seed that
+    # cannot ship blank is a seed somebody fills in with a real .mil URL.
+    if dest_by_name["Site_URL"].required:
+        errs.append("MF_Document_Destination.Site_URL must be nullable: it ships "
+                    "BLANK and is bound at import from an environment variable. "
+                    "A required column invites a committed destination")
+
+    # Three independent facts have to be true before a file is written, and all
+    # three default to 'no'. Losing any one of them turns fail-closed into
+    # fail-into-whatever-row-was-seeded.
+    for gate in ("Active_Flag", "Verified_By", "Site_URL"):
+        if gate not in dest_by_name:
+            errs.append(f"MF_Document_Destination is missing {gate}; EOM-02 fails "
+                        "closed on all three and cannot check one that is absent")
+
+    sub_by_name = {c.name: c for c in LISTS_BY_NAME["MF_EOM_Submission"].columns}
+
+    # The GUID is the durable handle. Under FIND_OR_ROOT files are moved by
+    # design, so a build that stored only the URL would lose the audit trail on
+    # exactly the files a human had to rescue.
+    if "SharePoint_Unique_ID" not in sub_by_name:
+        errs.append("MF_EOM_Submission is missing SharePoint_Unique_ID; the URL "
+                    "does not survive the move that FIND_OR_ROOT plans for")
+
+    # A misfiled document nobody can count is worse than an upload that failed.
+    nf = sub_by_name.get("Needs_Filing")
+    if nf is None:
+        errs.append("MF_EOM_Submission is missing Needs_Filing")
+    elif not nf.indexed:
+        errs.append("MF_EOM_Submission.Needs_Filing must be indexed — Admin "
+                    "filters on it and the list crosses the delegation ceiling")
+
     # Never store a percentage or any rate the app would have to recompute.
     for l in LISTS:
         for col in l.columns:
@@ -1162,6 +1297,8 @@ def to_dict():
             "QC_STATUS": list(QC_STATUS),
             "ROLE": list(ROLE),
             "SCOPE_TYPE": list(SCOPE_TYPE),
+            "DOCUMENT_DOMAIN": list(DOCUMENT_DOMAIN),
+            "FALLBACK_POLICY": list(FALLBACK_POLICY),
         },
     }
 

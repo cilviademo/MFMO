@@ -7,7 +7,7 @@
 # people uploading through the app — reverting to folder-drop-only reintroduces
 # the classification risk the declaration removes.
 #
-# The app collects the file and the declared metadata and calls EOM05_AppUpload.
+# The app collects the file and the declared metadata and calls EOM02_Submission.
 # The flow writes the library and the lists.
 #
 # For a DFAC manager with one facility, MF_ShowDropdowns is false and the screen
@@ -177,7 +177,7 @@ Screens:
 
                   - addFile:
                       # AddMedia with a file picker — NOT the Attachments
-                      # control. The bytes go to EOM05_AppUpload; the flow
+                      # control. The bytes go to EOM02_Submission; the flow
                       # writes the library.
                       Control: AddMedia
                       Properties:
@@ -250,7 +250,7 @@ Screens:
                                // Client-side size check. The flow repeats it.
                                Set(
                                    locUploadResult,
-                                   EOM05_AppUpload.Run(
+                                   EOM02_Submission.Run(
                                        {
                                            eomItemId:      locItem.EOM_Item_ID,
                                            eomItemKey:     locItem.EOM_Item_Key,

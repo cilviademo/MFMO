@@ -130,7 +130,7 @@ Everything else in the research is adopted as written.
 | Classification method and error state | `MF_EOM_Submission` |
 | Named formulas over a bloated OnStart | `App.Formulas.fx` |
 | Delegation patterns and anti-patterns | `Delegation.fx` |
-| Library-level trigger, not folder-level | `flows/EOM02-FileIntake` |
+| Library-level trigger, not folder-level | `flows/EOM02b-LegacyIntake` |
 | Capability gate register | `docs/government-environment-mode.md` |
 | Section 508 acceptance gates | `docs/accessibility.md` |
 | Semantic releases with packaged rollback | `docs/government-environment-mode.md` |

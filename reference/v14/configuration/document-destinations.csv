@@ -1,0 +1,5 @@
+﻿Destination_ID,Portfolio_ID,Document_Domain,Site_URL,Library_Name,Root_Folder,Folder_Template,Create_Missing_Folders,Fallback_Policy,Site_Note,Verified_By,Verified_Date,Active_Flag
+PORT1-EOM,PORTFOLIO 1,EOM,,Shared Documents,Legacy_Portfolio 1/H. Monthly Data Call,{FiscalYearShort}/{MonthFolder},FALSE,FIND_OR_ROOT,Separate site: DAFMissionFeeding-Portfolio1,,,FALSE
+PORT2-EOM,PORTFOLIO 2,EOM,,Shared Documents,Legacy_Portfolio 2/5. Monthly Data Call,{FiscalYearShort}/{MonthFolder},FALSE,FIND_OR_ROOT,Separate site: DAFMissionFeeding-Legacy_Portfolio2,,,FALSE
+PORT3-EOM,PORTFOLIO 3,EOM,,Shared Documents,Legacy_Portfolio 3/Monthly Data Call,{FiscalYearShort}/{MonthFolder},FALSE,FIND_OR_ROOT,Separate site: DAFMissionFeeding-Portfolio3,,,FALSE
+PORT4-EOM,PORTFOLIO 4,EOM,,Shared Documents,Legacy_Portfolio 4/Monthly Data Call,{FiscalYearShort}/{MonthFolder},FALSE,FIND_OR_ROOT,Separate site: DAFMissionFeeding-Portfolio4,,,FALSE

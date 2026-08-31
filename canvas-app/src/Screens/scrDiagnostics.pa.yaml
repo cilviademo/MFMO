@@ -106,7 +106,7 @@ Screens:
                 Control: Text
                 Variant: Body
                 Properties:
-                  Text: ="TenantCloud is UNKNOWN. Confirm GCC, GCC High or DoD before the deployment scripts are finalised."
+                  Text: ="TenantCloud is UNKNOWN. Expected UsGovDod — this tenant is DoD, not GCC High. Confirm before the deployment scripts are finalised."
                   Color: =clrStatusAmber
                   Visible: =gblTenantCloud = "UNKNOWN"
                   AutoHeight: =true
