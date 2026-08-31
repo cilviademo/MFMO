@@ -2,7 +2,7 @@
 
 version  1.0.0
 tag      v1.0.0
-commit   aed4b11251af13d935e2b10d49e41c571a691fe1
+commit   fbe35e338cdb70e5f93490bb652d9e4fb9cd994b
 built    reproducibly from the tagged commit; timestamps normalised
 
 a79d208c4100d3c9c7644688d048912c115db628541e6171d9b3a473c6c6078e  MissionFeedingOperations_1.0.0.zip
