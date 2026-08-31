@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
-# Everything that can be checked without a tenant. Run before every release.
+# Everything checkable without a tenant. Run before every release.
 #
-# What this DOES cover: the schema, the status engine, EOM-01's three
-# properties, the seed files, the delegation and accessibility static checks,
-# and that the Power Fx and flow transliterations still agree with the
-# reference implementation.
+# COVERS: the schema and its generated artifacts, the status engine and its
+# three transliterations, EOM-01's three properties, the seeds, the flow specs,
+# the delegation and accessibility static checks, and that the ten
+# reconciliation corrections stayed applied.
 #
-# What it does NOT cover: anything that needs SharePoint. Delegation at 5,000+
-# rows, the index verification, RLS, the keyboard and screen-reader passes and
-# the maintenance/read-only tests are in docs/DEPLOYMENT.md and are run in the
-# tenant. Passing this script is necessary, not sufficient.
+# DOES NOT COVER: anything needing SharePoint. Delegation at 5,000+ rows, index
+# verification, RLS with two scopes, the keyboard and screen-reader passes and
+# the maintenance/read-only tests are in docs/DEPLOYMENT.md and run in the
+# tenant. Passing this is necessary, not sufficient.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "== schema =="
 python3 scripts/eom_schema.py --validate
+python3 scripts/eom_schema.py --summary
 
 echo
 echo "== unit tests =="
-python3 -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tail -25
+python3 -m unittest discover -s tests -p 'test_*.py' 2>&1 | tail -5
 
 echo
 echo "== solution validation =="
@@ -26,7 +27,7 @@ python3 scripts/validate_solution.py
 
 echo
 echo "== EOM-01 dry run against the sample seed =="
-python3 scripts/generate_expected_items.py --as-of "$(date +%Y-%m-%d)"
+python3 scripts/generate_expected_items.py --period 2026-08 --today 2026-09-12
 
 echo
 echo "All local checks passed. Tenant checks remain: see docs/DEPLOYMENT.md."

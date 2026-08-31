@@ -1,20 +1,21 @@
 <#
 .SYNOPSIS
-    Seeds MF_Requirement, MF_App_Config, MF_Feature_Flags and the dimension
-    lists from configuration/*.csv.
+    Seeds MF_EOM_Requirement, MF_App_Config and MF_Feature_Flags from
+    configuration/*.csv, and optionally the sample dimension data.
 
 .DESCRIPTION
-    Idempotent. Every list has a declared unique key; a row whose key already
-    exists is updated, never duplicated. Run it as often as you like.
+    Idempotent. Every list has a declared unique key in scripts/eom_schema.py;
+    a row whose key already exists is updated, never duplicated. Run it as
+    often as you like.
 
-    Order matters: configuration and requirements first, then the real
-    installation, facility, contract and security rows. EOM-01 must not run
-    until all of them are present, because a missing facility silently
-    produces fewer expected items rather than an error.
+    Order matters. Configuration and requirements first, then the real
+    installation, facility and security rows. EOM-01 must not run until all of
+    them are present, because a missing facility silently produces fewer
+    expected items rather than an error.
 
 .PARAMETER IncludeSampleData
-    Also seed the *.sample.csv dimension files. Use in a test tenant only.
-    Production seeds the real rows, which are not committed to this repo.
+    Also seed the *.sample.csv dimension files. Test tenant only. Production
+    seeds the real rows, which are not committed to this repository.
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -33,35 +34,37 @@ $pnpEnv = switch ($TenantCloud) {
     'UsGovDod'  { 'USGovernmentDoD' }
 }
 
-# list name -> (csv file, unique key column). The key column is what makes
-# this idempotent; it matches unique_key in scripts/eom_schema.py.
+# list -> (csv, unique key). The key matches unique_key in scripts/eom_schema.py
+# and is what makes this idempotent.
 $core = @(
-    @{ List = 'MF_App_Config';      File = 'app_config.csv';       Key = 'Title' },
-    @{ List = 'MF_Feature_Flags';   File = 'feature_flags.csv';    Key = 'Title' },
-    @{ List = 'MF_Requirement';     File = 'requirements.csv';     Key = 'Requirement_ID' }
+    @{ List = 'MF_App_Config';      File = 'app-config.csv';    Key = 'Config_Key' },
+    @{ List = 'MF_Feature_Flags';   File = 'feature-flags.csv'; Key = 'Feature_Key' },
+    @{ List = 'MF_EOM_Requirement'; File = 'requirements.csv';  Key = 'Requirement_ID' }
 )
 $samples = @(
-    @{ List = 'MF_Installation';      File = 'installations.sample.csv';    Key = 'Installation_ID' },
-    @{ List = 'MF_Contract';          File = 'contracts.sample.csv';        Key = 'Contract_ID' },
-    @{ List = 'MF_Facility';          File = 'facilities.sample.csv';       Key = 'Facility_ID' },
-    @{ List = 'MF_Reporting_Period';  File = 'reporting_periods.sample.csv'; Key = 'Period_ID' },
-    @{ List = 'MF_Security_Mapping';  File = 'security_mapping.sample.csv'; Key = 'Title' }
+    @{ List = 'MF_Installation';     File = 'installations.sample.csv';    Key = 'Installation_ID' },
+    @{ List = 'MF_Facility';         File = 'facilities.sample.csv';       Key = 'Facility_ID' },
+    @{ List = 'MF_Security_Mapping'; File = 'security-mapping.sample.csv'; Key = 'Security_ID' }
 )
 
+# Columns that must be written as a real null rather than an empty string.
+# Facility_ID on an installation-scope row is the one that breaks everything
+# downstream if it becomes ''.
+$nullableKeys = @('Facility_ID', 'Contract_ID', 'Installation_ID', 'Portfolio_ID',
+                  'Suggested_Installation_ID', 'Suggested_Document_Code')
+
 function ConvertTo-FieldValues {
-    param([hashtable] $Row, [string] $ListName)
+    param([hashtable] $Row)
 
     $values = @{}
     foreach ($k in $Row.Keys) {
-        $v = $Row[$k]
-        if ($null -eq $v -or "$v".Trim() -eq '') {
-            # Blank stays blank: null, never empty string. Facility_ID on an
-            # installation-scope row depends on this distinction.
+        $v = "$($Row[$k])".Trim()
+        if ([string]::IsNullOrWhiteSpace($v)) {
+            # Blank stays blank: null, never empty string.
             continue
         }
-        if ("$v" -in @('TRUE', 'FALSE')) { $values[$k] = ("$v" -eq 'TRUE'); continue }
-        if ($k -like '*Applies_To_Operating_Model') { $values[$k] = @("$v".Split(';')); continue }
-        $values[$k] = "$v"
+        if ($v -in @('TRUE', 'FALSE')) { $values[$k] = ($v -eq 'TRUE'); continue }
+        $values[$k] = $v
     }
     return $values
 }
@@ -89,7 +92,7 @@ function Import-Seed {
             throw "$ListName : $KeyColumn '$keyValue' matches $($existing.Count) rows. Resolve the duplicate before re-seeding."
         }
 
-        $values = ConvertTo-FieldValues -Row $ht -ListName $ListName
+        $values = ConvertTo-FieldValues -Row $ht
 
         if ($existing.Count -eq 1) {
             if ($PSCmdlet.ShouldProcess("$ListName/$keyValue", 'Update')) {
@@ -119,9 +122,9 @@ if ($IncludeSampleData) {
     }
 }
 
-# The two answers that gate everything. Refuse to leave them unset.
+# One of the two answers that gate everything. Record it now that we know it.
 $cloudRow = Get-PnPListItem -List 'MF_App_Config' `
-    -Query "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>TenantCloud</Value></Eq></Where></Query></View>"
+    -Query "<View><Query><Where><Eq><FieldRef Name='Config_Key'/><Value Type='Text'>TenantCloud</Value></Eq></Where></Query></View>"
 if ($cloudRow.Count -eq 1) {
     Set-PnPListItem -List 'MF_App_Config' -Identity $cloudRow[0].Id -Values @{ Config_Value = $TenantCloud } | Out-Null
     Write-Host "==> MF_App_Config.TenantCloud set to $TenantCloud" -ForegroundColor Green
@@ -129,5 +132,6 @@ if ($cloudRow.Count -eq 1) {
 
 Write-Host ''
 Write-Host 'Seeding complete.' -ForegroundColor Green
-Write-Host 'Reminder: all twelve requirements seed as UNVERIFIED. None of them can drive a Red status' -ForegroundColor Yellow
-Write-Host 'until an authority reference is confirmed on scrAdminRequirements. That is deliberate.' -ForegroundColor Yellow
+Write-Host 'All twelve requirements seed as UNVERIFIED. None of them can drive an adverse' -ForegroundColor Yellow
+Write-Host 'status until an authority reference is confirmed on scrAdminRequirements.'      -ForegroundColor Yellow
+Write-Host 'That is deliberate, not an incomplete seed.'                                    -ForegroundColor Yellow

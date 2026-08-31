@@ -1,0 +1,22 @@
+Config_Key,Config_Value,Config_Type,Description,Admin_Only,Active_Flag
+CurrentFiscalYear,FY2027,String,Fiscal year for folder scoping,TRUE,TRUE
+OpenReportingPeriod,2026-08,String,The period the app defaults to. YYYY-MM throughout.,TRUE,TRUE
+MaintenanceMode,False,Boolean,Kill switch. Locks the app except developers and admins. Flip this rather than racing to unpublish.,TRUE,TRUE
+ReadOnlyMode,False,Boolean,"Status visible, writes blocked. Enforced in the app AND in the flows; the disabled control is a courtesy and the flow check is the control.",TRUE,TRUE
+AppVersion,0.6.0,String,Stamped on every telemetry event,TRUE,TRUE
+SchemaVersion,3.0,String,Schema this app expects. scrDiagnostics warns if it does not match scripts/eom_schema.py.,TRUE,TRUE
+MinimumSupportedVersion,0.4.0,String,Older cached clients are told to reload,TRUE,TRUE
+SupportMessage,Mission Feeding Operations is briefly unavailable for maintenance.,String,Shown on scrMaintenance,TRUE,TRUE
+SupportContact,,String,Shown on scrNoAccess and scrMaintenance. Set at deploy.,TRUE,TRUE
+RequireQC,True,Boolean,Whether submissions need review to reach Accepted,TRUE,TRUE
+TenantCloud,UNKNOWN,String,UsGov | UsGovHigh | UsGovDod. MUST be answered before provisioning - the endpoints differ per cloud. See docs/government-environment-mode.md.,TRUE,TRUE
+PacCliAuthorized,UNKNOWN,String,TRUE | FALSE | UNKNOWN. Microsoft supports PAC CLI in GCC and GCC High; local governance may still forbid it.,TRUE,TRUE
+EnableAIBuilder,False,Boolean,Tier 3 classification. Verify tenant authorization first. Never a dependency.,TRUE,TRUE
+EnableDocumentContentAI,False,Boolean,Tier 2 content classification. No code path exists in R1.,TRUE,TRUE
+EOM_Root_Path,/EOM,String,Subtree the intake flow watches. Everything outside is ignored.,TRUE,TRUE
+EvidenceRootPath,/EOM/_managed,String,Where EOM-05 writes. EOM-02 ignores anything under here - the app wrote it and it needs no classification.,TRUE,TRUE
+PowerBIReportURL,,String,Gov endpoint differs by cloud. Never hard-code app.powerbi.com.,TRUE,TRUE
+EscalationDaysOverdue,5,Number,Days past suspense before portfolio escalation,TRUE,TRUE
+MaxUploadSizeMB,50,Number,Rejected in the app before the flow is called and again inside the flow,TRUE,TRUE
+DelegationWarningThreshold,2000,Number,scrDiagnostics warns when a result set approaches this. The hard non-delegable ceiling is 2000 rows.,TRUE,TRUE
+ReconciliationStaleHours,36,Number,System Health flags items whose Last_Reconciled_DateTime is older than this,TRUE,TRUE

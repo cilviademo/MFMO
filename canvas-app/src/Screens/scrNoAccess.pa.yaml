@@ -1,11 +1,13 @@
 # =============================================================================
 # scrNoAccess — no security mapping.
 #
-# There is no sign-in. CAC resolved the identity before the app loaded, so
-# reaching this screen does not mean "you are not logged in" — it means the
-# identity is known and has no row in MF_Security_Mapping. Say that, because
-# telling someone to sign in again when signing in is not the problem wastes
-# an afternoon.
+# There is no sign-in. On the network CAC identifies the user before the app
+# loads, so reaching this screen does NOT mean "you are not logged in" — it
+# means the identity is known and has no row in MF Security Mapping.
+#
+# Say that, because telling someone to sign in again when signing in is not the
+# problem wastes an afternoon. An unmapped user gets a clear route to fix it,
+# not an empty app.
 # =============================================================================
 
 Screens:
@@ -14,9 +16,11 @@ Screens:
       Fill: =clrSurfaceAlt
       OnVisible: |
         =Patch(
-            MF_App_Event_Log, Defaults(MF_App_Event_Log),
-            MF_TelemetryRow("AccessDenied", "Warning", "scrNoAccess", gblCurrentUser.Email,
-                JSON({ reason: "NoSecurityMapping", upn: gblCurrentUser.Email }))
+            'MF App Event Log',
+            Defaults('MF App Event Log'),
+            MF_EventRow("PermissionDenied", "Warning", gblCurrentUser.Email,
+                        "NO_SCOPE_MAPPING",
+                        "Identity resolved but no active MF Security Mapping row")
         )
 
     Children:
@@ -33,35 +37,38 @@ Screens:
             PaddingRight: =24
             TabIndex: =-1
           Children:
-            - lblNoAccessHeading:
+            - lblHeading:
                 Control: Text
                 Variant: Subtitle
                 Properties:
-                  Text: ="You do not have access yet"
+                  Text: ="You don't have access yet"
                   Color: =clrText
                   Size: =24
                   Align: =Align.Center
                   AutoHeight: =true
                   TabIndex: =0
-            - lblNoAccessBody:
+            - lblBody:
                 Control: Text
                 Variant: Body
                 Properties:
                   # Specific, and correct about the cause.
                   Text: |
-                    ="You are signed in as " & gblCurrentUser.Email &
-                     ". Your identity was recognised, but no facility, installation or portfolio has been assigned to you yet. This is not a sign-in problem and signing in again will not change it."
+                    ="You're signed in as " & gblCurrentUser.Email &
+                     ". Your account isn't mapped to a facility yet. This isn't a sign-in problem, and signing in again won't change it."
                   Color: =clrText
                   Align: =Align.Center
                   AutoHeight: =true
                   LayoutMaxWidth: =560
                   Live: =Live.Polite
                   TabIndex: =-1
-            - lblNoAccessAction:
+            - lblAction:
                 Control: Text
                 Variant: Body
                 Properties:
-                  Text: ="Ask your installation manager to add you, or contact " & gblSupportContact & ". Quote the address above."
+                  Text: |
+                    ="Contact your Portfolio Manager" &
+                     If(IsBlank(gblSupportContact), "", " or " & gblSupportContact) &
+                     " and quote the address above."
                   Color: =clrText
                   Align: =Align.Center
                   AutoHeight: =true
@@ -73,5 +80,5 @@ Screens:
                 Properties:
                   Text: ="Check again"
                   AccessibleLabel: ="Check again whether access has been granted"
-                  OnSelect: =Refresh(MF_Security_Mapping); Navigate(MF_StartScreen, ScreenTransition.None)
+                  OnSelect: =Refresh('MF Security Mapping'); Navigate(MF_StartScreen, ScreenTransition.None)
                   TabIndex: =0

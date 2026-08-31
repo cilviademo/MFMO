@@ -1,12 +1,15 @@
 # =============================================================================
 # cmpStatusBadge — the status chip.
 #
-# Status is never colour-only. Text, icon shape and colour, always, in every
-# variant and at every gallery density. There is no compact mode that drops
-# the label, and there is no colour picker: the component takes a CODE and
-# asks MF_StatusPresentation what it means.
+# Status is never communicated by colour alone. A green square on its own is a
+# defect. The chip renders text and colour together, always, in every variant
+# and at every gallery density — there is no compact mode that drops the label.
 #
-# Accessibility gates A4, A6, A10.
+# The component takes a SEMANTIC STATUS and asks the engine what it means. It
+# never takes a colour, and there is no colour picker anywhere in this app.
+#
+# Uses the modern Badge rather than a coloured rectangle. Accessibility gates
+# A4, A6, A10.
 # =============================================================================
 
 ComponentDefinitions:
@@ -15,24 +18,24 @@ ComponentDefinitions:
     AccessAppScope: true            # reads the status catalogue named formulas
     CustomProperties:
 
-      StatusCode:
+      FinalStatus:
         PropertyKind: Input
-        DisplayName: StatusCode
-        Description: The stored Status_Code. The component derives everything else from it and never accepts a colour.
+        DisplayName: FinalStatus
+        Description: The stored Final_Status semantic string. Everything else is derived from it.
         DataType: Text
         Default: ="NOT_DUE"
 
-      SuspenseDate:
+      DueDate:
         PropertyKind: Input
-        DisplayName: SuspenseDate
-        Description: Included in the accessible sentence so a screen reader user gets what the sighted user reads from the row.
+        DisplayName: DueDate
+        Description: Included in the accessible sentence so a screen reader user gets what a sighted user reads from the row.
         DataType: Date
         Default: =Blank()
 
       AccessibleLabelOverride:
         PropertyKind: Input
         DisplayName: AccessibleLabelOverride
-        Description: Caller-supplied label. A component that hard-codes its own label cannot be made accessible by its caller, so this exists; blank means use the generated sentence.
+        Description: Caller-supplied label. A component that hard-codes its own label cannot be made accessible by its caller; blank means use the generated sentence.
         DataType: Text
         Default: =""
 
@@ -41,7 +44,7 @@ ComponentDefinitions:
         DisplayName: Presentation
         Description: The engine record, exposed so a caller sorts or filters on the same evaluation rather than repeating it.
         DataType: Record
-        Default: =MF_StatusPresentation(cmpStatusBadge.StatusCode)
+        Default: =MF_Status(cmpStatusBadge.FinalStatus)
 
     Properties:
       Height: =32
@@ -60,20 +63,19 @@ ComponentDefinitions:
             PaddingTop: =4
             PaddingBottom: =4
             BorderThickness: =1
-            BorderColor: =MF_StatusForeground(MF_StatusPresentation(cmpStatusBadge.StatusCode).status)
-            Fill: =MF_StatusBackground(MF_StatusPresentation(cmpStatusBadge.StatusCode).status)
+            BorderColor: =MF_StatusColor(MF_Status(cmpStatusBadge.FinalStatus).code)
+            Fill: =MF_StatusBackground(MF_Status(cmpStatusBadge.FinalStatus).code)
             RadiusTopLeft: =4
             RadiusTopRight: =4
             RadiusBottomLeft: =4
             RadiusBottomRight: =4
-            # The whole chip is one announceable unit. Its children are
-            # decorative so the reader does not hear the icon and the label
-            # as two separate things.
+            # The whole chip is one announceable unit, so the reader does not
+            # hear the icon and the label as two separate things.
             AccessibleLabel: |
               =If(
                   !IsBlank(cmpStatusBadge.AccessibleLabelOverride),
                   cmpStatusBadge.AccessibleLabelOverride,
-                  MF_StatusAccessibleLabel(cmpStatusBadge.StatusCode, cmpStatusBadge.SuspenseDate)
+                  MF_StatusAccessibleLabel(cmpStatusBadge.FinalStatus, cmpStatusBadge.DueDate)
               )
             # A status change announces without moving focus. Gate A10.
             Live: =Live.Polite
@@ -83,24 +85,25 @@ ComponentDefinitions:
             - icoStatus:
                 Control: Icon
                 Properties:
+                  # Shape is a third redundant channel alongside text and
+                  # colour, so the five states stay distinguishable in
+                  # greyscale and to a colour-blind reader.
                   Icon: |
                     =Switch(
-                        MF_StatusPresentation(cmpStatusBadge.StatusCode).code,
+                        MF_Status(cmpStatusBadge.FinalStatus).status,
                         "OVERDUE",             Icon.Warning,
-                        "RETURNED",            Icon.Undo,
-                        "PROVISIONAL_OVERDUE", Icon.Information,
-                        "DUE_SOON",            Icon.Clock,
-                        "SUBMITTED",           Icon.Publish,
-                        "IN_REVIEW",           Icon.View,
-                        "NOT_DUE",             Icon.Clock,
+                        "CORRECTION_REQUIRED", Icon.Undo,
+                        "NOT_SATISFIED",       Icon.Error,
+                        "RECEIVED_PENDING_QC", Icon.View,
                         "ACCEPTED",            Icon.CheckBadge,
-                        Icon.Information
+                        "NOT_DUE",             Icon.Clock,
+                        "PENDING_VALIDATION",  Icon.Information,
+                        Icon.Blocked
                     )
-                  Color: =MF_StatusForeground(MF_StatusPresentation(cmpStatusBadge.StatusCode).status)
+                  Color: =MF_StatusColor(MF_Status(cmpStatusBadge.FinalStatus).code)
                   Height: =16
                   Width: =16
-                  # Decorative: the shape is a redundant channel for the label,
-                  # not information of its own.
+                  # Decorative: it repeats the label rather than adding to it.
                   AccessibleLabel: =""
                   TabIndex: =-1
 
@@ -108,12 +111,12 @@ ComponentDefinitions:
                 Control: Text
                 Variant: Body
                 Properties:
-                  # The label text. Never dropped, never truncated to an icon.
-                  Text: =MF_StatusPresentation(cmpStatusBadge.StatusCode).label
-                  Color: =MF_StatusForeground(MF_StatusPresentation(cmpStatusBadge.StatusCode).status)
+                  # The label. Never dropped, never truncated to an icon.
+                  Text: =MF_Status(cmpStatusBadge.FinalStatus).label
+                  Color: =MF_StatusColor(MF_Status(cmpStatusBadge.FinalStatus).code)
                   Size: =12
                   FontWeight: =FontWeight.Semibold
                   AutoHeight: =true
-                  # Wraps rather than clips at 200% zoom and 320px. Gate A11.
+                  # Wraps rather than clips at 200% zoom. Gate A11.
                   Overflow: =Overflow.Visible
                   TabIndex: =-1

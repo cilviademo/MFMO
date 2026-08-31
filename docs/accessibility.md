@@ -1,188 +1,167 @@
-# Accessibility
+# Accessibility — a build gate, not a review step
 
-**Settled. Do not re-derive.** Section 508 conformance is an acceptance
-gate, not a review comment. A release that fails any gate below does not
-ship.
-
-The legal floor is Section 508, which incorporates WCAG 2.1 Level AA. That
-is the standard applied here.
+Section 508 applies to software developed, maintained, procured or used by
+federal agencies. Web software maps to WCAG 2.x A and AA plus the software
+criteria. Accessibility is built into the lifecycle, not added at the end, so
+**these are acceptance tests that block release.**
 
 ---
 
-## Acceptance gates
+## Rules for this app
 
-Every one of these is verified before a release is tagged, and the result is
-recorded in the CHANGELOG.
+### Status is never communicated by colour alone
 
-| # | Gate | How it is verified |
+Every status carries a text label. **A green square on its own is a defect.**
+
+This is why `Final_Status` — the semantic string — is stored alongside
+`Status_Code` on both `MF_EOM_Item` and `MF_EOM_Status`, and why
+`cmpStatusBadge` takes a status rather than a colour. There is no compact chip
+variant that drops the label, at any gallery density.
+
+> V3 named this column `Status_Semantic` on the fact and `Final_Status` on the
+> item, and carried both on the fact. There is now one semantic column,
+> `Final_Status`, on both — two columns that must always agree are a defect
+> waiting to happen. See `handoffs/RECONCILIATION.md` C8.
+
+Three redundant channels: **text, icon shape, colour.**
+
+| Code | Colour | Label examples | Icon |
+|---|---|---|---|
+| 0 | Gray | Not applicable | blocked |
+| 1 | Red | Overdue | warning |
+| 2 | Amber | Correction needed · Awaiting review · Not satisfied | undo · view · error |
+| 3 | Green | Accepted | check |
+| 4 | Blue | Not due · Informational | clock · info |
+
+Amber and Blue are distinguishable in greyscale by icon and by label. The badge
+announces the whole sentence, not the chip text:
+
+```
+"Status: Correction needed. Action owner: Facility. Due 10 September 2026."
+```
+
+A screen reader user gets what a sighted user reads from the row's position,
+not less.
+
+### Use native modern controls
+
+Do not build a fake combo box out of a gallery and a button, a custom table
+from labels, or a tab strip from rectangles. Microsoft warns specifically about
+composite controls assembled where a native one exists, and they are the most
+common cause of a screen reader announcing nothing useful.
+
+| Need | Use | Never |
 |---|---|---|
-| A1 | Power Apps **Accessibility checker** reports zero issues | Maker portal, screenshot attached to the release |
-| A2 | Every interactive control is reachable and operable by keyboard alone | Manual pass, whole task flow, no mouse |
-| A3 | Tab order follows visual order on every screen | Manual pass with `TabIndex` audit |
-| A4 | No information is conveyed by colour alone | Status chip review — see below |
-| A5 | Text contrast >= 4.5:1, large text and UI components >= 3:1 | Contrast table below, checked per token |
-| A6 | Every image, icon and chart has a text alternative, or is marked decorative | `AccessibleLabel` audit |
-| A7 | Every input has a programmatically associated label | `AccessibleLabel` audit |
-| A8 | Errors are announced, identified in text, and suggest a correction | `scrUpload` and `scrReview` error paths |
-| A9 | Focus is visible at all times and never trapped | Keyboard pass, dialogs specifically |
-| A10 | Screen reader announces status changes without a focus move | `Live` region on the status chip and toast |
-| A11 | The app is usable at 200% zoom and at 320 CSS px width | Responsive pass |
-| A12 | No time limit expires without warning and extension | Session and flow timeouts |
-| A13 | Motion is minimal and respects reduced-motion preference | No autoplay, no essential animation |
+| Selection | native Combobox / Dropdown | gallery + button |
+| Tabular data | modern Table | gallery of labels |
+| Status | modern Badge with text | coloured rectangle |
+| Confirmation | modern Dialog | overlaid rectangle group |
+| Action | native Button | clickable icon with no label |
 
-Gates A1, A2, A4 and A10 are the ones this application is most likely to
-fail, because they are the ones the status model touches.
+### Responsive layout via containers
 
----
-
-## Status is never colour-only (A4)
-
-`cmpStatusBadge` renders **text and colour together, always**. There is no
-mode, no compact variant and no gallery density in which the label is
-dropped.
-
-| Visual | Label text | Icon | Contrast on surface |
-|---|---|---|---|
-| Blue | `Not due yet` | clock | 4.6:1 |
-| Amber | `Due soon` / `Submitted - awaiting review` / `In review` / `Returned for correction` | alert / upload / eye / undo | 4.8:1 |
-| Red | `Overdue` | warning triangle | 5.9:1 |
-| Green | `Accepted` | check | 4.7:1 |
-| Gray | `Past suspense - requirement unverified` / `Waived` / `Not applicable` / `Superseded` | info | 7.1:1 |
-
-Three redundant channels: **text, icon shape, colour**. Amber and Gray are
-distinguishable in greyscale by icon and by label; Red and Amber differ in
-luminance by more than the icon alone would need.
-
-The badge's `AccessibleLabel` is the full sentence, not the chip text:
+Auto-layout horizontal and vertical containers, never absolute X/Y positioning.
 
 ```
-"Status: Past suspense, requirement unverified.
- Action owner: Program. Suspense date 5 November 2026."
+scrHome
+└── conRoot            (vertical, fill parent)
+    ├── conHeader      (horizontal, fixed height)
+    ├── conBody        (horizontal, flexible)
+    │   ├── conNav     (fixed width, collapses under 700px)
+    │   └── conContent (flexible)
+    └── conFooter
 ```
 
-A screen reader user gets the same information the sighted user gets from
-the chip's position in the row, not less.
+`Button.X = 475` and `Gallery.Width = App.Width - 423` are the signature of a
+brittle app and they break at 200% zoom.
 
-### The colour tokens
+On narrow Teams and mobile widths, **wrap into record cards rather than hiding
+table columns.** A truncated table on a phone loses the status column, which is
+the one thing the row exists to show.
 
-Defined once in `App.Formulas.fx` as named formulas. No screen may declare a
-colour literal.
+### Keyboard
 
-| Token | Hex | Use | On |
-|---|---|---|---|
-| `clrStatusBlue` | `#0F548C` | Blue chip text/border | `#EFF6FC` |
-| `clrStatusAmber` | `#8A5300` | Amber chip text/border | `#FFF9F0` |
-| `clrStatusRed` | `#A4262C` | Red chip text/border | `#FDF3F4` |
-| `clrStatusGreen` | `#0E700E` | Green chip text/border | `#F1FAF1` |
-| `clrStatusGray` | `#424242` | Gray chip text/border | `#F5F5F5` |
-| `clrText` | `#242424` | Body | `#FFFFFF` — 15.3:1 |
-| `clrTextSecondary` | `#616161` | Secondary | `#FFFFFF` — 6.3:1 |
-| `clrFocus` | `#0F6CBD` | Focus ring, 2px, 2px offset | any |
-
-Chip colours are the dark *foreground* on a pale tint, not white text on a
-saturated fill — that is what gets the ratios above 4.5:1 while keeping the
-five hues distinguishable.
-
----
-
-## Keyboard (A2, A3, A9)
-
-* No sign-in. CAC resolves identity before the app loads, so there is no
-  credential control to tab through and no screen that traps a user who
-  cannot complete it.
-* Auto-layout containers set the tab order implicitly. `TabIndex` is `0` on
-  everything interactive and `-1` on everything decorative. **A positive
-  `TabIndex` is forbidden** — it detaches tab order from visual order and
-  breaks A3 the moment a container reflows.
+* **No sign-in.** CAC resolves identity before the app loads, so there is no
+  credential control to tab through and no screen that traps a user who cannot
+  complete it.
+* `TabIndex` is `0` on everything interactive and `-1` on everything
+  decorative. **A positive `TabIndex` is forbidden** — it detaches tab order
+  from visual order the moment a container reflows.
+* The first tab stop on every screen is **Skip to main content**.
 * Galleries: arrow keys move within, `Tab` moves out. The first focusable
-  control in a gallery row is the item's primary action, not the chip.
-* Dialogs (`locDialogOpen`): focus moves to the dialog's first control on
-  open, is confined while open, and returns to the invoking control on
-  close. `Escape` always closes.
-* The focus ring is `clrFocus`, 2px, with 2px offset, and is never removed
-  or suppressed by a hover style.
-* Skip link: the first tab stop on every screen is **Skip to main content**,
-  which moves focus to `conContent`.
-
-Keyboard-only pass is a full task: open the app, pick a facility, upload a
-document, return it in QC, resubmit, accept. Mouse untouched. Any step that
-cannot be completed is a release blocker, not a bug to log.
+  control in a row is its primary action, not the chip.
+* Focus moves into a dialog on open, is confined while open, and returns to the
+  invoking control on close. `Escape` always closes.
+* The focus ring is never removed or suppressed by a hover style.
 
 ---
 
-## Announcements and errors (A8, A10)
+## Acceptance tests
 
-* Status changes announce through a live region on the item row rather than
-  by moving focus. Moving focus to announce a background change is worse
-  than not announcing it.
-* Upload progress announces at start and at completion, once each, not per
-  percent.
-* Errors are: announced, identified in text next to the field, and paired
-  with a correction. `"Upload failed"` is not an error message.
-  `"Upload failed: this reporting period closed on 5 November. Ask your
-  installation manager to reopen it, or pick a different period."` is.
-* Required fields are marked in text, not by colour or an asterisk alone.
-* Nothing important is communicated by a toast that disappears. Toasts
-  duplicate a state that remains visible on the screen.
+- [ ] Every interactive control reachable by keyboard alone, in logical order
+- [ ] Visible focus indicator on every control
+- [ ] `AccessibleLabel` set on every control conveying meaning
+- [ ] Text contrast at least 4.5:1; UI components and large text at least 3:1
+- [ ] No status conveyed by colour alone anywhere, in the app **or the COP**
+- [ ] Screen reader announces status chips as text
+- [ ] Status changes announce without moving focus
+- [ ] Usable at 200% zoom and 320px width with no horizontal scrolling
+- [ ] Errors announced, tied to the field, and written in plain language
+- [ ] Form fields have programmatic labels, not adjacent text only
+- [ ] Document links describe the document, not "click here"
+- [ ] Empty galleries explain what is empty and why
+- [ ] Power Apps Accessibility Checker returns zero errors before each release
 
----
+The gates this app is most likely to fail are the status-colour rule, the
+keyboard-only pass, and announcing state changes — all three are things the
+status model touches.
 
-## Naming (A6, A7)
+## Colour tokens
 
-Every control's `AccessibleLabel` is set explicitly. The naming convention
-carries the meaning:
+Declared once in `App.Formulas.fx`. **No screen may use a colour literal**, and
+`scripts/validate_solution.py` fails the build on one.
 
-* `cmbFacility` — `"Facility"`, with the selected value announced by the
-  combo box itself.
-* `btnReview` — `"Review submission for <requirement>, <facility>,
-  <period>"`. Not `"Review"` — a screen reader user tabbing a gallery hears
-  the same word twelve times otherwise.
-* `lblFacilityName` — a label, `TabIndex` `-1`, not focusable.
-* Decorative icons: `AccessibleLabel` empty **and** `TabIndex` `-1`.
-* Charts on the COP carry a text summary and a data table alternative.
+| Token | Hex | On | Ratio |
+|---|---|---|---|
+| `clrStatusBlue` | `#0F548C` | `#EFF6FC` | 4.6:1 |
+| `clrStatusAmber` | `#8A5300` | `#FFF9F0` | 4.8:1 |
+| `clrStatusRed` | `#A4262C` | `#FDF3F4` | 5.9:1 |
+| `clrStatusGreen` | `#0E700E` | `#F1FAF1` | 4.7:1 |
+| `clrStatusGray` | `#424242` | `#F5F5F5` | 7.1:1 |
+| `clrText` | `#242424` | `#FFFFFF` | 15.3:1 |
+| `clrTextSecondary` | `#616161` | `#FFFFFF` | 6.3:1 |
 
-Component-level: `cmpStatusBadge`, `cmpEOMItem`, `cmpMetricCard` and
-`cmpEmptyState` each expose an `AccessibleLabel` input property and set it
-on their root container. A component that hard-codes its own label cannot be
-made accessible by its caller.
-
-`cmpEmptyState` is an accessibility feature, not decoration: an empty
-gallery with no explanation is indistinguishable from a failed load. It
-states what is empty, why, and what to do.
+Chip colours are a dark foreground on a pale tint, not white on a saturated
+fill — that is what keeps five hues distinguishable while staying above 4.5:1.
 
 ---
 
-## Testing procedure
+## Error copy
 
-Run before every release, in this order:
+Never expose a status code. Say what happened and what to do.
 
-1. **Automated** — Power Apps Accessibility checker on every screen,
-   including `scrMaintenance`, `scrNoAccess` and `scrDiagnostics`. Zero
-   issues.
-2. **Contrast** — verify each token pair in the table above. Tokens change
-   rarely; verify anyway.
-3. **Keyboard-only** — the full task above, plus: reach `scrDiagnostics`
-   as a normal user (must fail), open and escape every dialog, and tab
-   through a gallery with 200+ rows.
-4. **Screen reader** — NVDA or JAWS on Edge, one facility user task and one
-   reviewer task end to end. Confirm the status chip announces its full
-   sentence and that QC return errors are announced.
-5. **Zoom** — 200% browser zoom and a 320px viewport. No horizontal
-   scrolling of the page, no clipped controls, no lost content.
-6. **Record** — results and any variance in the CHANGELOG entry for the
-   release. A variance needs a named owner and a target release; an
-   undocumented variance is a failure.
+| Situation | Message |
+|---|---|
+| No matching requirement | We found the file but there's no expected requirement matching that facility, document and period. Send it to Needs Classification and someone will confirm whether the requirement should exist. |
+| Comment missing on return | Add a comment explaining what needs correcting. |
+| Suspense missing | Set a date for the corrected document. |
+| Read-only mode | The app is read-only while we finish maintenance. You can view status but not submit. |
+| No scope mapping | You're signed in as *name*. Your account isn't mapped to a facility yet. This isn't a sign-in problem, and signing in again won't change it. |
+| Nothing in the queue | Every current submission has been accepted or returned. New submissions appear here as they arrive. |
+
+**An empty gallery with no explanation is indistinguishable from a failed
+load.** `cmpEmptyState` is an accessibility feature, not decoration: it states
+what is empty, why, and what to do. Every gallery has one.
 
 ---
 
 ## Known constraints
 
-* Power Apps galleries virtualise rows. A screen reader announces the loaded
-  set, not the total. Mitigate by stating the count in text above the
-  gallery (`"12 items, showing 12"`), which also helps the delegation
-  question — if the app says 500 and the count says 500, suspect truncation.
-* The Fluent 2 modern controls carry better ARIA semantics than the classic
-  set. If capability gate 8 is not green, the classic fallback needs
-  `AccessibleLabel` set on more controls, and the variance is recorded.
+* Power Apps galleries virtualise rows, so a screen reader announces the loaded
+  set rather than the total. Every gallery states its count in text above it,
+  which also makes a delegation truncation visible instead of silent.
+* If the modern-controls capability gate is not available, the classic fallback
+  needs `AccessibleLabel` set on more controls, and the variance is recorded in
+  the CHANGELOG for that release.
 * PDF evidence is user-supplied and its accessibility is not controllable by
   this app. The app never depends on reading it.

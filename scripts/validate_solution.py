@@ -9,7 +9,7 @@ Pre-release validation. Run before every export, tag and commit.
 Checks, in order:
 
   1. The schema validates and matches its declared size.
-  2. docs/data-model.md is not stale.
+  2. The generated docs are not stale.
   3. No hard-coded URL, site GUID or list-name string literal anywhere.
   4. Every Power Fx query that touches a high-volume list matches an approved
      shape in Delegation.fx.
@@ -36,8 +36,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 import eom_schema as S  # noqa: E402
+from status_engine import STATUSES  # noqa: E402
 
-HIGH_VOLUME = ("MF_EOM_Item", "MF_EOM_Submission", "MF_EOM_Status", "MF_App_Event_Log")
+HIGH_VOLUME = ("MF EOM Item", "MF EOM Submission", "MF EOM Status",
+               "MF App Event Log", "MF EOM Audit")
 
 # The interactive control types. A control of one of these types needs an
 # accessible name and must not carry a positive TabIndex.
@@ -46,22 +48,26 @@ INTERACTIVE = ("Button", "ComboBox", "TextInput", "DatePicker", "Toggle",
 
 # Anti-patterns from canvas-app/formulas/Delegation.fx. Each one returns the
 # first 500 rows and reports success.
+_HV = "|".join(re.escape(n) for n in HIGH_VOLUME)
+
 ANTI_PATTERNS = [
-    (re.compile(r"IsBlank\(\s*(Facility_ID|Installation_ID|EOM_Item_ID)\s*\)"),
+    (re.compile(r"IsBlank\(\s*(Facility_ID|Installation_ID|EOM_Item_ID|Contract_ID)\s*\)"),
      "IsBlank() on a list column does not delegate, and does not distinguish "
-     "null from empty string. Filter on Requirement_Scope or Classification_Status instead."),
-    (re.compile(r"ClearCollect\(\s*\w+\s*,\s*(%s)\b" % "|".join(HIGH_VOLUME)),
+     "null from empty string. Filter on Requirement_Scope or Resolution_Status instead."),
+    (re.compile(r"ClearCollect\(\s*\w+\s*,\s*'(%s)'" % _HV),
      "collecting a high-volume list pulls the first 500 rows and calls it the table"),
-    (re.compile(r"\bSearch\(\s*(%s)\b[^)]*,[^)]*,[^)]*," % "|".join(HIGH_VOLUME)),
+    (re.compile(r"\bSearch\(\s*'(%s)'[^)]*,[^)]*,[^)]*," % _HV),
      "multi-column Search() does not delegate"),
-    (re.compile(r"\bSort\(\s*(%s)\b" % "|".join(HIGH_VOLUME)),
+    (re.compile(r"\bSort\(\s*'(%s)'" % _HV),
      "Sort() does not delegate; use SortByColumns() on an indexed column"),
-    (re.compile(r"(Sum|Average|Max|Min|StdevP|VarP)\(\s*(%s)\b" % "|".join(HIGH_VOLUME)),
-     "aggregates do not delegate to SharePoint; read MF_EOM_Status instead"),
-    (re.compile(r"\bGroupBy\(\s*(%s)\b" % "|".join(HIGH_VOLUME)),
-     "GroupBy() is client-side and operates on a truncated set"),
-    (re.compile(r"ForAll\(\s*(%s)\b" % "|".join(HIGH_VOLUME)),
+    (re.compile(r"(Sum|Average|Max|Min|StdevP|VarP)\(\s*'(%s)'" % _HV),
+     "aggregates do not delegate to SharePoint; read the fact instead"),
+    (re.compile(r"\b(GroupBy|AddColumns|Distinct)\(\s*'(%s)'" % _HV),
+     "client-side shaping over a possibly truncated set"),
+    (re.compile(r"ForAll\(\s*'(%s)'" % _HV),
      "ForAll over a data source; that work belongs in EOM-01"),
+    (re.compile(r"StartsWith\(\s*EOM_Item_Key"),
+     "StartsWith does not delegate on SharePoint; filter on Installation_ID"),
 ]
 
 results = {"fail": [], "warn": [], "ok": []}
@@ -102,15 +108,18 @@ def check_schema():
 
 
 def check_generated_docs():
-    path = os.path.join(ROOT, "docs", "data-model.md")
-    if not os.path.exists(path):
-        fail("docs/data-model.md is missing; generate it from the schema")
-        return
-    if read(path).strip() != S.to_markdown().strip():
-        fail("docs/data-model.md is stale: "
-             "python3 scripts/eom_schema.py --markdown > docs/data-model.md")
-    else:
-        ok("docs/data-model.md matches the schema")
+    for path, produce, flag in (
+        (os.path.join(ROOT, "docs", "data-model.md"), S.to_markdown, "--markdown"),
+        (os.path.join(ROOT, "docs", "MF_EOM_Data_Dictionary.csv"),
+         S.to_dictionary_csv, "--dictionary"),
+    ):
+        rel = os.path.relpath(path, ROOT)
+        if not os.path.exists(path):
+            fail(f"{rel} is missing; generate it from the schema")
+        elif read(path).strip() != produce().strip():
+            fail(f"{rel} is stale: python3 scripts/eom_schema.py {flag} > {rel}")
+        else:
+            ok(f"{rel} matches the schema")
 
 
 def check_no_hard_coded_environment():
@@ -120,11 +129,13 @@ def check_no_hard_coded_environment():
     addresses a SharePoint list by its identifier, bound at author time. A list
     name as a STRING LITERAL is not, and is what this catches.
     """
-    url = re.compile(r"https://[\w.-]*sharepoint\.(com|us|mil)/", re.I)
+    url = re.compile(r"https://[\w.-]*(sharepoint\.(com|us|mil)|app\.powerbi\.com)", re.I)
     guid = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.I)
+    # A data-source SYMBOL ('MF EOM Item') is unavoidable; a list's INTERNAL
+    # name as a bare string literal is not, and that is what this catches.
     literal_list = re.compile(r'"(MF_[A-Za-z_]+)"')
 
-    searched = ("canvas-app", "flows", "solution")
+    searched = ("canvas-app", "flows", "solution", "powerbi")
     hits = 0
     for top in searched:
         for path in glob.glob(os.path.join(ROOT, top, "**", "*"), recursive=True):
@@ -165,18 +176,16 @@ def check_delegation():
 
 
 def check_period_filter_first():
-    """Every query on MF_EOM_Item filters on Reporting_Period_ID."""
+    """Every approved query on MF EOM Item filters on Reporting_Period."""
     text = read(os.path.join(ROOT, "canvas-app", "formulas", "Delegation.fx"))
     approved = re.findall(r"^(MF_\w+)\((.*?)\).*?:\s*Table\s*=\s*(.*?)(?=^\w|\Z)",
                           text, re.S | re.M)
-    missing = []
-    for name, _args, body in approved:
-        if "MF_EOM_Item" in body and "Reporting_Period_ID" not in body:
-            missing.append(name)
+    missing = [name for name, _args, body in approved
+               if "'MF EOM Item'" in body and "Reporting_Period" not in body]
     if missing:
-        fail("queries on MF_EOM_Item without a period filter: " + ", ".join(missing))
+        fail("queries on MF EOM Item without a period filter: " + ", ".join(missing))
     else:
-        ok("every approved MF_EOM_Item query filters on Reporting_Period_ID")
+        ok("every approved MF EOM Item query filters on Reporting_Period")
 
     # And nothing outside Delegation.fx queries the high-volume lists directly.
     stray = []
@@ -185,12 +194,11 @@ def check_period_filter_first():
         if rel.endswith("Delegation.fx"):
             continue
         for i, line in enumerate(read(path).splitlines(), 1):
-            if re.search(r"(Filter|LookUp|SortByColumns)\(\s*(MF_EOM_Item|MF_EOM_Status)\b", line):
+            if re.search(r"(Filter|SortByColumns)\(\s*'MF EOM (Item|Status|Audit)'", line):
                 stray.append(f"{rel}:{i}")
-    if stray:
-        for s in stray:
-            fail(f"direct query on a high-volume list outside Delegation.fx at {s}")
-    else:
+    for hit in stray:
+        fail(f"direct query on a high-volume list outside Delegation.fx at {hit}")
+    if not stray:
         ok("high-volume lists are only queried through the approved shapes")
 
 
@@ -231,9 +239,24 @@ def check_accessibility():
     # Gate A4: the badge must render its label, always.
     badge = read(os.path.join(ROOT, "canvas-app", "src", "Components", "cmpStatusBadge.pa.yaml"))
     if ".label" not in badge:
-        fail("cmpStatusBadge does not render Status_Semantic: status would be colour-only (gate A4)")
+        fail("cmpStatusBadge does not render its label: status would be colour-only (gate A4)")
+    elif "FinalStatus" not in badge:
+        fail("cmpStatusBadge must take a semantic status, never a colour")
     else:
         ok("cmpStatusBadge renders text, icon and colour together")
+
+    # Absolute positioning breaks at 200% zoom.
+    absolute = []
+    for path in glob.glob(os.path.join(ROOT, "canvas-app", "src", "**", "*.pa.yaml"),
+                          recursive=True):
+        rel = os.path.relpath(path, ROOT)
+        for i, line in enumerate(read(path).splitlines(), 1):
+            if re.search(r"^\s+(X|Y):\s*=\s*\d", line):
+                absolute.append(f"{rel}:{i}")
+    for hit in absolute:
+        fail(f"absolute positioning at {hit}: breaks at 200% zoom (gate A11)")
+    if not absolute:
+        ok("no absolute positioning; auto-layout containers throughout")
 
     # Every gallery needs an empty state: an empty gallery with no explanation
     # is indistinguishable from a failed load.
@@ -248,45 +271,60 @@ def check_accessibility():
 
 def check_feature_flags():
     import csv
-    path = os.path.join(ROOT, "configuration", "feature_flags.csv")
+    path = os.path.join(ROOT, "configuration", "feature-flags.csv")
     with open(path, encoding="utf-8-sig") as fh:
         rows = list(csv.DictReader(fh))
-    # Gates 1-5 are HARD: if one is red the build stops, so a flag defaulting
-    # True behind one can never be honoured against a missing dependency. The
-    # rule bites on the SOFT gates, where the capability may simply be absent
-    # and the app has to carry on without it.
-    hard = ("Capability.1.", "Capability.2.", "Capability.3.",
-            "Capability.4.", "Capability.5.")
-    bad = [r["Title"] for r in rows
-           if r["Requires_Capability"].strip()
-           and not r["Requires_Capability"].startswith(hard)
-           and r["Default_Value"] != "FALSE"]
+    # AI Builder and content classification must never become a dependency
+    # whose availability could block the app. Off in prod AND for testers,
+    # because there is no code path behind either in R1.
+    bad = [r["Feature_Key"] for r in rows
+           if r["Feature_Key"] in ("EOM_AI_BUILDER", "EOM_CONTENT_CLASSIFY")
+           and (r["Enabled_Prod"] != "FALSE" or r["Enabled_Testers"] != "FALSE")]
     if bad:
-        fail("flags with a soft-gated dependency defaulting True: " + ", ".join(bad))
+        fail("AI classification flags must ship FALSE: " + ", ".join(bad))
     else:
-        ok("no soft-gated dependency defaults True")
+        ok("AI classification flags ship disabled")
 
-    for r in rows:
-        if r["Title"] in ("EnableAIBuilder", "EnableDocumentContentAI") and r["Flag_Value"] != "FALSE":
-            fail(f"{r['Title']} must ship FALSE")
+    dev = [r["Feature_Key"] for r in rows
+           if r["Minimum_Role"] == "Developer" and r["Enabled_Prod"] != "FALSE"]
+    if dev:
+        fail("developer-only features enabled in prod: " + ", ".join(dev))
+    else:
+        ok("no developer-only feature is enabled in prod")
 
 
 def check_flows():
-    paths = glob.glob(os.path.join(ROOT, "flows", "**", "*.json"), recursive=True)
-    if not paths:
-        fail("no flow definitions found")
+    expected = ("EOM01-ExpectedPackage", "EOM02-FileIntake", "EOM03-Reconciliation",
+                "EOM04-Notifications", "EOM05-AppUpload")
+    missing = [f for f in expected
+               if not os.path.exists(os.path.join(ROOT, "flows", f, "definition.md"))]
+    for f in missing:
+        fail(f"flows/{f}/definition.md is missing")
+
+    # An export that has never been imported is a drawing of source, not
+    # source. See docs/handoffs/RECONCILIATION.md section 8.
+    stray = glob.glob(os.path.join(ROOT, "flows", "**", "*.json"), recursive=True)
+    for path in stray:
+        fail(f"{os.path.relpath(path, ROOT)}: hand-written flow JSON is not source; "
+             "the spec is the source and the export is the artifact")
+
+    if not missing and not stray:
+        ok(f"{len(expected)} flow specs present, no fabricated JSON")
+
+
+def check_reconciliation_record():
+    """The corrections must stay documented, or the next reader re-introduces them."""
+    path = os.path.join(ROOT, "docs", "handoffs", "RECONCILIATION.md")
+    if not os.path.exists(path):
+        fail("docs/handoffs/RECONCILIATION.md is missing; the decision record is "
+             "how a reader knows why the tree differs from reference/v3")
         return
-    for path in paths:
-        rel = os.path.relpath(path, ROOT)
-        try:
-            json.loads(read(path))
-        except json.JSONDecodeError as e:
-            fail(f"{rel} does not parse: {e}")
-            continue
-        text = read(path)
-        if "parameters('siteUrl')" not in text:
-            fail(f"{rel} does not read the site from a parameter")
-    ok(f"{len(paths)} flow definitions parse and parameterise the site")
+    text = read(path)
+    missing = [c for c in [f"C{n}" for n in range(1, 11)] if f"| {c} |" not in text]
+    if missing:
+        fail("reconciliation record is missing corrections: " + ", ".join(missing))
+    else:
+        ok("reconciliation record documents all ten corrections")
 
 
 def reconcile_fact(items_path, fact_path):
@@ -299,7 +337,7 @@ def reconcile_fact(items_path, fact_path):
         if key not in latest or row["Snapshot_Date"] > latest[key]["Snapshot_Date"]:
             latest[key] = row
 
-    compared = ("Status_Code", "Final_Status", "Status_Semantic", "Action_Owner_Role")
+    compared = ("Final_Status", "Status_Code", "Action_Owner", "Action_Required")
     mismatches = 0
     for item_id, item in items.items():
         f = latest.get(item_id)
@@ -316,16 +354,15 @@ def reconcile_fact(items_path, fact_path):
             if a != b:
                 fail(f"{item_id}.{field}: item={a!r} fact={b!r}")
                 mismatches += 1
-        code = item.get("Status_Code")
-        if isinstance(code, dict):
-            code = code.get("Value")
-        want_complete = code == "ACCEPTED"
-        want_denominator = code not in ("NOT_DUE", "WAIVED", "NOT_APPLICABLE", "SUPERSEDED")
-        if bool(f.get("Is_Complete")) != want_complete:
-            fail(f"{item_id}.Is_Complete disagrees with Status_Code {code}")
-            mismatches += 1
-        if bool(f.get("Is_In_Denominator")) != want_denominator:
-            fail(f"{item_id}.Is_In_Denominator disagrees with Status_Code {code}")
+        # The fact must not have re-derived anything: the numeric code has to
+        # be the one the engine assigns to that semantic status.
+        status = item.get("Final_Status")
+        if isinstance(status, dict):
+            status = status.get("Value")
+        expected_code = STATUSES.get(status, (None,))[0]
+        if expected_code is not None and int(f.get("Status_Code", -1)) != expected_code:
+            fail(f"{item_id}: fact Status_Code {f.get('Status_Code')} does not match "
+                 f"the engine's code for {status} ({expected_code})")
             mismatches += 1
     extra = set(latest) - set(items)
     for item_id in extra:
@@ -349,6 +386,7 @@ def main(argv=None):
     check_accessibility()
     check_feature_flags()
     check_flows()
+    check_reconciliation_record()
 
     if args.reconcile_fact:
         if not (args.items and args.fact):

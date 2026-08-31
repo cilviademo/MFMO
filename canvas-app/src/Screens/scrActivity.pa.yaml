@@ -1,0 +1,220 @@
+# =============================================================================
+# scrActivity — business events and the audit trail.
+#
+# Renamed from History. The app-level period selector re-renders everything,
+# which removed most of the reason History existed as a destination; what
+# remains is genuinely different — the record of what happened, stamped with
+# the app version that did it.
+#
+# Cheap now, invaluable during an IG.
+#
+# MF EOM Audit and MF App Event Log are append-only and unbounded. NEVER bind
+# a gallery to either without a filter: query by Entity_ID or Record_ID only.
+# =============================================================================
+
+Screens:
+  scrActivity:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: =Set(locActivityFilter, "All")
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            TabIndex: =-1
+          Children:
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =12
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  TabIndex: =-1
+                Children:
+                  - btnBack:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Back"
+                        AccessibleLabel: ="Back"
+                        OnSelect: =Back(ScreenTransition.None)
+                        TabIndex: =0
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: =If(IsBlank(locSelectedItem.EOM_Item_ID), "Activity", locSelectedItem.EOM_Item_Key)
+                        AutoHeight: =true
+                        TabIndex: =-1
+                  - cmbFilter:
+                      Control: ComboBox
+                      Properties:
+                        Items: =["All", "Uploads", "Reviews", "Corrections", "Classifications", "System"]
+                        SelectMultiple: =false
+                        DefaultSelectedItems: =["All"]
+                        OnChange: =Set(locActivityFilter, Self.Selected.Value)
+                        AccessibleLabel: ="Filter activity by type"
+                        LayoutMinWidth: =180
+                        TabIndex: =0
+
+            - conContent:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =12
+                  LayoutMinWidth: =320
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  # --- version history for the selected item ---------------
+                  - lblVersionsHeading:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: ="Versions"
+                        FontWeight: =FontWeight.Semibold
+                        Visible: =!IsBlank(locSelectedItem.EOM_Item_ID)
+                        TabIndex: =-1
+
+                  - galVersions:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        # Every version is retained. Nothing is overwritten or
+                        # deleted, including the ones that were returned.
+                        Items: =MF_VersionsForItem(locSelectedItem.EOM_Item_ID)
+                        TemplateSize: =88
+                        Visible: =!IsBlank(locSelectedItem.EOM_Item_ID) && CountRows(Self.AllItems) > 0
+                        AccessibleLabel: ="Submission versions, newest first"
+                        TabIndex: =0
+                      Children:
+                        - conVersion:
+                            Control: GroupContainer
+                            Variant: verticalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =2
+                              PaddingTop: =8
+                              PaddingBottom: =8
+                              PaddingLeft: =12
+                              PaddingRight: =12
+                              Fill: =If(ThisItem.Is_Current, clrSurface, clrSurfaceAlt)
+                              BorderThickness: =1
+                              BorderColor: =clrBorder
+                              TabIndex: =-1
+                            Children:
+                              - lblVersionHeading:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: ="Version " & ThisItem.Version_No & If(ThisItem.Is_Current, " (current)", " (superseded)")
+                                    FontWeight: =FontWeight.Semibold
+                                    TabIndex: =-1
+                              - lblVersionMeta:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: |
+                                      =Text(ThisItem.Uploaded_DateTime, "d mmm yyyy hh:nn") & " - " &
+                                       ThisItem.Uploaded_By.DisplayName &
+                                       If(IsBlank(ThisItem.Submitted_On_Behalf_Of), "",
+                                          " on behalf of " & ThisItem.Submitted_On_Behalf_Of) &
+                                       " - " & ThisItem.Intake_Method &
+                                       " - " & Coalesce(ThisItem.Classification_Method, "unclassified")
+                                    Color: =clrTextSecondary
+                                    AutoHeight: =true
+                                    TabIndex: =-1
+                              - lblVersionQC:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: |
+                                      =Coalesce(ThisItem.QC_Status, "Not yet reviewed") &
+                                       If(IsBlank(ThisItem.QC_By.DisplayName), "", " by " & ThisItem.QC_By.DisplayName) &
+                                       If(IsBlank(ThisItem.QC_Comment), "", " - " & ThisItem.QC_Comment)
+                                    Color: =clrTextSecondary
+                                    AutoHeight: =true
+                                    TabIndex: =-1
+                              - btnOpenVersion:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: ="Open file"
+                                    AccessibleLabel: ="Open version " & ThisItem.Version_No & " of " & ThisItem.File_Name & " in a new tab"
+                                    OnSelect: =Launch(ThisItem.File_URL, {}, LaunchTarget.New)
+                                    TabIndex: =0
+
+                  # --- audit trail ----------------------------------------
+                  - lblAuditHeading:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: ="Audit trail"
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+
+                  - galAudit:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        # Filtered by Entity_ID, always. Never an unfiltered
+                        # read of an append-only list.
+                        Items: |
+                          =Filter(
+                              MF_ActivityForRecord(
+                                  Coalesce(locSelectedItem.EOM_Item_ID, locSelectedItem.Current_Submission_ID)),
+                              locActivityFilter = "All"
+                                  || (locActivityFilter = "Uploads"         && Action = "Uploaded")
+                                  || (locActivityFilter = "Reviews"         && StartsWith(Action, "QC"))
+                                  || (locActivityFilter = "Corrections"     && Action = "QC Correction Required")
+                                  || (locActivityFilter = "Classifications" && Action = "Reclassified")
+                                  || (locActivityFilter = "System"          && Action in ["Generated", "Status Recalculated"])
+                          )
+                        TemplateSize: =52
+                        Visible: =CountRows(Self.AllItems) > 0
+                        AccessibleLabel: ="Audit trail, newest first"
+                        TabIndex: =0
+                      Children:
+                        - lblAuditRow:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: |
+                                =Text(ThisItem.Action_DateTime, "d mmm yyyy hh:nn") & "  " &
+                                 ThisItem.Action & "  " & ThisItem.Actor_UPN &
+                                 If(IsBlank(ThisItem.Old_Value) && IsBlank(ThisItem.New_Value), "",
+                                    "  " & Coalesce(ThisItem.Old_Value, "-") & " -> " & Coalesce(ThisItem.New_Value, "-")) &
+                                 If(IsBlank(ThisItem.Detail), "", "  " & ThisItem.Detail)
+                              Color: =clrText
+                              AutoHeight: =true
+                              TabIndex: =-1
+
+                  - emptyActivity:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =CountRows(galVersions.AllItems) = 0 && CountRows(galAudit.AllItems) = 0
+                        Title: ="No activity yet"
+                        Body: |
+                          =If(
+                              IsBlank(locSelectedItem.EOM_Item_ID),
+                              "Open a requirement from your package to see its versions and audit trail.",
+                              "Nothing has been submitted against this requirement, so there is nothing to show. The checklist row exists because the requirement expects a document."
+                          )
+                        ActionLabel: =If(IsBlank(locSelectedItem.EOM_Item_ID), "", "Submit a document")
+                        OnAction: =Navigate(scrUpload, ScreenTransition.None)

@@ -2,294 +2,324 @@
 
 # Data model
 
-Schema version **2.0** — **12 lists**, **164 columns**.
+Schema version **3.0** — **12 lists**, **172 columns**.
 
-`scripts/eom_schema.py` is the single source of truth. Regenerate this file with `python3 scripts/eom_schema.py --markdown > docs/data-model.md`.
+Derived from the V3 build with the corrections recorded in [`handoffs/RECONCILIATION.md`](handoffs/RECONCILIATION.md). Regenerate with `python3 scripts/eom_schema.py --markdown > docs/data-model.md`.
 
-| List | Columns | Indexed | Est. rows (yr 1) |
-|---|---:|---:|---:|
-| `MF_Installation` | 7 | 4 | 89 |
-| `MF_Facility` | 12 | 6 | 400 |
-| `MF_Contract` | 9 | 5 | 150 |
-| `MF_Requirement` | 19 | 6 | 200 |
-| `MF_Reporting_Period` | 9 | 5 | 200 |
-| `MF_EOM_Item` | 24 | 14 | 250,000 |
-| `MF_EOM_Submission` | 24 | 11 | 400,000 |
-| `MF_EOM_Status` | 22 | 13 | 3,000,000 |
-| `MF_Security_Mapping` | 11 | 7 | 5,000 |
-| `MF_App_Config` | 8 | 3 | 100 |
-| `MF_Feature_Flags` | 9 | 3 | 100 |
-| `MF_App_Event_Log` | 10 | 6 | 2,000,000 |
+| List | Grain | Columns | Indexed | Est. rows (yr 1) |
+|---|---|---:|---:|---:|
+| `MF_Installation` | One row per installation | 6 | 3 | 89 |
+| `MF_Facility` | One row per feeding facility | 7 | 4 | 500 |
+| `MF_EOM_Requirement` | One row per document requirement per operating model | 16 | 3 | 200 |
+| `MF_EOM_Item` | One PERSISTENT row per expected submission per reporting period | 26 | 12 | 250,000 |
+| `MF_EOM_Submission` | One row per uploaded file version | 25 | 7 | 400,000 |
+| `MF_Unmatched_File` | One row per file found in the FY folder that could not be resolved | 13 | 4 | 5,000 |
+| `MF_Security_Mapping` | One row per user per granted scope | 13 | 7 | 5,000 |
+| `MF_EOM_Audit` | One row per state change | 9 | 4 | 1,000,000 |
+| `MF_App_Config` | One row per configuration key | 6 | 2 | 100 |
+| `MF_Feature_Flags` | One row per feature | 7 | 1 | 100 |
+| `MF_App_Event_Log` | One row per meaningful business event | 13 | 6 | 2,000,000 |
+| `MF_EOM_Status` | One flat row per EOM item — the canonical Power BI fact | 31 | 8 | 250,000 |
 
 ## `MF_Installation`
 
-Installations in the portfolio. Parent of facility.
+**Grain:** One row per installation
 
-Unique key: `Installation_ID`.
+Unique key: `Installation_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Installation name. Renamed Title. |
-| `Installation_ID` | Text | Y | Y | Stable business key, e.g. INST-FTLIB. |
-| `Installation_Code` | Text | Y |  | Short code used in EOM_Item_Key. |
-| `Service_Branch` | Text |  |  | Owning service, free text so joint sites are expressible. |
-| `Region` | Text |  |  | Reporting region. |
-| `Portfolio_ID` | Text | Y | Y | Portfolio this installation rolls into. Denormalized onto every downstream row for delegation. |
-| `Is_Active` | Boolean |  | Y | Inactive installations generate no expected items. |
+| `Installation_ID` | Text | Y | Y | Canonical key. Must match the COP MF_Installation.Installation_ID. |
+| `Installation_Name` | Text | Y |  |  |
+| `Portfolio_ID` | Text | Y | Y |  |
+| `MAJCOM` | Text |  |  |  |
+| `EOM_Folder_URL` | URL |  |  | Teams/SharePoint FY folder root for this installation |
+| `Active_Flag` | Boolean | Y | Y |  |
 
 ## `MF_Facility`
 
-Facilities. The operating model lives here, not on the installation: one base can run a legacy DFAC and a Food 2.0 cafe, and requirements follow the facility.
+**Grain:** One row per feeding facility
 
-Unique key: `Facility_ID`.
+Operating_Model is HERE, not on the installation. One base can run a legacy DFAC and a Food 2.0 cafe simultaneously; the requirement set is driven by the facility's model.
 
-| Column | Type | Req | Idx | Notes |
-|---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Facility name. Renamed Title. |
-| `Facility_ID` | Text | Y | Y | Stable business key, e.g. FAC-FTLIB-01. |
-| `Installation_ID` | Text | Y | Y | Parent installation. |
-| `Installation_Name` | Text |  |  | Denormalized for display without a lookup. |
-| `Portfolio_ID` | Text | Y | Y | Denormalized for delegable portfolio filtering. |
-| `Facility_Type` | Choice | Y |  | Physical type of the facility. Choices: `DFAC`, `Cafe`, `Grab_and_Go`, `Field_Feeding`, `Warehouse`, `Other`. |
-| `Operating_Model` | Choice | Y | Y | Drives which requirements apply. Non-negotiable: this lives on the facility. Choices: `Legacy_DFAC`, `Food_2_0`, `Hybrid`, `Contractor_Operated`. |
-| `Contract_ID` | Text |  |  | Governing contract when contractor operated. Null otherwise. |
-| `Manager_UPN` | Text |  |  | Facility manager UPN. Resolved from Entra, never typed. |
-| `Reviewer_UPN` | Text |  |  | Default QC reviewer UPN. |
-| `Go_Live_Date` | DateTime |  |  | First reporting period this facility is expected to report. |
-| `Is_Active` | Boolean |  | Y | Inactive facilities generate no expected items. |
-
-## `MF_Contract`
-
-Contracts. A contractor invoice may cover several facilities under one CLIN, which is why Requirement_Scope includes Contract.
-
-Unique key: `Contract_ID`.
+Unique key: `Facility_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Contract name. Renamed Title. |
-| `Contract_ID` | Text | Y | Y | Stable business key. |
-| `CLIN` | Text |  |  | Contract line item number the obligation attaches to. |
-| `Vendor_Name` | Text |  |  | Prime vendor. |
-| `Installation_ID` | Text |  | Y | Installation the contract is administered from. |
-| `Portfolio_ID` | Text | Y | Y | Denormalized for delegable portfolio filtering. |
-| `Period_Start` | DateTime |  |  | Period of performance start. |
-| `Period_End` | DateTime |  |  | Period of performance end. |
-| `Is_Active` | Boolean |  | Y | Inactive contracts generate no expected items. |
+| `Facility_ID` | Text | Y | Y | Unique enterprise-wide, not per installation |
+| `Installation_ID` | Text | Y | Y |  |
+| `Facility_Name` | Text | Y |  |  |
+| `Facility_Type` | Choice | Y |  | Choices: `Main DFAC`, `Flight Kitchen`, `Kiosk`, `Satellite`, `MAF`, `Contract Cafe`. |
+| `Operating_Model` | Choice | Y | Y | Drives which requirements apply to THIS facility Choices: `Legacy/APF`, `Food 2.0`, `MAFFO/MAF`, `AOR/CDS`. |
+| `Contract_ID` | Text |  |  | Nullable. Set where the facility is covered by a contract. |
+| `Active_Flag` | Boolean | Y | Y |  |
 
-## `MF_Requirement`
+## `MF_EOM_Requirement`
 
-The requirement catalogue. Seeded with twelve provisional rows. Verification_Status governs whether a missed suspense is allowed to drive Red: an UNVERIFIED requirement never does.
+**Grain:** One row per document requirement per operating model
 
-Unique key: `Requirement_ID`.
+THE requirement engine. The app queries this; it contains no 'if Legacy then require 1119' logic. Changing a requirement next year is a list edit, not an app rebuild. The drop boxes on the installation screen ARE this list, filtered.
 
-| Column | Type | Req | Idx | Notes |
-|---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Requirement name. Renamed Title. |
-| `Requirement_ID` | Text | Y | Y | Stable business key, e.g. REQ-001. |
-| `Requirement_Code` | Text | Y |  | Short code used in EOM_Item_Key. |
-| `Requirement_Category` | Choice | Y |  | Reporting category. Choices: `Accountability`, `Inventory`, `Financial`, `Food_Safety`, `Equipment`, `Personnel`, `Contract`, `Customer`, `Closeout`, `Nutrition`. |
-| `Requirement_Scope` | Choice | Y | Y | Facility, Installation or Contract. Determines whether Facility_ID is null. Choices: `Facility`, `Installation`, `Contract`. |
-| `Applies_To_Operating_Model` | MultiChoice |  |  | Operating models this requirement applies to. Empty means all. Choices: `Legacy_DFAC`, `Food_2_0`, `Hybrid`, `Contractor_Operated`. |
-| `Frequency` | Choice | Y | Y | How often the obligation recurs. Choices: `Monthly`, `Quarterly`, `SemiAnnual`, `Annual`. |
-| `Due_Rule` | Text |  |  | Human-readable rule, e.g. 'EOM+5BD'. Documentation for the offsets below, never parsed at runtime. |
-| `Due_Offset_Days` | Number | Y |  | Days after period end that the document is due. |
-| `Suspense_Offset_Days` | Number |  |  | Days after period end that the document becomes late. Must be >= Due_Offset_Days. |
-| `Verification_Status` | Choice | Y | Y | UNVERIFIED until a named authority is confirmed. Choices: `UNVERIFIED`, `VERIFIED`, `RETIRED`. |
-| `Verification_Date` | DateTime |  |  | Date the authority reference was confirmed. Null while UNVERIFIED. |
-| `Authority_Reference` | Note |  |  | Regulation, contract clause or policy memo the requirement rests on. |
-| `Accepted_File_Types` | Text |  |  | Comma-separated extensions accepted at upload. |
-| `Requires_QC` | Boolean |  |  | False means an accepted upload closes the item without review. |
-| `QC_Role` | Choice |  |  | Role that performs QC when Requires_QC is true. Choices: `FacilityUser`, `FacilityManager`, `Reviewer`, `InstallationManager`, `PortfolioManager`, `Admin`, `Developer`, `Tester`. |
-| `Effective_Start_Date` | DateTime |  |  | First period this requirement generates items for. |
-| `Effective_End_Date` | DateTime |  |  | Last period this requirement generates items for. Null means open-ended. |
-| `Is_Active` | Boolean |  | Y | Inactive requirements generate no expected items. |
-
-## `MF_Reporting_Period`
-
-Fiscal reporting periods. Monthly rows drive EOM; the FiscalYear row drives EOY closeout. EOM-01 runs against periods in state OPEN.
-
-Unique key: `Period_ID`.
+Unique key: `Requirement_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Period name, e.g. FY26-P05 or FY26-EOY. Renamed Title. |
-| `Period_ID` | Text | Y | Y | Stable business key, identical to Title. |
-| `Period_Type` | Choice | Y | Y | Month, Quarter or FiscalYear. Choices: `Month`, `Quarter`, `FiscalYear`. |
-| `Fiscal_Year` | Number | Y | Y | Federal fiscal year, e.g. 2026. |
-| `Fiscal_Month` | Number |  |  | 1-12 where 1 is October. Null on FiscalYear rows. |
-| `Period_Start` | DateTime |  |  | First day of the period. |
-| `Period_End` | DateTime | Y |  | Last day of the period. All due and suspense dates are offsets from this. |
-| `Window_Close_Date` | DateTime |  |  | After this date the period accepts no further submissions without an admin override. |
-| `Period_State` | Choice | Y | Y | FUTURE, OPEN, CLOSING or CLOSED. Choices: `FUTURE`, `OPEN`, `CLOSING`, `CLOSED`. |
+| `Requirement_ID` | Text | Y | Y |  |
+| `Document_Code` | Text | Y |  | 1119, 1119-1, SIK, SF1080, DAF79, 1038, SAIIT, CONTRACTOR-INV |
+| `Document_Name` | Text | Y |  |  |
+| `Applicable_Model` | Choice | Y |  | 'All' applies regardless of facility model Choices: `Legacy/APF`, `Food 2.0`, `MAFFO/MAF`, `AOR/CDS`, `All`. |
+| `Requirement_Scope` | Choice | Y |  | Determines the grain of the generated EOM_Item. Portfolio reserved, not implemented. Choices: `Facility`, `Installation`, `Contract`. |
+| `Applicable_Facility_Types` | Text |  |  | Semicolon list. Blank = all types. Kiosks rarely file a 1119. |
+| `Frequency` | Choice | Y |  | Choices: `Monthly`, `Quarterly`, `Semiannual`, `Annual`, `Conditional`. |
+| `Required_Flag` | Boolean | Y |  |  |
+| `Due_Day` | Number |  |  | Day of the month following the reporting period. Configurable — changing 10 to 15 never touches the app. |
+| `Due_Offset_Months` | Number |  |  | Usually 1. Set higher for lagging requirements. |
+| `QC_Required` | Boolean | Y |  |  |
+| `Accepted_File_Types` | Text |  |  | Advisory only in MVP. xlsx;pdf |
+| `Authority_Reference` | Text |  |  | UNVERIFIED means do not enforce. The app still shows the box; the requirement cannot drive an adverse status until validated. |
+| `Authority_Status` | Choice | Y | Y | UNVERIFIED requirements generate items but never drive Red Choices: `Verified`, `UNVERIFIED`, `Management decision`. |
+| `Sort_Order` | Number |  |  |  |
+| `Active_Flag` | Boolean | Y | Y |  |
 
 ## `MF_EOM_Item`
 
-The persistent checklist row: one expected obligation per Facility/Installation/Contract x Requirement x Reporting Period. Never duplicated on resubmission. This is the list that crosses the delegation ceiling first, so every column a query touches is indexed and Reporting_Period_ID is always the first filter.
+**Grain:** One PERSISTENT row per expected submission per reporting period
 
-Unique key: `Title`.
+Generated by EOM-01. Created once and never duplicated. Corrections attach as new MF_EOM_Submission versions pointing at the same item. Facility_ID is NULL for Installation and Contract scope. This is the list that crosses the delegation ceiling first, so every column a production query touches is indexed and Reporting_Period is always the first filter.
+
+Unique key: `EOM_Item_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | EOM_Item_Key: compound human-readable key, <Scope>|<ScopeID>|<Requirement_Code>|<Period_ID>. Renamed Title and used for idempotency. |
-| `EOM_Item_ID` | Text | Y | Y | GUID assigned at generation. Foreign key target for submissions and the fact. |
-| `Requirement_ID` | Text | Y | Y | Requirement this obligation comes from. |
-| `Requirement_Name` | Text |  |  | Denormalized for display and for the fact. |
-| `Requirement_Scope` | Choice | Y | Y | Copied from the requirement so the item filters without a join. Choices: `Facility`, `Installation`, `Contract`. |
-| `Requirement_Verification_Status` | Choice | Y | Y | Copied at generation. An UNVERIFIED requirement never drives Red. Choices: `UNVERIFIED`, `VERIFIED`, `RETIRED`. |
-| `Facility_ID` | Text |  | Y | Null, never empty string, on Installation- and Contract-scope rows. |
-| `Facility_Name` | Text |  |  | Denormalized for display. |
-| `Installation_ID` | Text | Y | Y | Always populated, including on facility-scope rows. |
-| `Installation_Name` | Text |  |  | Denormalized for display. |
-| `Contract_ID` | Text |  |  | Populated on Contract-scope rows only. |
-| `Portfolio_ID` | Text | Y | Y | Denormalized for delegable portfolio rollups. |
-| `Reporting_Period_ID` | Text | Y | Y | Always the first filter in every production query. |
-| `Fiscal_Year` | Number |  | Y | Denormalized so EOY views filter without a join. |
-| `Due_Date` | DateTime |  |  | Period_End + Requirement.Due_Offset_Days. |
-| `Suspense_Date` | DateTime |  | Y | Period_End + Requirement.Suspense_Offset_Days. Reset by a QC return. |
-| `Status_Code` | Choice | Y | Y | Stored so Filter() delegates. Written only by the status engine. Choices: `NOT_DUE`, `DUE_SOON`, `SUBMITTED`, `IN_REVIEW`, `RETURNED`, `ACCEPTED`, `OVERDUE`, `PROVISIONAL_OVERDUE`, `WAIVED`, `NOT_APPLICABLE`, `SUPERSEDED`. |
-| `Status_Semantic` | Text |  |  | Human-readable status string stored beside the code. Never derived independently of it. |
-| `Final_Status` | Choice | Y | Y | One of five visual states. Independent of Status_Code by design. Choices: `Blue`, `Amber`, `Red`, `Green`, `Gray`. |
-| `Action_Owner_Role` | Choice | Y |  | Who owes the next action. Choices: `Facility`, `Reviewer`, `Program`, `None`. |
-| `Action_Required` | Boolean |  | Y | True when someone owes an action. Drives My Work. |
-| `Current_Submission_ID` | Text |  |  | Submission_ID of the current version. Null until first upload. |
-| `Current_Version_Number` | Number |  |  | Version number of the current submission. 0 before first upload. |
-| `Generation_Run_ID` | Text |  |  | EOM-01 run that created the row. Idempotency audit trail. |
+| `EOM_Item_ID` | Text | Y | Y |  |
+| `EOM_Item_Key` | Text | Y | Y | Human-readable compound key: LACKLAND|BLDG1234|2026-10|1119. Drives duplicate prevention and flow idempotency. |
+| `Portfolio_ID` | Text | Y | Y | Denormalized. The portfolio filter is the first server-side filter on every query, so it must be on the row. |
+| `Installation_ID` | Text | Y | Y |  |
+| `Facility_ID` | Text |  | Y | NULLABLE — null, never empty string. Null for Installation-scope and Contract-scope rows. |
+| `Contract_ID` | Text |  |  | NULLABLE. Set for Contract-scope rows. |
+| `Reporting_Period` | Text | Y | Y | YYYY-MM |
+| `Requirement_ID` | Text | Y | Y |  |
+| `Requirement_Scope` | Choice | Y |  | Denormalized from the requirement so the app filters without a join. Also how the app asks 'is this a facility row' — IsBlank(Facility_ID) does not delegate. Choices: `Facility`, `Installation`, `Contract`. |
+| `Authority_Status` | Choice | Y | Y | Denormalized at generation. Rule 2 of the status engine reads it, and a lookup to MF_EOM_Requirement would not delegate. Choices: `Verified`, `UNVERIFIED`, `Management decision`. |
+| `Required_Flag` | Boolean | Y |  |  |
+| `Due_Date` | DateTime | Y | Y |  |
+| `Current_Submission_ID` | Text |  |  | Points at the Is_Current submission. Null until the first upload. |
+| `Received_Flag` | Boolean | Y |  |  |
+| `Received_DateTime` | DateTime |  |  | Upload timestamp of the current submission. Null until received. |
+| `Final_Status` | Choice | Y | Y | SEMANTIC status. Calculated by EOM-03 and by the app's QC action, never user-selectable. Independent of Status_Code — one evaluation writes both; neither is derived from the other. Choices: `NOT_APPLICABLE`, `NOT_DUE`, `PENDING_VALIDATION`, `OVERDUE`, `NOT_SATISFIED`, `CORRECTION_REQUIRED`, `RECEIVED_PENDING_QC`, `ACCEPTED`. |
+| `Status_Code` | Number | Y | Y | VISUAL code only. 0 Gray not-applicable, 1 Red overdue, 2 Amber needs attention, 3 Green accepted, 4 Blue not-due/informational. Five states, not four: collapsing 'not applicable' and 'not due yet' into Gray made an installation whose requirements had simply not come due read as Not Applicable. Stored so Filter() delegates. |
+| `Action_Owner` | Choice | Y |  | Status_Code alone cannot answer 'is this mine'. Amber covers both correction needed (facility) and awaiting review (AFSVC). Home filters on this, not on colour. Choices: `Facility`, `Reviewer`, `Admin`, `None`. |
+| `Action_Required` | Boolean | Y | Y |  |
+| `Days_Late` | Number |  |  | Set by EOM-03, not computed in DAX. Null until received or overdue. |
+| `On_Time_Flag` | Boolean |  |  | Received on or before Due_Date. |
+| `Last_Reconciled_DateTime` | DateTime |  |  | Stamped by EOM-03. System Health flags items not reconciled recently. |
+| `Exception_Flag` | Boolean | Y |  | Set when the item needs human attention beyond normal QC |
+| `Correction_Due` | DateTime |  |  | Set when QC returns a correction |
+| `Waived_Flag` | Boolean |  |  | Portfolio Manager may waive a requirement for a period |
+| `Waiver_Reason` | Note |  |  |  |
 
 ## `MF_EOM_Submission`
 
-One row per uploaded file. Versioned, never overwritten. Rows with a null EOM_Item_ID and Classification_Status NEEDS_CLASSIFICATION are the Needs Classification queue: an upload with no matching expected item lands here and never creates a tracker row.
+**Grain:** One row per uploaded file version
 
-Unique key: `Submission_ID`.
+Versioned evidence. v1 Correction Required and v2 Accepted both persist; nothing is overwritten or deleted. QC applies to the Is_Current version.
 
-| Column | Type | Req | Idx | Notes |
-|---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Submission key: <EOM_Item_Key>|v<n>, or UNMATCHED|<guid> when unclassified. Renamed Title. |
-| `Submission_ID` | Text | Y | Y | GUID assigned at intake. |
-| `EOM_Item_ID` | Text |  | Y | Parent checklist row. NULL for the Needs Classification queue. |
-| `Version_Number` | Number | Y |  | 1 for the first upload against an item, incremented thereafter. Every version is retained. |
-| `Is_Current_Version` | Boolean |  | Y | Exactly one true row per item. Drives the item's Status_Code. |
-| `File_Name` | Text |  |  | As uploaded. Evidence only. Filenames are never authoritative and never a classification method. |
-| `SharePoint_File_ID` | Text | Y | Y | The unique file identifier. The list row is truth; the path is convenience. |
-| `SharePoint_File_Url` | Url |  |  | Convenience link. Re-resolved from SharePoint_File_ID when a file is moved or renamed. |
-| `File_Size_Bytes` | Number |  |  | Size at intake. |
-| `Submitted_By_UPN` | Text |  | Y | Uploader, resolved from Entra identity, never typed. |
-| `Submitted_On` | DateTime |  | Y | Intake timestamp. |
-| `Submission_Channel` | Choice | Y | Y | APP_UPLOAD is the front door; FOLDER_DROP keeps working. Choices: `APP_UPLOAD`, `FOLDER_DROP`, `ADMIN`. |
-| `Classification_Method` | Choice | Y |  | Tier 0 DECLARED is the production baseline. Tiers 2 and 3 are feature-flagged off. Choices: `DECLARED`, `FOLDER_HINT`, `CONTENT`, `AI_BUILDER`, `MANUAL`, `UNCLASSIFIED`. |
-| `Classification_Status` | Choice | Y | Y | CLASSIFIED, NEEDS_CLASSIFICATION, REJECTED_DUPLICATE or ERROR. Choices: `CLASSIFIED`, `NEEDS_CLASSIFICATION`, `REJECTED_DUPLICATE`, `ERROR`. |
-| `Classification_Confidence` | Number |  |  | 0-100. Always 100 for DECLARED. Advisory only for FOLDER_HINT. |
-| `Suggested_Facility_ID` | Text |  |  | Tier 1 folder hint. Displayed as a suggestion, never applied automatically. |
-| `Suggested_Requirement_ID` | Text |  |  | Tier 1 folder hint. Displayed as a suggestion, never applied automatically. |
-| `Error_Code` | Text |  |  | Machine-readable intake or QC error. |
-| `Error_Message` | Note |  |  | Human-readable failure detail for the Needs Classification queue. |
-| `QC_Status` | Choice |  | Y | PENDING, IN_REVIEW, ACCEPTED or RETURNED. Choices: `PENDING`, `IN_REVIEW`, `ACCEPTED`, `RETURNED`. |
-| `QC_Reviewer_UPN` | Text |  | Y | Reviewer who made the decision. |
-| `QC_Reviewed_On` | DateTime |  |  | Decision timestamp. |
-| `QC_Comment` | Note |  |  | Mandatory on RETURNED. The flow rejects a return without a comment. |
-| `New_Suspense_Date` | DateTime |  |  | Mandatory on RETURNED. Written back to the item's Suspense_Date. |
-
-## `MF_EOM_Status`
-
-The canonical Power BI fact. One row per checklist item per snapshot. Every workflow decision is already resolved here so the COP reconstructs no workflow logic: no DAX in the report may re-derive a status. Is_Complete and Is_In_Denominator carry the rollup semantics; the percentage itself is never stored.
-
-Unique key: `Title`.
+Unique key: `Submission_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Fact key: <EOM_Item_Key>|<Snapshot_Date>. Renamed Title. |
-| `Snapshot_Date` | DateTime | Y | Y | Date the fact row was generated by EOM-03. |
-| `EOM_Item_ID` | Text | Y | Y | Grain key back to MF_EOM_Item. |
-| `EOM_Item_Key` | Text |  |  | Human-readable grain key for troubleshooting against the app. |
-| `Reporting_Period_ID` | Text | Y | Y | Period dimension key. |
-| `Fiscal_Year` | Number |  | Y | Denormalized for EOY reporting. |
-| `Portfolio_ID` | Text | Y | Y | RLS key at portfolio scope. |
-| `Installation_ID` | Text | Y | Y | RLS key at installation scope. |
-| `Facility_ID` | Text |  | Y | RLS key at facility scope. Null on Installation- and Contract-scope rows. |
-| `Facility_Name` | Text |  |  | Denormalized label. |
-| `Requirement_ID` | Text | Y | Y | Requirement dimension key. |
-| `Requirement_Scope` | Choice | Y |  | Facility, Installation or Contract. Choices: `Facility`, `Installation`, `Contract`. |
-| `Requirement_Verification_Status` | Choice | Y |  | Explains why a past-suspense row is Gray rather than Red. Choices: `UNVERIFIED`, `VERIFIED`, `RETIRED`. |
-| `Status_Code` | Choice | Y | Y | Copied verbatim from the item. Never recomputed. Choices: `NOT_DUE`, `DUE_SOON`, `SUBMITTED`, `IN_REVIEW`, `RETURNED`, `ACCEPTED`, `OVERDUE`, `PROVISIONAL_OVERDUE`, `WAIVED`, `NOT_APPLICABLE`, `SUPERSEDED`. |
-| `Status_Semantic` | Text |  |  | Copied verbatim from the item. |
-| `Final_Status` | Choice | Y | Y | Copied verbatim from the item. Choices: `Blue`, `Amber`, `Red`, `Green`, `Gray`. |
-| `Action_Owner_Role` | Choice | Y |  | Copied verbatim from the item. Choices: `Facility`, `Reviewer`, `Program`, `None`. |
-| `Action_Required` | Boolean |  |  | Copied verbatim from the item. |
-| `Due_Date` | DateTime |  |  | Copied verbatim from the item. |
-| `Suspense_Date` | DateTime |  |  | Copied verbatim from the item. |
-| `Is_Complete` | Boolean |  | Y | Rollup numerator flag. True only for ACCEPTED. |
-| `Is_In_Denominator` | Boolean |  | Y | Rollup denominator flag. False for NOT_DUE, WAIVED, NOT_APPLICABLE and SUPERSEDED. |
+| `Submission_ID` | Text | Y | Y |  |
+| `EOM_Item_ID` | Text | Y | Y |  |
+| `Version_No` | Number | Y |  | Assigned by upload timestamp order |
+| `File_Name` | Text | Y |  | As uploaded. No naming convention required, and the name is never read for meaning. |
+| `File_URL` | URL | Y |  | THE LIST ROW IS TRUTH, THE PATH IS CONVENIENCE. Never derive status from the path — files get moved and renamed. |
+| `File_Size_KB` | Number |  |  |  |
+| `Uploaded_By` | User | Y |  | SharePoint identity of the actual uploader |
+| `Uploaded_DateTime` | DateTime | Y | Y |  |
+| `Submitted_On_Behalf_Of` | Text |  |  | Facility_ID or Installation_ID when an AFSVC MFM uploads a document that arrived by email. Without this, emailed submissions misattribute to AFSVC and the missing/overdue counts go wrong silently. |
+| `Intake_Method` | Choice | Y |  | App upload needs no classification. Folder drop may. Choices: `App upload`, `Folder drop`, `Manual classification`. |
+| `Classification_Method` | Choice |  |  | 'Declared at upload' is the production baseline. Filename is NEVER a method, at any tier. Choices: `Declared at upload`, `Folder context`, `Document content`, `AI Builder`, `Manual`. |
+| `Classification_Status` | Choice |  | Y | Choices: `Pending`, `Classified`, `Needs Review`, `Failed`. |
+| `Classification_Confidence` | Choice |  |  | 'Declared' = the app captured it at upload. That is the whole point of making the app the front door. Choices: `Declared`, `High`, `Low`, `Unresolved`. |
+| `Last_Error_Code` | Text |  |  |  |
+| `Last_Error_Message` | Note |  |  | User-facing, plain language. Never a raw HTTP status. |
+| `Last_Processing_DateTime` | DateTime |  |  |  |
+| `Retry_Count` | Number |  |  |  |
+| `Source_Path` | Text |  |  | Where the file was found. Diagnostic only — the list row is truth. |
+| `SharePoint_File_ID` | Text |  | Y | Survives a rename or move; the URL does not. |
+| `Is_Current` | Boolean | Y | Y |  |
+| `Superseded_By` | Text |  |  | Submission_ID of the version that replaced this one |
+| `QC_Status` | Choice | Y | Y | Choices: `Pending Review`, `Accepted`, `Correction Required`, `Wrong Document`, `Not Applicable`. |
+| `QC_By` | User |  |  |  |
+| `QC_DateTime` | DateTime |  |  |  |
+| `QC_Comment` | Note |  |  | REQUIRED when QC_Status is Correction Required or Wrong Document |
+
+## `MF_Unmatched_File`
+
+**Grain:** One row per file found in the FY folder that could not be resolved
+
+The safety net for folder drops. Should trend toward empty once people use the app. No content parsing and no AI Builder in MVP — a human picks from dropdowns. NEVER INVENT A REQUIREMENT: resolving a row here attaches the file to an existing expected item and never creates one.
+
+Unique key: `Unmatched_ID`
+
+| Column | Type | Req | Idx | Notes |
+|---|---|:-:|:-:|---|
+| `Unmatched_ID` | Text | Y | Y |  |
+| `File_Name` | Text | Y |  |  |
+| `File_URL` | URL | Y |  |  |
+| `Portfolio_ID` | Text |  | Y | Derivable from the folder — that much the path gives us |
+| `Fiscal_Year` | Text |  |  | Derivable from the folder |
+| `Discovered_DateTime` | DateTime | Y | Y |  |
+| `Uploaded_By` | User |  |  |  |
+| `Suggested_Installation_ID` | Text |  |  | Weak hint only. Never auto-applied. |
+| `Suggested_Document_Code` | Text |  |  | Weak hint only. |
+| `Resolution_Status` | Choice | Y | Y | Choices: `Needs Classification`, `Classified`, `Not an EOM document`, `Duplicate`. |
+| `Resolved_Submission_ID` | Text |  |  |  |
+| `Resolved_By` | User |  |  |  |
+| `Resolved_DateTime` | DateTime |  |  |  |
 
 ## `MF_Security_Mapping`
 
-One security mapping serves app filtering and Power BI RLS. A user may hold several rows. Developer_Flag and Tester_Flag gate the protected developer surface in a single-environment tenant.
+**Grain:** One row per user per granted scope
 
-Unique key: `Title`.
+ONE mapping for both Power Apps filtering and Power BI RLS. Do not maintain two permission models. Also drives dropdown defaulting: a DFAC manager with one facility row sees no dropdowns at all, just an upload box.
+
+Unique key: `Security_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Mapping key: <Principal_UPN>|<Role>|<Scope_Type>|<Scope_ID>. Renamed Title. |
-| `Principal_UPN` | Text | Y | Y | User principal name, or the group's mail nickname when Principal_Type is Group. |
-| `Principal_Type` | Choice | Y |  | User or Group. Choices: `User`, `Group`. |
-| `Entra_Group_Id` | Text |  |  | Object id when Principal_Type is Group. Membership is resolved at app start. |
-| `Role` | Choice | Y | Y | Role granted at this scope. Choices: `FacilityUser`, `FacilityManager`, `Reviewer`, `InstallationManager`, `PortfolioManager`, `Admin`, `Developer`, `Tester`. |
-| `Scope_Type` | Choice | Y | Y | Facility, Installation, Portfolio or Global. Choices: `Facility`, `Installation`, `Portfolio`, `Global`. |
-| `Scope_ID` | Text |  | Y | Facility_ID, Installation_ID or Portfolio_ID. Null when Scope_Type is Global. |
-| `Portfolio_ID` | Text |  | Y | Portfolio the scope belongs to. Denormalized for RLS. |
-| `Developer_Flag` | Boolean |  |  | Unlocks scrDiagnostics. Never granted by a role. |
-| `Tester_Flag` | Boolean |  |  | Unlocks flags scoped to testers without touching production defaults. |
-| `Is_Active` | Boolean |  | Y | Revocation without deletion, so the audit trail survives. |
+| `Security_ID` | Text | Y | Y |  |
+| `UPN` | Text | Y | Y |  |
+| `Scope_Type` | Choice | Y | Y | Choices: `Enterprise`, `Portfolio`, `Installation`, `Facility`. |
+| `Portfolio_ID` | Text |  | Y |  |
+| `Installation_ID` | Text |  | Y |  |
+| `Facility_ID` | Text |  | Y |  |
+| `Role` | Choice | Y |  | Choices: `DFAC Manager`, `Accountant`, `MFM`, `Portfolio Manager`, `AFSVC Leadership`, `Admin`. |
+| `Can_QC` | Boolean | Y |  | Portfolio Manager and Admin only |
+| `Can_Submit_On_Behalf` | Boolean | Y |  | MFM, Portfolio Manager, Admin |
+| `Can_Edit_Requirements` | Boolean | Y |  | Admin only |
+| `Developer_Flag` | Boolean | Y |  | Sees feature-flagged and diagnostic surfaces. Required because a DAF tenant may allow only ONE environment — unreleased work has to coexist with production safely. |
+| `Tester_Flag` | Boolean | Y |  | Sees Enabled_Testers features only |
+| `Active_Flag` | Boolean | Y | Y |  |
+
+## `MF_EOM_Audit`
+
+**Grain:** One row per state change
+
+Cheap now, invaluable during an IG. Every QC decision, every generated item, and every notification the system decided not to send.
+
+Unique key: `Audit_ID`
+
+| Column | Type | Req | Idx | Notes |
+|---|---|:-:|:-:|---|
+| `Audit_ID` | Text | Y | Y |  |
+| `Entity_Type` | Choice | Y |  | Choices: `EOM_Item`, `EOM_Submission`, `Requirement`. |
+| `Entity_ID` | Text | Y | Y |  |
+| `Action` | Choice | Y | Y | Choices: `Generated`, `Uploaded`, `QC Accepted`, `QC Correction Required`, `QC Wrong Document`, `QC Not Applicable`, `Waived`, `Reclassified`, `Status Recalculated`, `Notification Suppressed`, `Notification Sent`. |
+| `Actor_UPN` | Text | Y |  |  |
+| `Action_DateTime` | DateTime | Y | Y |  |
+| `Old_Value` | Text |  |  |  |
+| `New_Value` | Text |  |  |  |
+| `Detail` | Note |  |  |  |
 
 ## `MF_App_Config`
 
-Runtime configuration. Holds the kill switch: MaintenanceMode and ReadOnlyMode. No URL, site GUID or list name is hard-coded anywhere in the app; they are read from here.
+**Grain:** One row per configuration key
 
-Unique key: `Title`.
+Admin-managed, read-only to everyone else. This is the kill switch: when something breaks after a publish you flip MaintenanceMode rather than racing to unpublish. Every environment-variable value has a matching row here, so neither path is load-bearing alone.
+
+Unique key: `Config_Key`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Config key. Renamed Title. |
-| `Config_Value` | Note | Y |  | Value as text. Coerced by Config_Type at read time. |
-| `Config_Type` | Choice | Y |  | Text, Number, Boolean or Date. Choices: `Text`, `Number`, `Boolean`, `Date`. |
-| `Environment_Tag` | Text |  | Y | DEV, TEST or PROD. A single environment may carry all three; the app reads the tag matching its own. |
-| `Description` | Note |  |  | What this key controls and what breaks if it is wrong. |
-| `Effective_From` | DateTime |  |  | Null means immediately. |
-| `Effective_To` | DateTime |  |  | Null means indefinitely. |
-| `Is_Active` | Boolean |  | Y | Inactive keys fall back to the app's compiled default. |
+| `Config_Key` | Text | Y | Y |  |
+| `Config_Value` | Text | Y |  |  |
+| `Config_Type` | Choice | Y |  | Choices: `String`, `Boolean`, `Number`, `Date`. |
+| `Description` | Note |  |  |  |
+| `Admin_Only` | Boolean | Y |  |  |
+| `Active_Flag` | Boolean | Y | Y |  |
 
 ## `MF_Feature_Flags`
 
-Feature flags. Everything outside the SharePoint / Power Apps / Power Automate / Power BI / Entra core degrades gracefully behind a flag. EnableDocumentContentAI and EnableAIBuilder ship False.
+**Grain:** One row per feature
 
-Unique key: `Title`.
+Ship a new screen inside the published app while normal users still see the old one. Beats the manual old-screen/new-screen rename: no rebuild, and the rollback is a checkbox.
+
+Unique key: `Feature_Key`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Flag name. Renamed Title. |
-| `Flag_Value` | Boolean | Y | Y | Current value. |
-| `Default_Value` | Boolean |  |  | Value the app falls back to if the list is unreachable. Never True for an optional dependency. |
-| `Scope` | Choice | Y |  | Global, Role or User. Choices: `Global`, `Role`, `User`. |
-| `Enabled_For_Roles` | Text |  |  | Semicolon-delimited roles when Scope is Role. |
-| `Enabled_For_UPNs` | Note |  |  | Semicolon-delimited UPNs when Scope is User. |
-| `Description` | Note |  |  | What the flag turns on and what it costs. |
-| `Requires_Capability` | Text |  |  | Capability gate from docs/government-environment-mode.md that must be green before this flag may be set True. |
-| `Is_Active` | Boolean |  | Y | Retired flags stay for the audit trail. |
+| `Feature_Key` | Text | Y | Y |  |
+| `Feature_Name` | Text | Y |  |  |
+| `Enabled_Prod` | Boolean | Y |  |  |
+| `Enabled_Testers` | Boolean | Y |  |  |
+| `Minimum_Role` | Choice | Y |  | Choices: `DFAC Manager`, `Accountant`, `MFM`, `Portfolio Manager`, `AFSVC Leadership`, `Admin`, `Developer`. |
+| `Effective_Date` | DateTime |  |  |  |
+| `Notes` | Note |  |  |  |
 
 ## `MF_App_Event_Log`
 
-Structured business telemetry. Writes on app open, screen view, upload and QC decision at minimum. Not a debug log: every row answers a question somebody will ask about the programme.
+**Grain:** One row per meaningful business event
 
-Unique key: `Title`.
+Business telemetry, NOT click tracking. Answers 'why didn't Minot's 1119 show up' operationally, and 'how many manual interventions did we avoid' strategically. Append-only; never bind a gallery directly to it.
+
+Unique key: `Event_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
-| `Title` | Text | Y | Y | Event key: <Correlation_ID>|<Event_Type>. Renamed Title. |
-| `Event_Time` | DateTime | Y | Y | UTC timestamp. |
-| `Event_Type` | Choice | Y | Y | Business event, not a log level. Choices: `AppOpen`, `ScreenView`, `Upload`, `UploadFailed`, `QCDecision`, `Classification`, `AdminAction`, `FlowRun`, `AccessDenied`, `Error`. |
-| `Severity` | Choice | Y | Y | Debug, Info, Warning or Error. Choices: `Debug`, `Info`, `Warning`, `Error`. |
-| `User_UPN` | Text |  | Y | Acting identity. |
-| `App_Version` | Text |  |  | Semantic version of the app that wrote the row. |
-| `Screen_Name` | Text |  |  | Screen the event was raised from. |
-| `Correlation_ID` | Text |  | Y | Ties an app action to the flow runs it triggered. |
-| `Entity_ID` | Text |  |  | EOM_Item_ID, Submission_ID or the affected configuration key. |
-| `Detail_Json` | Note |  |  | Event-specific payload. No PII beyond the UPN, no file contents. |
+| `Event_ID` | Text | Y | Y |  |
+| `Event_DateTime` | DateTime | Y | Y |  |
+| `User_UPN` | Text | Y | Y |  |
+| `Role` | Text |  |  |  |
+| `Portfolio_ID` | Text |  |  |  |
+| `Installation_ID` | Text |  | Y |  |
+| `Facility_ID` | Text |  |  |  |
+| `Event_Type` | Choice | Y | Y | Choices: `AppOpened`, `DocumentDiscovered`, `SubmissionCreated`, `VersionSuperseded`, `ClassificationSucceeded`, `ClassificationUncertain`, `ManualClassification`, `ExpectedItemMatched`, `QCAccepted`, `QCCorrectionRequired`, `QCWrongDocument`, `ExpectedGenerationFailed`, `ReconciliationMismatch`, `FlowFailure`, `PermissionDenied`, `MaintenanceModeBlocked`. |
+| `Record_ID` | Text |  | Y |  |
+| `Result` | Choice | Y |  | Choices: `Success`, `Warning`, `Failure`. |
+| `Error_Code` | Text |  |  |  |
+| `Error_Message` | Note |  |  |  |
+| `App_Version` | Text | Y |  | Which build produced this event. Essential when one environment holds released and unreleased code at once. |
+
+## `MF_EOM_Status`
+
+**Grain:** One flat row per EOM item — the canonical Power BI fact
+
+Materialized by EOM-03. Power BI NEVER reconstructs workflow logic; it colours on Status_Code and labels with Final_Status. Every workflow decision is resolved before the report sees the row.
+
+Unique key: `Status_ID`
+
+| Column | Type | Req | Idx | Notes |
+|---|---|:-:|:-:|---|
+| `Status_ID` | Text | Y | Y |  |
+| `EOM_Item_ID` | Text | Y | Y |  |
+| `Reporting_Period` | Text | Y | Y |  |
+| `Fiscal_Year` | Text | Y |  |  |
+| `Portfolio_ID` | Text | Y | Y |  |
+| `Installation_ID` | Text | Y | Y |  |
+| `Installation_Name` | Text | Y |  |  |
+| `Facility_ID` | Text |  | Y | Null for Installation and Contract scope |
+| `Facility_Name` | Text |  |  |  |
+| `Operating_Model` | Text |  |  |  |
+| `Contract_ID` | Text |  |  |  |
+| `Requirement_ID` | Text | Y |  |  |
+| `Requirement_Name` | Text | Y |  |  |
+| `Document_Code` | Text | Y |  |  |
+| `Requirement_Scope` | Text | Y |  |  |
+| `Authority_Status` | Text | Y |  | Carried through so the COP can dim provisional requirements too |
+| `Required_Flag` | Boolean | Y |  |  |
+| `Due_Date` | DateTime | Y |  |  |
+| `Received_Flag` | Boolean | Y |  |  |
+| `Received_DateTime` | DateTime |  |  |  |
+| `Version_No` | Number |  |  |  |
+| `QC_Status` | Text |  |  |  |
+| `Final_Status` | Text | Y | Y | The semantic string, copied verbatim from the item. This is the ONLY semantic column: Power BI labels with it and never re-derives it. |
+| `Status_Code` | Number | Y | Y | 0 Gray 1 Red 2 Amber 3 Green 4 Blue. Copied verbatim from the item. |
+| `Action_Owner` | Text | Y |  |  |
+| `Action_Required` | Boolean | Y |  |  |
+| `Package_State` | Text | Y |  | Facility-level rollup: ACTION_REQUIRED | IN_REVIEW | COMPLETE | IN_PROGRESS | NOT_APPLICABLE. Computed over semantic statuses, never over colour codes — a colour rollup calls [ACCEPTED, NOT_DUE, NOT_DUE] Complete when it is IN_PROGRESS. |
+| `Days_Late` | Number |  |  |  |
+| `On_Time_Flag` | Boolean |  |  |  |
+| `Current_File_URL` | URL |  |  |  |
+| `Generated_DateTime` | DateTime | Y |  |  |
 

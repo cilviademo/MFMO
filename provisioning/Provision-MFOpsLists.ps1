@@ -38,7 +38,7 @@
 
 .EXAMPLE
     pwsh provisioning/Provision-MFOpsLists.ps1 `
-        -SiteUrl https://contoso.sharepoint.us/sites/MissionFeeding `
+        -SiteUrl <your-site-collection-url> `
         -TenantCloud UsGovHigh -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -54,9 +54,9 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$script:ExpectedSchemaVersion = '2.0'
+$script:ExpectedSchemaVersion = '3.0'
 $script:ExpectedListCount     = 12
-$script:ExpectedColumnCount   = 164
+$script:ExpectedColumnCount   = 172
 
 # PnP's cloud identifier differs from the PAC CLI's.
 $script:PnPEnvironment = switch ($TenantCloud) {
@@ -108,7 +108,7 @@ function Get-FieldXml {
 
     switch ($Column.type) {
         'Text' {
-            "<Field Type='Text' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Indexed='$indexed' MaxLength='$($Column.max_length)' />"
+            "<Field Type='Text' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Indexed='$indexed' MaxLength='255' />"
         }
         'Note' {
             "<Field Type='Note' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' NumLines='6' RichText='FALSE' AppendOnly='FALSE' />"
@@ -117,8 +117,7 @@ function Get-FieldXml {
             "<Field Type='Number' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Indexed='$indexed' Decimals='0' />"
         }
         'Boolean' {
-            $default = if ($null -ne $Column.default -and $Column.default) { '1' } else { '0' }
-            "<Field Type='Boolean' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Indexed='$indexed'><Default>$default</Default></Field>"
+            "<Field Type='Boolean' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Indexed='$indexed'><Default>0</Default></Field>"
         }
         'DateTime' {
             "<Field Type='DateTime' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Indexed='$indexed' Format='DateOnly' />"
@@ -126,8 +125,14 @@ function Get-FieldXml {
         'Url' {
             "<Field Type='URL' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Format='Hyperlink' />"
         }
-        { $_ -in 'Choice', 'MultiChoice' } {
-            $type = if ($Column.type -eq 'Choice') { 'Choice' } else { 'MultiChoice' }
+        'User' {
+            "<Field Type='User' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' UserSelectionMode='PeopleOnly' />"
+        }
+        'Currency' {
+            "<Field Type='Currency' DisplayName='$name' Name='$name' StaticName='$name' Required='$required' Decimals='2' />"
+        }
+        'Choice' {
+            $type = 'Choice'
             $choices = ($Column.choices | ForEach-Object { "<CHOICE>$_</CHOICE>" }) -join ''
             # FillInChoice FALSE: the vocabularies live in eom_schema.py and a
             # free-text value would silently break the status engine.
@@ -169,27 +174,31 @@ function New-MFList {
         Write-Skip "list exists"
     }
 
-    # Versioning where the schema asks for it. MF_EOM_Submission carries
-    # version history because a submission row is never overwritten.
-    if ($ListDefinition.versioning) {
+    # Versioning on the evidence-bearing lists. A submission row is never
+    # overwritten and an audit row is never edited, so list-level history is
+    # the backstop if one ever is.
+    if ($listName -in @('MF_EOM_Submission', 'MF_EOM_Item', 'MF_EOM_Audit')) {
         if ($PSCmdlet.ShouldProcess($listName, 'Enable versioning')) {
             Set-PnPList -Identity $listName -EnableVersioning $true -MajorVersions 100 | Out-Null
             Write-Ok "versioning on"
         }
     }
 
-    foreach ($column in $ListDefinition.columns) {
-        if ($column.title) {
-            # The built-in Title field, renamed. Never recreated.
-            if ($PSCmdlet.ShouldProcess("$listName.Title", "Rename to $($column.description.Split('.')[0])")) {
-                $titleField = Get-PnPField -List $listName -Identity 'Title'
-                $titleField.Required = $true
-                $titleField.Update()
-                Invoke-PnPQuery
-            }
-            continue
+    # The built-in Title column is NOT repurposed. Every list carries its own
+    # business key (Requirement_ID, EOM_Item_ID, ...) and Title is left
+    # optional and unused, because overloading it makes the key invisible in
+    # every view that shows "Title".
+    if ($PSCmdlet.ShouldProcess("$listName.Title", 'Make the built-in Title optional')) {
+        try {
+            $titleField = Get-PnPField -List $listName -Identity 'Title'
+            $titleField.Required = $false
+            $titleField.Update()
+            Invoke-PnPQuery
         }
+        catch { Write-Skip 'Title already optional' }
+    }
 
+    foreach ($column in $ListDefinition.columns) {
         $field = Get-PnPField -List $listName -Identity $column.name -ErrorAction SilentlyContinue
         if ($null -ne $field) {
             Write-Skip "$($column.name) exists"
@@ -300,5 +309,5 @@ if (-not $SkipIndexes) { Test-Indexes -Schema $schema }
 
 Write-Host ''
 Write-Host 'Provisioning complete.' -ForegroundColor Green
-Write-Host 'Next: pwsh provisioning/Seed-MFOpsConfiguration.ps1 -SiteUrl <url> -TenantCloud <cloud>' -ForegroundColor White
+Write-Host 'Next: seed configuration/ then run EOM-01. See docs/DEPLOYMENT.md.' -ForegroundColor White
 Write-Host 'Do not seed until the index verification above passed.' -ForegroundColor Yellow

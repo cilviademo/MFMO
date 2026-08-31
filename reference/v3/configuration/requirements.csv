@@ -1,0 +1,13 @@
+﻿Requirement_ID,Document_Code,Document_Name,Applicable_Model,Requirement_Scope,Applicable_Facility_Types,Frequency,Required_Flag,Due_Day,QC_Required,Authority_Reference,Authority_Status,Sort_Order,Active_Flag
+REQ-001,1119,AF Form 1119 Daily Feeding Summary,Legacy/APF,Facility,Main DFAC;Flight Kitchen;Satellite;MAF,Monthly,TRUE,10,TRUE,DAFMAN 34-131 - CONFIRM paragraph,UNVERIFIED,10,TRUE
+REQ-002,1119-1,AF Form 1119-1 Continuation,Legacy/APF,Facility,Main DFAC;Flight Kitchen;Satellite;MAF,Monthly,TRUE,10,TRUE,Accompanies the facility 1119 - CONFIRM applicability,UNVERIFIED,20,TRUE
+REQ-003,SIK,Subsistence-in-Kind Bill,Legacy/APF,Installation,,Monthly,TRUE,10,TRUE,SCOPE UNRESOLVED - may be consolidated installation billing rather than per DFAC,UNVERIFIED,30,TRUE
+REQ-004,1119,AF Form 1119 Daily Feeding Summary,MAFFO/MAF,Facility,MAF;Main DFAC,Monthly,TRUE,10,TRUE,CONFIRM,UNVERIFIED,10,TRUE
+REQ-005,1119-1,AF Form 1119-1 Continuation,MAFFO/MAF,Facility,MAF;Main DFAC,Monthly,TRUE,10,TRUE,CONFIRM,UNVERIFIED,20,TRUE
+REQ-006,SIK,Subsistence-in-Kind Bill,MAFFO/MAF,Installation,,Monthly,TRUE,10,TRUE,SCOPE UNRESOLVED,UNVERIFIED,30,TRUE
+REQ-007,SF1080,SF 1080 Voucher for Transfers,Food 2.0,Installation,,Monthly,FALSE,10,TRUE,APPLICABILITY UNRESOLVED - depends on the reimbursement/billing workflow,UNVERIFIED,40,FALSE
+REQ-008,DAF79,DAF Form 79,All,Installation,,Monthly,FALSE,10,TRUE,APPLICABILITY UNRESOLVED - do not assume,UNVERIFIED,50,FALSE
+REQ-009,1038,AF Form 1038,All,Installation,,Monthly,FALSE,10,TRUE,FREQUENCY AND SCOPE UNRESOLVED,UNVERIFIED,60,FALSE
+REQ-010,CONTRACTOR-INV,Contractor invoice / Food 2.0 support,Food 2.0,Contract,,Monthly,TRUE,15,TRUE,Contract scope - one invoice may cover several facilities under one CLIN,UNVERIFIED,70,TRUE
+REQ-011,SAIIT,SAIIT inventory accountability,Food 2.0,Facility,Main DFAC;Contract Cafe;MAF,Monthly,TRUE,15,TRUE,Inventory accountability is tied to the individual operation,UNVERIFIED,80,TRUE
+REQ-012,SAIIT,SAIIT inventory accountability,Legacy/APF,Facility,Main DFAC;MAF,Monthly,TRUE,15,TRUE,CONFIRM,UNVERIFIED,80,TRUE

@@ -1,0 +1,12 @@
+Feature_Key,Feature_Name,Enabled_Prod,Enabled_Testers,Minimum_Role,Effective_Date,Notes
+EOM_UPLOAD,EOM upload screen,TRUE,TRUE,DFAC Manager,2026-09-01,
+EOM_QC,Review queue,TRUE,TRUE,Portfolio Manager,2026-09-01,
+EOM_UNMATCHED,Needs classification queue,TRUE,TRUE,Portfolio Manager,2026-09-01,
+EOM_ACTIVITY,Activity and audit trail,TRUE,TRUE,DFAC Manager,2026-09-01,Replaces the old History screen
+EOM_ADMIN_REQS,Requirements admin,TRUE,TRUE,Admin,2026-09-01,
+EOM_ON_BEHALF,Submit on behalf of another location,TRUE,TRUE,MFM,2026-09-01,Exception path for emailed and recovered documents
+EOM_DIAGNOSTICS,Diagnostics screen,FALSE,TRUE,Developer,,Developer surface. Never enable in prod. Additionally requires Developer_Flag.
+EOM_WAIVERS,Requirement waivers,FALSE,TRUE,Portfolio Manager,,"Built, not released - no admin UI yet"
+EOM_CONTENT_CLASSIFY,Content-based classification,FALSE,FALSE,Developer,,Tier 2. Not built in R1 and no code path exists.
+EOM_AI_BUILDER,AI Builder classification,FALSE,FALSE,Developer,,Tier 3. Must never become a dependency whose absence blocks the app.
+FMAT_MODULE,FMAT module (R2),FALSE,FALSE,Developer,,Placeholder for the next release

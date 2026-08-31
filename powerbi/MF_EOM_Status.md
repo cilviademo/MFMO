@@ -1,12 +1,11 @@
 # The COP semantic model
 
-**`MF_EOM_Status` is the canonical fact. The COP reconstructs no workflow
+**`MF_EOM_Status` is the canonical fact. Power BI reconstructs no workflow
 logic.**
 
-Every workflow decision is resolved before Power BI sees a row: the code, the
-semantic label, the visual state, the action owner and the two rollup flags.
-No measure below re-derives a status, and no report author needs to know what
-`RETURNED` means or which codes count toward completeness.
+Every workflow decision is resolved by EOM-03 before the report sees a row: the
+semantic status, the numeric colour code, the action owner, and the package
+state. **Power BI colours on `Status_Code` and labels with `Final_Status`.**
 
 If a rule appears in DAX that also appears in `docs/status-calculation.md`,
 that is a second engine and it is a defect.
@@ -17,169 +16,190 @@ that is a second engine and it is a defect.
 
 | Table | Source | Role |
 |---|---|---|
-| `MF_EOM_Status` | SharePoint list | Fact. One row per item per snapshot. |
-| `MF_Requirement` | SharePoint list | Dimension |
+| `MF_EOM_Status` | SharePoint list | Fact. One flat row per `MF_EOM_Item`. |
+| `MF_EOM_Requirement` | SharePoint list | Dimension |
 | `MF_Facility` | SharePoint list | Dimension |
 | `MF_Installation` | SharePoint list | Dimension |
-| `MF_Reporting_Period` | SharePoint list | Dimension |
 | `MF_Security_Mapping` | SharePoint list | **RLS bridge** — hidden |
-| `Date` | generated | Marked as the date table, joined on `Snapshot_Date` |
+| `Period` | generated from `Reporting_Period` | `YYYY-MM`, marked as the date table |
 
 Relationships are single-direction, many-to-one, from the fact outward.
-Bi-directional filtering is off: it makes RLS leak, and this model carries
+**Bi-directional filtering is off**: it makes RLS leak, and this model carries
 facility-level security.
 
 `Facility_ID` is **null** on Installation- and Contract-scope rows. Do not
-replace it with a blank string in Power Query — the RLS expression below
-depends on the distinction, and a blank string would attach those rows to a
-facility that does not exist.
+replace it with a blank string in Power Query — the RLS expression depends on
+the distinction, and a blank string would attach those rows to a facility that
+does not exist.
 
 ---
 
 ## Measures
 
-Two booleans and some division. That is the entire completeness model.
+The fact already carries everything. These aggregate; they never recompute.
 
 ```dax
-Items in scope =
-    COUNTROWS ( MF_EOM_Status )
+EOM Items = COUNTROWS ( MF_EOM_Status )
 
-Items due =
-    CALCULATE ( COUNTROWS ( MF_EOM_Status ), MF_EOM_Status[Is_In_Denominator] = TRUE )
+-- Colour codes as stored by EOM-03. 0 Gray 1 Red 2 Amber 3 Green 4 Blue.
+EOM Accepted    = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 3 )
+EOM Needs Action= CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 1 )
+EOM In Progress = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 2 )
+EOM Informational = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 4 )
 
-Items accepted =
-    CALCULATE ( COUNTROWS ( MF_EOM_Status ), MF_EOM_Status[Is_Complete] = TRUE )
+-- Applicable excludes Gray. It does NOT exclude Blue: a not-due requirement
+-- is still an obligation, it simply has not arrived.
+EOM Applicable =
+CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] IN { 1, 2, 3, 4 } )
+```
 
--- Blank, never zero and never one, when nothing is due. "0% of nothing" is a
--- figure a manager will act on.
-Completeness =
-    DIVIDE ( [Items accepted], [Items due] )
+### Provisional is not overdue
 
-Completeness label =
-    IF ( ISBLANK ( [Completeness] ), "Nothing due", FORMAT ( [Completeness], "0%" ) )
-
-Action required =
-    CALCULATE ( COUNTROWS ( MF_EOM_Status ), MF_EOM_Status[Action_Required] = TRUE )
-
--- Owned by the programme, not the facility: an unverified requirement past
--- its suspense date. This is currently the majority of the estate.
-Provisional past suspense =
-    CALCULATE (
-        COUNTROWS ( MF_EOM_Status ),
-        MF_EOM_Status[Status_Code] = "PROVISIONAL_OVERDUE"
-    )
-
+```dax
+-- Only a Verified requirement can produce OVERDUE.
 Genuinely overdue =
-    CALCULATE ( COUNTROWS ( MF_EOM_Status ), MF_EOM_Status[Status_Code] = "OVERDUE" )
+CALCULATE ( [EOM Items], MF_EOM_Status[Final_Status] = "OVERDUE" )
+
+Provisional =
+CALCULATE ( [EOM Items], MF_EOM_Status[Final_Status] = "PENDING_VALIDATION" )
 ```
 
-`Genuinely overdue` counts only `OVERDUE`, which only a `VERIFIED` requirement
-can produce. **Do not add `PROVISIONAL_OVERDUE` to it.** The two are different
-facts with different owners, and a single "overdue" number that merges them
-tells a commander that facilities are in breach of requirements nobody has
-confirmed exist.
+**Do not add `Provisional` to `Genuinely overdue`.** They are different facts
+with different owners, and a single "overdue" number that merges them tells a
+commander that bases are in breach of requirements nobody has confirmed exist.
+Report them as separate figures, and label the second one as the programme's
+own backlog.
 
-### Latest snapshot
+### Package state — materialized, not re-derived
 
-The fact is a daily snapshot, so an unfiltered sum counts every day at once.
+`Package_State` is written by EOM-03 over semantic statuses. The report reads
+it.
 
 ```dax
-Latest snapshot = CALCULATE ( MAX ( MF_EOM_Status[Snapshot_Date] ), ALL ( MF_EOM_Status ) )
+Packages complete =
+CALCULATE (
+    DISTINCTCOUNT ( MF_EOM_Status[Facility_ID] ),
+    MF_EOM_Status[Package_State] = "COMPLETE"
+)
 
-Completeness today =
-    CALCULATE ( [Completeness], MF_EOM_Status[Snapshot_Date] = [Latest snapshot] )
+Packages action required =
+CALCULATE (
+    DISTINCTCOUNT ( MF_EOM_Status[Facility_ID] ),
+    MF_EOM_Status[Package_State] = "ACTION_REQUIRED"
+)
+
+Package Status Color =
+SWITCH ( SELECTEDVALUE ( MF_EOM_Status[Package_State] ),
+    "COMPLETE",        "#0E700E",
+    "IN_REVIEW",       "#8A5300",
+    "ACTION_REQUIRED", "#A4262C",
+    "IN_PROGRESS",     "#0F548C",
+    "#424242" )
 ```
 
-Every current-state visual filters to the latest snapshot. Trend visuals use
-month-end snapshots, which are exempt from the retention purge.
+> V3's DAX contained `Package Status Code` as a naive colour rollup — the same
+> "any 1 then 1, any 2 then 2, any 3 then 3, else 0" that marks
+> `[ACCEPTED, NOT_DUE, NOT_DUE]` Complete. It is removed. The rollup is
+> computed once, server-side, over semantic statuses. See
+> `docs/handoffs/RECONCILIATION.md` C3.
+
+### Timeliness
+
+`Days_Late` and `On_Time_Flag` are set by EOM-03, not computed here.
+
+```dax
+Average days late =
+AVERAGEX ( FILTER ( MF_EOM_Status, MF_EOM_Status[Received_Flag] ),
+           MF_EOM_Status[Days_Late] )
+
+On-time rate =
+DIVIDE (
+    CALCULATE ( [EOM Items], MF_EOM_Status[On_Time_Flag] = TRUE () ),
+    CALCULATE ( [EOM Items], MF_EOM_Status[Received_Flag] = TRUE () )
+)
+```
+
+**No completion percentage is stored** in the fact. A ratio quietly treats
+"not yet due" as either done or failing. Where the COP needs one it is computed
+here, from `Status_Code = 3` over `EOM Applicable`, and only within a closed
+period.
 
 ---
 
 ## Row-level security
 
 **One security mapping serves app filtering and Power BI RLS.**
-`MF_Security_Mapping` is the same list the app reads; the roles are generated
-from `Scope_Type` and `Scope_ID` rather than hand-maintained, so a user added
-to a facility in the app is filtered correctly in the report on the next
-refresh with no separate action.
+`MF_Security_Mapping` is the same list the app reads, so a user added to a
+facility is filtered correctly in the report on the next refresh with no
+separate action. Do not maintain two permission models.
 
-Define one role, `MissionFeedingScope`, on `MF_EOM_Status`:
+One role, `MissionFeedingScope`, on `MF_EOM_Status`:
 
 ```dax
 VAR me = USERPRINCIPALNAME ()
-VAR isGlobal =
-    NOT ISEMPTY (
-        FILTER ( ALL ( MF_Security_Mapping ),
-            MF_Security_Mapping[Principal_UPN] = me
-                && MF_Security_Mapping[Scope_Type] = "Global"
-                && MF_Security_Mapping[Is_Active] = TRUE ) )
+VAR mine =
+    FILTER ( ALL ( MF_Security_Mapping ),
+             MF_Security_Mapping[UPN] = me
+             && MF_Security_Mapping[Active_Flag] = TRUE () )
+VAR isEnterprise =
+    NOT ISEMPTY ( FILTER ( mine, MF_Security_Mapping[Scope_Type] = "Enterprise" ) )
 RETURN
-    isGlobal
-    || MF_EOM_Status[Facility_ID] IN
-        SELECTCOLUMNS ( FILTER ( ALL ( MF_Security_Mapping ),
-            MF_Security_Mapping[Principal_UPN] = me
-                && MF_Security_Mapping[Scope_Type] = "Facility"
-                && MF_Security_Mapping[Is_Active] = TRUE ), "s", MF_Security_Mapping[Scope_ID] )
-    || MF_EOM_Status[Installation_ID] IN
-        SELECTCOLUMNS ( FILTER ( ALL ( MF_Security_Mapping ),
-            MF_Security_Mapping[Principal_UPN] = me
-                && MF_Security_Mapping[Scope_Type] = "Installation"
-                && MF_Security_Mapping[Is_Active] = TRUE ), "s", MF_Security_Mapping[Scope_ID] )
+    isEnterprise
     || MF_EOM_Status[Portfolio_ID] IN
-        SELECTCOLUMNS ( FILTER ( ALL ( MF_Security_Mapping ),
-            MF_Security_Mapping[Principal_UPN] = me
-                && MF_Security_Mapping[Scope_Type] = "Portfolio"
-                && MF_Security_Mapping[Is_Active] = TRUE ), "s", MF_Security_Mapping[Scope_ID] )
+        SELECTCOLUMNS ( FILTER ( mine, MF_Security_Mapping[Scope_Type] = "Portfolio" ),
+                        "s", MF_Security_Mapping[Portfolio_ID] )
+    || MF_EOM_Status[Installation_ID] IN
+        SELECTCOLUMNS ( FILTER ( mine, MF_Security_Mapping[Scope_Type] = "Installation" ),
+                        "s", MF_Security_Mapping[Installation_ID] )
+    || MF_EOM_Status[Facility_ID] IN
+        SELECTCOLUMNS ( FILTER ( mine, MF_Security_Mapping[Scope_Type] = "Facility" ),
+                        "s", MF_Security_Mapping[Facility_ID] )
 ```
 
-`Is_Active` matters: access is revoked by setting it false, not by deleting
+`Active_Flag` matters: access is revoked by setting it false, not by deleting
 the row, so the audit trail survives.
 
-A user scoped to one facility sees only that facility's rows — **including
-the installation-scope rows for their installation**, because those carry
-`Installation_ID` and a null `Facility_ID`, and the installation clause
-matches only if they hold an installation-scope mapping. A facility user does
-not see their installation's certification row, which is correct: it is not
-their obligation.
+### The leak this is guarding against
 
-### The rollup rule the report must not break
+A facility-scoped user must not receive an installation figure derived from
+their neighbours' packages. RLS narrows the fact, so an "installation
+completeness" card shown to a facility-scoped user is silently computed over
+their own rows only — **a correct number with a wrong label**, which is worse
+than an error.
 
-**A facility user must not receive an installation figure derived from their
-neighbours.** RLS narrows the fact, so an "installation completeness" card
-shown to a facility-scoped user is silently computed over their own rows only
-— a correct number with a wrong label, which is worse than an error.
-
-Every visual whose title names a scope wider than the viewer's carries the
-qualifier:
+Every visual whose title names a scope wider than the viewer's carries a
+qualifier, matching `MF_ScopeQualifier()` in the app:
 
 ```dax
 Scope qualifier =
 VAR me = USERPRINCIPALNAME ()
-VAR widest =
-    CALCULATE ( MAX ( MF_Security_Mapping[Scope_Type] ),
-        ALL ( MF_Security_Mapping ),
-        MF_Security_Mapping[Principal_UPN] = me,
-        MF_Security_Mapping[Is_Active] = TRUE )
+VAR isFacilityOnly =
+    ISEMPTY ( FILTER ( ALL ( MF_Security_Mapping ),
+        MF_Security_Mapping[UPN] = me
+        && MF_Security_Mapping[Active_Flag] = TRUE ()
+        && MF_Security_Mapping[Scope_Type] IN { "Enterprise", "Portfolio", "Installation" } ) )
 RETURN
-    IF ( widest = "Facility",
-         "Covers your assigned facilities only, not the whole installation.",
+    IF ( isFacilityOnly,
+         "Covers your facility and this installation's shared obligations, not the whole base.",
          BLANK () )
 ```
 
-Test RLS with at least two scopes before release — a facility user and an
-installation manager — and confirm their totals differ in the way the mapping
-says they should.
+A facility-scoped user does see their installation's Installation-scope rows —
+those are shared obligations of the base, carried with a null `Facility_ID` —
+but not another DFAC's facility rows. Test RLS with **at least two scopes**
+before release and confirm the totals differ the way the mapping says they
+should.
 
 ---
 
 ## Refresh
 
-Scheduled refresh, twice daily, at least an hour after EOM-03. Import mode,
-not DirectQuery: DirectQuery against a SharePoint list at this volume is
-slower than the refresh window it replaces, and the fact is a daily snapshot,
-so live data would not be more current anyway.
+Scheduled refresh twice daily, at least an hour after EOM-03. Import mode, not
+DirectQuery: DirectQuery against a SharePoint list at this volume is slower
+than the refresh window it replaces, and the fact is rebuilt nightly anyway.
 
-Incremental refresh on `Snapshot_Date`: 14 days refreshed, 400 days archived.
+The gov Power BI service URL differs by cloud. It comes from
+`MF_App_Config.PowerBIReportURL`; never hard-code `app.powerbi.com`.
 
 ---
 
@@ -187,13 +207,13 @@ Incremental refresh on `Snapshot_Date`: 14 days refreshed, 400 days archived.
 
 | Page | Grain | Note |
 |---|---|---|
-| Portfolio | Portfolio × period | Completeness, action required, provisional count kept separate from genuinely overdue |
-| Installation | Installation × period | Includes installation- and contract-scope rows |
+| Portfolio | Portfolio × period | Packages by state. Provisional shown separately from overdue. |
+| Installation | Installation × facility | The matrix, conditionally formatted from `Status_Code` |
 | Facility | Facility × requirement | The same `Requirement · Scope · Due · Status · Action` row as the app |
-| Provisional requirements | Requirement | The programme's own backlog: what is unverified and how much is riding on it |
-| Trend | Month-end snapshots | Monthly, not daily |
+| Provisional | Requirement | The programme's own backlog: what is unverified and how much rides on it |
+| Timeliness | Period | `Days_Late`, `On_Time_Flag`, aging |
 
-Every chart carries a text summary and a data-table alternative
-(`docs/accessibility.md`, gate A6). Status is shown with its label, never by
-colour alone — a Power BI chart is subject to the same rule as a chip in the
-app.
+Conditional formatting comes from `Status_Code`; the label beside it comes from
+`Final_Status`. **Status is never colour-only in the report either** — a green
+square with no text fails the same gate in Power BI as it does in the app.
+Every chart carries a text summary and a data-table alternative.

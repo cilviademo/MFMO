@@ -2,28 +2,25 @@
 """
 MissionFeedingOperations — the status engine.
 
-One engine, one evaluation. It returns
-``{status, code, label, actionOwner, actionRequired}`` plus the two rollup
-flags the Power BI fact carries. Nothing anywhere else in this solution may
-derive a label, a colour or a completeness flag independently of the code.
+The Power App and Power BI must never disagree about what colour a base is.
+This module is the reference implementation; `canvas-app/formulas/StatusEngine.fx`,
+`flows/EOM03-Reconciliation` and the prototype are mechanical translations of
+it, held in agreement by `tests/test_status_engine.py`.
 
-This module is the reference implementation. ``canvas-app/formulas/StatusEngine.fx``
-is a line-for-line transliteration of ``evaluate()`` into Power Fx and
-``flows/EOM03-StatusFact`` applies the same ordering server-side. The three
-are held in agreement by ``tests/test_status_engine.py``, which runs the same
-fixtures through this module and asserts the Power Fx and flow definitions
-still contain the same ordered branches.
+Ported from the V3 prototype's `itemStatus()` and `packageState()`, which are
+the most current and correct V3 artifacts. V3's Power Fx and its
+`App.Formulas.fx` are NOT the reference — they had already drifted from the
+decision table in the same document, in three ways recorded as C1-C3 in
+`docs/handoffs/RECONCILIATION.md`.
 
-Rules that are not negotiable:
+Nothing about status is ever set by a human. There is no "make this yellow"
+control anywhere in the app.
 
-  * Status is calculated, never chosen. No colour picker exists anywhere.
-  * Status is never colour-only. Every code carries a label.
-  * An UNVERIFIED requirement never drives Red. It goes Gray.
-  * Blue means "not due yet". Gray means "not applicable, waived,
-    superseded, or provisional". Those are different facts about the world
-    and a four-state model conflates them.
-  * No percentage is ever stored. Rollups are computed from the two
-    boolean flags at read time.
+  * ``Final_Status`` is the SEMANTIC string.
+  * ``Status_Code`` is the NUMERIC visual code, 0-4.
+  * Both are stored. One evaluation writes both. Neither is derived from the
+    other, and no second function derives the label independently of the code —
+    that is how a status engine starts lying.
 """
 
 from __future__ import annotations
@@ -31,89 +28,82 @@ from __future__ import annotations
 import datetime as _dt
 from dataclasses import dataclass
 
-# --- the five visual states ------------------------------------------------
-BLUE = "Blue"
-AMBER = "Amber"
-RED = "Red"
-GREEN = "Green"
-GRAY = "Gray"
+# --- the five visual codes -------------------------------------------------
+# Four states were not enough. Collapsing "not applicable" and "not due yet"
+# into Gray made an installation whose requirements simply had not come due
+# display as Not applicable, which is false. Blue separates "in progress,
+# nothing wrong" from "does not apply".
+NA = 0       # Gray
+ACTION = 1   # Red
+PENDING = 2  # Amber
+DONE = 3     # Green
+INFO = 4     # Blue
+
+CODE_COLOUR = {NA: "Gray", ACTION: "Red", PENDING: "Amber", DONE: "Green", INFO: "Blue"}
 
 # --- action owners ---------------------------------------------------------
 FACILITY = "Facility"
 REVIEWER = "Reviewer"
-PROGRAM = "Program"
+ADMIN = "Admin"
 NONE = "None"
 
-# --- the eleven codes, in evaluation order --------------------------------
-# Each entry is (Final_Status, Status_Semantic, Action_Owner_Role, Action_Required).
-CODES = {
-    "NOT_APPLICABLE":      (GRAY,  "Not applicable",                 NONE,     False),
-    "WAIVED":              (GRAY,  "Waived",                         NONE,     False),
-    "SUPERSEDED":          (GRAY,  "Superseded",                     NONE,     False),
-    "ACCEPTED":            (GREEN, "Accepted",                       NONE,     False),
-    "RETURNED":            (AMBER, "Returned for correction",        FACILITY, True),
-    "IN_REVIEW":           (AMBER, "In review",                      REVIEWER, True),
-    "SUBMITTED":           (AMBER, "Submitted - awaiting review",    REVIEWER, True),
-    "OVERDUE":             (RED,   "Overdue",                        FACILITY, True),
-    "PROVISIONAL_OVERDUE": (GRAY,  "Past suspense - requirement unverified", PROGRAM, True),
-    "DUE_SOON":            (AMBER, "Due soon",                       FACILITY, True),
-    "NOT_DUE":             (BLUE,  "Not due yet",                    FACILITY, False),
+# --- the eight semantic statuses ------------------------------------------
+# (Status_Code, label, Action_Owner, Action_Required)
+STATUSES = {
+    "NOT_APPLICABLE":      (NA,      "Not applicable",    NONE,     False),
+    "NOT_DUE":             (INFO,    "Not due",           FACILITY, False),
+    "PENDING_VALIDATION":  (INFO,    "Informational",     ADMIN,    False),
+    "OVERDUE":             (ACTION,  "Overdue",           FACILITY, True),
+    "NOT_SATISFIED":       (PENDING, "Not satisfied",     FACILITY, True),
+    "CORRECTION_REQUIRED": (PENDING, "Correction needed", FACILITY, True),
+    "RECEIVED_PENDING_QC": (PENDING, "Awaiting review",   REVIEWER, True),
+    "ACCEPTED":            (DONE,    "Accepted",          NONE,     False),
 }
 
-# Rollup semantics. A colour rollup calls [ACCEPTED, NOT_DUE, NOT_DUE]
-# Complete; a semantic rollup does not. Only ACCEPTED counts toward the
-# numerator, and the four codes that describe an obligation nobody owes are
-# excluded from the denominator entirely rather than counted as done.
-COMPLETE_CODES = frozenset({"ACCEPTED"})
-OUT_OF_DENOMINATOR_CODES = frozenset(
-    {"NOT_DUE", "WAIVED", "NOT_APPLICABLE", "SUPERSEDED"}
-)
-
-DEFAULT_DUE_SOON_WINDOW_DAYS = 7
+# --- package rollup states -------------------------------------------------
+PACKAGE_STATES = {
+    "ACTION_REQUIRED": (ACTION,  "Action required"),
+    "IN_REVIEW":       (PENDING, "In review"),
+    "COMPLETE":        (DONE,    "Complete"),
+    "IN_PROGRESS":     (INFO,    "In progress"),
+    "NOT_APPLICABLE":  (NA,      "Nothing due"),
+}
 
 
 @dataclass(frozen=True)
 class StatusResult:
     """The single return value of the single evaluation."""
 
-    code: str
-    status: str            # Final_Status, one of the five visual states
-    label: str             # Status_Semantic
+    status: str          # Final_Status — the semantic string
+    code: int            # Status_Code — the numeric visual code
+    label: str           # display text
     actionOwner: str
     actionRequired: bool
 
     @property
-    def is_complete(self) -> bool:
-        return self.code in COMPLETE_CODES
-
-    @property
-    def is_in_denominator(self) -> bool:
-        return self.code not in OUT_OF_DENOMINATOR_CODES
+    def colour(self) -> str:
+        return CODE_COLOUR[self.code]
 
     def as_item_fields(self) -> dict:
-        """The four columns MF_EOM_Item stores, and nothing else."""
+        """The four columns MF_EOM_Item stores, written together."""
         return {
-            "Status_Code": self.code,
-            "Status_Semantic": self.label,
             "Final_Status": self.status,
-            "Action_Owner_Role": self.actionOwner,
+            "Status_Code": self.code,
+            "Action_Owner": self.actionOwner,
             "Action_Required": self.actionRequired,
         }
 
-    def as_fact_fields(self) -> dict:
-        d = self.as_item_fields()
-        d["Is_Complete"] = self.is_complete
-        d["Is_In_Denominator"] = self.is_in_denominator
-        return d
 
-
-def _result(code: str) -> StatusResult:
-    status, label, owner, required = CODES[code]
-    return StatusResult(code=code, status=status, label=label,
+def _mk(status: str) -> StatusResult:
+    code, label, owner, required = STATUSES[status]
+    return StatusResult(status=status, code=code, label=label,
                         actionOwner=owner, actionRequired=required)
 
 
-def _as_date(value):
+def _day(value):
+    """Reporting_Period is YYYY-MM, dates are YYYY-MM-DD, datetimes carry a
+    time part. Parse to a date before comparing so a timestamp never leaks
+    into a day comparison."""
     if value is None:
         return None
     if isinstance(value, _dt.datetime):
@@ -123,144 +113,168 @@ def _as_date(value):
     return _dt.date.fromisoformat(str(value)[:10])
 
 
-def evaluate(
+def item_status(
     *,
-    as_of,
-    suspense_date,
-    requirement_verification_status="UNVERIFIED",
-    requirement_is_active=True,
+    today,
+    due_date,
+    required_flag=True,
+    waived_flag=False,
+    authority_status="UNVERIFIED",
+    received_flag=False,
     qc_status=None,
-    has_current_submission=False,
-    waived=False,
-    superseded=False,
-    applies_to_facility=True,
-    due_soon_window_days=DEFAULT_DUE_SOON_WINDOW_DAYS,
 ) -> StatusResult:
-    """Evaluate one checklist row. Ordered, total, and side-effect free.
+    """Evaluate one checklist row. Ordered, total, first match wins.
 
-    ``qc_status`` is the QC state of the *current version* submission, or
-    None when no submission exists. Superseded versions never influence the
-    item's status; that is what ``Is_Current_Version`` is for.
+    ``qc_status`` is the QC state of the CURRENT-VERSION submission, or None
+    when nothing has been received. A rejected v1 under an accepted v2 never
+    influences the item — that is what ``Is_Current`` is for.
+
+    The order is behaviour. Reordering it to make a screen read better is a
+    behaviour change, and the tests assert it.
     """
-    as_of = _as_date(as_of)
-    suspense_date = _as_date(suspense_date)
+    today = _day(today)
+    due_date = _day(due_date)
 
     # 1. The obligation does not exist for this row.
-    if not applies_to_facility or not requirement_is_active or \
-            requirement_verification_status == "RETIRED":
-        return _result("NOT_APPLICABLE")
+    if waived_flag or not required_flag:
+        return _mk("NOT_APPLICABLE")
 
-    # 2. The obligation existed and was released.
-    if waived:
-        return _result("WAIVED")
+    # 2. A provisional requirement is informational, never adverse.
+    #    All twelve seeded requirements are UNVERIFIED, so this is the default
+    #    path today, not an edge case. Until the authority is confirmed, an
+    #    unfiled document is not a finding and the action sits with the Admin
+    #    (verify the requirement), not with the facility (file the document).
+    if authority_status == "UNVERIFIED" and not received_flag:
+        return _mk("PENDING_VALIDATION")
 
-    # 3. The obligation was replaced by another row.
-    if superseded:
-        return _result("SUPERSEDED")
+    # 3-7. A current submission exists; its QC verdict decides.
+    if qc_status == "Accepted":
+        return _mk("ACCEPTED")
+    if qc_status == "Not Applicable":
+        return _mk("NOT_APPLICABLE")
+    if qc_status == "Correction Required":
+        return _mk("CORRECTION_REQUIRED")
+    if qc_status == "Wrong Document":
+        # A wrong document does not stay Red forever. It means the requirement
+        # is still UNMET; whether that is urgent depends on the suspense date,
+        # not on the reviewer's verdict. A submission-level QC result must
+        # never become the parent item's status directly.
+        return _mk("OVERDUE") if (due_date and today > due_date) else _mk("NOT_SATISFIED")
 
-    # 4-7. A current submission exists. Its QC state is the item's state.
-    if has_current_submission and qc_status:
-        if qc_status == "ACCEPTED":
-            return _result("ACCEPTED")
-        if qc_status == "RETURNED":
-            return _result("RETURNED")
-        if qc_status == "IN_REVIEW":
-            return _result("IN_REVIEW")
-        if qc_status == "PENDING":
-            return _result("SUBMITTED")
-        raise ValueError(f"unknown qc_status {qc_status!r}")
+    # 8. Received and waiting on a reviewer.
+    if received_flag:
+        return _mk("RECEIVED_PENDING_QC")
 
-    # 8. Nothing submitted. Time decides, and verification decides the colour.
-    if suspense_date is None:
-        return _result("NOT_DUE")
-
-    if as_of > suspense_date:
-        # An UNVERIFIED requirement never drives Red. All twelve seeded
-        # requirements are provisional today, so this is the default path.
-        if requirement_verification_status == "VERIFIED":
-            return _result("OVERDUE")
-        return _result("PROVISIONAL_OVERDUE")
-
-    if (suspense_date - as_of).days <= due_soon_window_days:
-        return _result("DUE_SOON")
-
-    return _result("NOT_DUE")
+    # 9-10. Nothing received. Time decides.
+    if due_date is None or today <= due_date:
+        return _mk("NOT_DUE")
+    return _mk("OVERDUE")
 
 
-# --------------------------------------------------------------------------
-# Rollups. Computed, never stored.
-# --------------------------------------------------------------------------
+def package_state(statuses, visible_predicate=None) -> dict:
+    """Roll up a sequence of StatusResult (or Final_Status strings).
 
-def rollup(results, visible_predicate=None) -> dict:
-    """Roll up a sequence of StatusResult (or Status_Code strings).
+    Over SEMANTIC statuses, never over colour codes. The naive colour rollup
+    sees ``[3, 4, 4]`` with no 1 and no 2 and marks the package Complete. It is
+    IN_PROGRESS: two requirements have not been filed yet.
 
-    ``visible_predicate`` is applied first. A facility user must not receive
-    an installation figure derived from their neighbours' rows, so the
-    caller passes the same visibility filter the app and RLS apply, and the
-    rollup is computed over what the viewer may actually see.
-
-    Returns counts and a complete/denominator pair. The percentage is
-    computed by the caller for display and is never persisted.
+    ``visible_predicate`` is applied first. A user scoped to one DFAC must not
+    receive an installation figure derived from their neighbours' packages —
+    that leaks across a security boundary even when no names appear on screen.
     """
     rows = []
-    for r in results:
-        if isinstance(r, str):
-            r = _result(r)
-        if visible_predicate is not None and not visible_predicate(r):
+    for s in statuses:
+        if isinstance(s, str):
+            s = _mk(s)
+        if visible_predicate is not None and not visible_predicate(s):
             continue
-        rows.append(r)
+        rows.append(s)
 
-    denominator = [r for r in rows if r.is_in_denominator]
-    complete = [r for r in denominator if r.is_complete]
+    def has(*names):
+        return any(r.status in names for r in rows)
 
-    by_code = {}
-    by_status = {}
+    applicable = [r for r in rows if r.status != "NOT_APPLICABLE"]
+
+    if not applicable:
+        state = "NOT_APPLICABLE"
+    elif has("OVERDUE", "CORRECTION_REQUIRED", "NOT_SATISFIED"):
+        state = "ACTION_REQUIRED"
+    elif has("RECEIVED_PENDING_QC"):
+        state = "IN_REVIEW"
+    else:
+        # A provisional requirement neither completes a package nor blocks it.
+        real = [r for r in applicable if r.status != "PENDING_VALIDATION"]
+        if real and all(r.status == "ACCEPTED" for r in real):
+            state = "COMPLETE"
+        else:
+            state = "IN_PROGRESS"
+
+    code, label = PACKAGE_STATES[state]
+    by_status, by_code = {}, {}
     for r in rows:
-        by_code[r.code] = by_code.get(r.code, 0) + 1
         by_status[r.status] = by_status.get(r.status, 0) + 1
+        by_code[r.code] = by_code.get(r.code, 0) + 1
 
     return {
+        "state": state,
+        "code": code,
+        "label": label,
         "total": len(rows),
-        "in_denominator": len(denominator),
-        "complete": len(complete),
+        "applicable": len(applicable),
+        "accepted": sum(1 for r in rows if r.status == "ACCEPTED"),
         "action_required": sum(1 for r in rows if r.actionRequired),
-        "by_code": by_code,
         "by_status": by_status,
-        # Present for display only. Not a column, not stored, and undefined
-        # rather than zero when nothing is due.
-        "complete_ratio": (len(complete) / len(denominator)) if denominator else None,
+        "by_code": by_code,
     }
 
 
-def due_and_suspense(period_end, due_offset_days, suspense_offset_days):
-    """Both dates are offsets from the period end. Nothing is inferred."""
-    period_end = _as_date(period_end)
-    due = period_end + _dt.timedelta(days=int(due_offset_days))
-    suspense = period_end + _dt.timedelta(days=int(suspense_offset_days))
-    if suspense < due:
-        raise ValueError("Suspense_Offset_Days must be >= Due_Offset_Days")
-    return due, suspense
+def due_date_for(period: str, due_day, due_offset_months=1):
+    """Due_Date = date(period + Due_Offset_Months, Due_Day).
+
+    Both values come from the requirement row, never from the flow. Changing
+    the 10th to the 15th is a list edit, not a deployment.
+    """
+    year, month = (int(x) for x in period.split("-"))
+    month += int(due_offset_months or 0)
+    year += (month - 1) // 12
+    month = (month - 1) % 12 + 1
+    day = int(due_day or 1)
+    # Clamp rather than roll over: a Due_Day of 31 in a 30-day month is the
+    # last day of that month, not the 1st of the next.
+    last = (_dt.date(year + (month == 12), (month % 12) + 1, 1)
+            - _dt.timedelta(days=1)).day
+    return _dt.date(year, month, min(day, last))
+
+
+def days_late(due_date, received_datetime, today=None):
+    """Set by EOM-03 rather than computed in DAX. Positive means late."""
+    due = _day(due_date)
+    if due is None:
+        return None
+    ref = _day(received_datetime) if received_datetime else _day(today or _dt.date.today())
+    return (ref - due).days
 
 
 if __name__ == "__main__":
-    import json
-    today = _dt.date(2026, 11, 10)
+    today = _dt.date(2026, 9, 12)
     demo = [
-        ("verified, past suspense, nothing submitted",
-         dict(as_of=today, suspense_date=_dt.date(2026, 11, 5),
-              requirement_verification_status="VERIFIED")),
-        ("provisional, past suspense, nothing submitted",
-         dict(as_of=today, suspense_date=_dt.date(2026, 11, 5),
-              requirement_verification_status="UNVERIFIED")),
-        ("submitted, awaiting QC",
-         dict(as_of=today, suspense_date=_dt.date(2026, 11, 15),
-              has_current_submission=True, qc_status="PENDING")),
-        ("returned for correction",
-         dict(as_of=today, suspense_date=_dt.date(2026, 11, 20),
-              has_current_submission=True, qc_status="RETURNED")),
+        ("provisional requirement, nothing filed",
+         dict(today=today, due_date=_dt.date(2026, 9, 10))),
+        ("verified requirement, nothing filed, past suspense",
+         dict(today=today, due_date=_dt.date(2026, 9, 10), authority_status="Verified")),
+        ("verified, filed, awaiting review",
+         dict(today=today, due_date=_dt.date(2026, 9, 10), authority_status="Verified",
+              received_flag=True, qc_status="Pending Review")),
+        ("wrong document before suspense",
+         dict(today=today, due_date=_dt.date(2026, 9, 20), authority_status="Verified",
+              received_flag=True, qc_status="Wrong Document")),
+        ("wrong document after suspense",
+         dict(today=today, due_date=_dt.date(2026, 9, 10), authority_status="Verified",
+              received_flag=True, qc_status="Wrong Document")),
     ]
     for label, kw in demo:
-        r = evaluate(**kw)
-        print(f"{label:<44} {r.code:<20} {r.status:<6} {r.actionOwner}")
+        r = item_status(**kw)
+        print(f"{label:<44}{r.status:<20}{r.code}  {r.colour:<6}{r.actionOwner}")
     print()
-    print(json.dumps(rollup(["ACCEPTED", "NOT_DUE", "NOT_DUE"]), indent=2))
+    print("[ACCEPTED, NOT_DUE, NOT_DUE] ->",
+          package_state(["ACCEPTED", "NOT_DUE", "NOT_DUE"])["state"])

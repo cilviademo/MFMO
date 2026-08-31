@@ -1,0 +1,24 @@
+{
+  "connectionReferences": [
+    {
+      "schemaName": "mfops_sharepointonline",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "displayName": "MF Ops - SharePoint"
+    },
+    {
+      "schemaName": "mfops_office365users",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "MF Ops - Office 365 Users"
+    },
+    {
+      "schemaName": "mfops_office365",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+      "displayName": "MF Ops - Outlook (notifications)"
+    },
+    {
+      "schemaName": "mfops_teams",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+      "displayName": "MF Ops - Teams (escalation)"
+    }
+  ]
+}

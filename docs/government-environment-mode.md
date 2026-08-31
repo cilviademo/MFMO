@@ -1,198 +1,207 @@
-# Government environment mode
+# Government environment compatibility mode
 
-**Settled. Do not re-derive.**
+The solution must not require Managed Environments, Power Platform Pipelines,
+premium or custom connectors, AI Builder, PCF components, service principals,
+app registrations, the HTTP or Graph connectors, Dataverse, or more than one
+Power Platform environment.
 
-This solution targets a single Power Platform environment in a US
-Government cloud. Two facts about that environment gate everything, and
-neither changes the design — both change the deployment scripts.
+It must deploy into a **single GCC / GCC High / DoD production environment** by
+manual solution import, or by PAC CLI where the tenant authorizes it.
 
 ---
 
-## The two gating answers
+## Two answers gate everything
 
-| Question | Status | Where it is recorded |
+| Question | Status | Recorded in |
 |---|---|---|
-| Which government cloud is this tenant in — GCC, GCC High, or DoD? | **UNKNOWN — confirm before provisioning** | `configuration/app_config.csv` key `TenantCloud` |
-| May the build run PAC CLI against it? | **UNKNOWN — verify authorization** | `configuration/app_config.csv` key `PacCliAuthorized` |
+| Which government cloud — GCC, GCC High, or DoD? | **UNKNOWN — confirm** | `MF_App_Config.TenantCloud` |
+| May the build run PAC CLI against the tenant? | **UNKNOWN — verify** | `MF_App_Config.PacCliAuthorized` |
 
-Do not guess either one. `provisioning/Provision-MFOpsLists.ps1` refuses to
-run until `TenantCloud` is set to a real value, because the SharePoint and
-Graph endpoints differ per cloud and a script pointed at the commercial
+Neither changes the design; both change the deployment scripts. Do not guess
+either one — `Provision-MFOpsLists.ps1` takes the cloud as a mandatory
+parameter for exactly this reason, because a script pointed at the commercial
 endpoints from a GCC High tenant fails in ways that look like a permissions
 problem.
+
+Microsoft supports PAC CLI in GCC and GCC High. **Local governance may still
+forbid it**, and Microsoft availability does not equal local DAF authorization.
 
 ### Endpoints by cloud
 
 | | GCC | GCC High | DoD |
 |---|---|---|---|
 | SharePoint admin | `*-admin.sharepoint.com` | `*-admin.sharepoint.us` | `*-admin.dps.mil` |
-| Graph | `graph.microsoft.com` | `graph.microsoft.us` | `dod-graph.microsoft.us` |
 | Power Platform API | `api.gov.powerplatform.microsoft.us` | `api.high.powerplatform.microsoft.us` | `api.appsplatform.us` |
 | PAC CLI `--cloud` | `UsGov` | `UsGovHigh` | `UsGovDod` |
+| PnP `-AzureEnvironment` | `USGovernment` | `USGovernmentHigh` | `USGovernmentDoD` |
 | Login authority | `login.microsoftonline.com` | `login.microsoftonline.us` | `login.microsoftonline.us` |
 
 ### If PAC CLI is not authorized
 
-Nothing in the design depends on it. The fallback path is fully supported:
+Nothing in the design depends on it.
 
-* Lists are provisioned by `Provision-MFOpsLists.ps1` over PnP PowerShell or,
-  if PnP is also unavailable, by the REST payloads the same script emits with
-  `-EmitRestOnly`.
-* The canvas app is authored in the maker portal and exported as an `.msapp`,
-  which is unpacked to `.pa.yaml` by `pac canvas unpack` **or** by the Power
-  Apps Language Tooling in any environment that has it — including a
-  developer workstation outside the tenant, because unpacking is an offline
-  operation on the exported file.
-* The solution ZIP is exported from the maker portal and committed to
-  `dist/`.
+* Lists are provisioned by `Provision-MFOpsLists.ps1` over PnP PowerShell, or
+  by the REST payloads the same script emits with `-EmitRestOnly`.
+* The app is authored in the maker portal and exported as an `.msapp`, which is
+  unpacked to `.pa.yaml` on any workstation — unpacking is an offline operation
+  on the exported file and does not touch the tenant.
+* The solution ZIP is exported from the maker portal and committed to `dist/`.
 
-**The YAML is the code.** The `.msapp` and the solution ZIP are build
-artifacts. If the two ever disagree, the YAML wins and the artifact is
-rebuilt.
+**The `.pa.yaml` is the code.** The `.msapp` and the solution ZIP are build
+artifacts. If they ever disagree, the YAML wins and the artifact is rebuilt.
+
+---
+
+## Why single-environment safety is a design constraint, not a caveat
+
+Federal Power Platform tenants commonly grant one environment for everything —
+apps, flows, Dataverse, agents — with no DEV or TEST tier. **Publishing *is*
+deploying.** Every safety mechanism has to live inside the app.
+
+That is why this repo contains `MF_App_Config`, `MF_Feature_Flags`,
+`MF_App_Event_Log` and `Developer_Flag` / `Tester_Flag`. They are not
+nice-to-haves; they are the substitute for an environment tier.
+
+| Constraint | Our mechanism |
+|---|---|
+| No DEV environment | `Developer_Flag` + feature flags |
+| No staged release | `Enabled_Testers` → `Enabled_Prod` |
+| No rollback pipeline | Packaged semantic releases in `dist/` |
+| Publishing is deploying | `MaintenanceMode` / `ReadOnlyMode` kill switch |
+| No environment monitoring | `MF_App_Event_Log` |
+| Two builds in one app | `App_Version` stamped on every event |
+
+**Do not copy the common workaround** of hand-renaming old and new screens.
+Ship both behind a flag and flip a checkbox.
 
 ---
 
 ## Capability gate register
 
-Verify each gate before build step 1 and record the result in
-`MF_App_Config`. **Stop the build if any of the first five is red.**
-
-| # | Capability | Required for | Gate | If unavailable |
-|---|---|---|---|---|
-| 1 | SharePoint Online, custom list creation | everything | **HARD** | Stop. No fallback. |
-| 2 | SharePoint document library, versioning on | evidence storage | **HARD** | Stop. |
-| 3 | Power Apps canvas apps | the app | **HARD** | Stop. |
-| 4 | Power Automate, SharePoint connector | all five flows | **HARD** | Stop. |
-| 5 | Entra ID, `Office365Users` connector | identity, no sign-in screen | **HARD** | Stop. |
-| 6 | Power BI service, gov region | the COP | soft | App still correct; COP deferred. `MF_EOM_Status` still written. |
-| 7 | Office 365 Outlook connector | EOM-04 notifications | soft | Flag `EnableNotifications` False. Log rows still written. |
-| 8 | Power Apps modern (Fluent 2) controls | UI | soft | Classic controls with the same accessible names. Record as a variance. |
-| 9 | AI Builder | tier 3 classification | soft | Flag `EnableAIBuilder` **ships False**. Never a dependency. |
-| 10 | Premium connectors / Dataverse | nothing in R1 | n/a | Not used. R1 is standard-connector only. |
-| 11 | Power Platform Pipelines | nothing | n/a | **Not used by design.** Releases are ZIP + tag. |
-| 12 | Custom connectors | nothing in R1 | n/a | Not used. |
-| 13 | Power Apps Component Framework | nothing in R1 | n/a | Out of scope. |
-| 14 | Teams embedding | convenience | soft | App runs in browser. |
-
-Gate 9 deserves restating: **AI Builder must never become a dependency whose
-availability could block the app.** It is behind `EnableAIBuilder`, which
-ships `False`, and the code path behind it is absent from R1 entirely.
-
-### Recording the result
+Nothing below is assumed. Each is verified against **this tenant** — new
+connectors are disabled by default in GCC High and DoD until an administrator
+reviews them.
 
 ```powershell
-pwsh provisioning/Verify-MFOpsCapabilities.ps1 -TenantCloud UsGovHigh -Verbose
+pwsh provisioning/Verify-MFOpsCapabilities.ps1 -SiteUrl <site> -TenantCloud <cloud>
 ```
 
-Writes one `MF_App_Config` row per gate, keyed `Capability.<n>.<name>`, with
-`Config_Value` of `GREEN`, `SOFT_FAIL` or `RED`, plus the date and the
-identity that verified it. A `Requires_Capability` value on a feature flag
-names one of these keys; the app refuses to honour a flag whose capability
-gate is not GREEN.
+Writes one `MF_App_Config` row per gate, keyed `Capability.<Name>`, and throws
+if any blocker is unavailable.
+
+| Capability | MVP dependency | If unavailable |
+|---|---|---|
+| SharePoint Online connector | **Yes** | **Blocker.** Stop. |
+| Power Apps canvas | **Yes** | **Blocker.** Stop. |
+| Power Automate | **Yes** | **Blocker.** Stop. |
+| Power BI, gov endpoint | **Yes** | **Blocker.** Confirm the service URL. |
+| Office 365 Users connector | Preferred | Fallback: UPN text only |
+| Solutions | Preferred | Fallback: unmanaged component export |
+| PAC CLI | No | Fallback: manual export |
+| Environment variables | Preferred | Fallback: `MF_App_Config` rows |
+| Fluent 2 modern controls | Preferred | Fallback: classic, recorded as a variance |
+| AI Builder | **No** | Feature-flagged tier 3 only. Ships `False`. |
+| PCF / Creator Kit | **No** | Native modern controls first |
+| Code Apps | **No** | Requires admin enablement |
+| Custom connectors | **No** | Not used |
+| HTTP / Graph | **No** | Not used |
+| Dataverse | **No** | Not used |
+| Power Platform Pipelines | **No** | **Not used by design.** Requires Managed Environments and premium licensing. |
+
+AI Builder deserves restating: **it must never become a dependency whose
+availability could block the app.** It is behind `EOM_AI_BUILDER`, which ships
+`Enabled_Prod FALSE` and `Enabled_Testers FALSE`, and the code path behind it
+is absent from R1 entirely.
+
+If environment variables are unavailable, every value in
+`configuration/environment-variables.json` has a matching `MF_App_Config` row.
+The app reads config first and falls back to the variable, **so neither path is
+load-bearing alone.**
 
 ---
 
-## Single-environment safety
+## Kill switch
 
-There is one environment. Dev, test and production are the same tenant, the
-same lists and the same app. That is not an ideal to be argued with; it is
-the constraint, and it is handled as a first-class feature rather than by
-convention.
-
-### Kill switch
-
-Two config keys, read at app start and re-read on every navigation:
+Two config keys, read as named formulas so they re-evaluate rather than going
+stale in an OnStart:
 
 | Key | Effect |
 |---|---|
-| `MaintenanceMode` = `true` | Every user except Developer_Flag holders lands on `scrMaintenance`. No data source is opened. |
-| `ReadOnlyMode` = `true` | The app loads normally, all write affordances are disabled and visibly labelled, and the upload and QC flows refuse to run. |
+| `MaintenanceMode` = `True` | Everyone except developers and admins lands on `scrMaintenance`, before any business data source is opened |
+| `ReadOnlyMode` = `True` | The app loads, every write affordance is disabled and visibly labelled, and EOM-04 and EOM-05 refuse to write |
 
-`ReadOnlyMode` is enforced twice: the controls disable, **and** the flows
-check the same key before writing. A disabled button is a courtesy; the flow
-check is the control.
+`ReadOnlyMode` matters more than it looks. When something is wrong but not
+broken, people still need to see where their package stands. Locking writes
+while leaving status readable is far safer than pulling the app.
+
+Both are enforced twice — the disabled control is a courtesy; **the flow check
+is the control.** Both default `False` in the app's fallback, so a
+configuration outage neither locks everyone out nor silently unlocks writes.
 
 Turning either on requires no deployment. That is the point.
 
-### Developer and tester surfaces
+## Developer and tester surfaces
 
-`Developer_Flag` and `Tester_Flag` live on `MF_Security_Mapping` and are
-never granted by a role. `Developer_Flag` unlocks `scrDiagnostics`, which
-shows the resolved config, the capability register, the last twenty
-telemetry rows and the delegation warnings for the current screen.
-`Tester_Flag` allows a user to receive flags scoped to testers without
-altering the production default.
+`Developer_Flag` and `Tester_Flag` live on `MF_Security_Mapping` and are never
+granted by a role. `Developer_Flag` unlocks `scrDiagnostics` — the resolved
+config, the capability register, the configuration health checks, the flag
+resolution and the last twenty events. `Tester_Flag` lets a user see
+`Enabled_Testers` features without altering the production default.
 
-A normal user must not be able to reach `scrDiagnostics` by any navigation,
-deep link or keyboard route. This is an acceptance test.
-
-### Feature flags
-
-Every capability outside the R1 core is behind a flag with a `False`
-default. The default is what the app uses if `MF_Feature_Flags` is
-unreachable — so an outage never turns an optional dependency on.
-
-| Flag | Ships | Gate |
-|---|:-:|---|
-| `EnableDocumentContentAI` | `False` | Capability 9 |
-| `EnableAIBuilder` | `False` | Capability 9 |
-| `EnableNotifications` | `False` | Capability 7 |
-| `EnablePowerBIEmbed` | `False` | Capability 6 |
-| `EnableUnmatchedQueue` | `True` | Capability 4 |
-| `EnableAppUpload` | `True` | Capability 4 |
-| `EnableFolderDropIntake` | `True` | Capability 4 |
-| `EnableDiagnosticsScreen` | `True` | — (still requires `Developer_Flag`) |
-| `EnableEOYModule` | `True` | — |
+`scrDiagnostics` is gated twice: the flag **and** `Developer_Flag`. A normal
+user must not reach it by any navigation, deep link or keyboard route. This is
+an acceptance test.
 
 ---
 
 ## No hard-coded URLs, site GUIDs or list names
 
-Anywhere. Not in Power Fx, not in a flow, not in a script.
+Anywhere. Not in Power Fx, not in a flow spec, not in a script.
 
-* The app's SharePoint connections are added by name at author time; the
-  **site path and library path** come from `MF_App_Config`
-  (`SiteUrl`, `EvidenceLibraryPath`, `PortfolioRootPath`).
-* Flows read the same keys from `MF_App_Config` in their first action.
-* `provisioning/*.ps1` take the site URL as a parameter and never default it.
-* `scripts/validate_solution.py` greps the whole tree for
-  `https://*.sharepoint.*`, bare GUIDs and literal `MF_` list names outside
-  `scripts/eom_schema.py` and fails the build on a hit.
+* The app's site and library paths come from environment variables, with
+  `MF_App_Config` as the fallback.
+* Flows read the same keys in their first action.
+* `provisioning/*.ps1` take the site URL as a mandatory parameter and never
+  default it.
+* `scripts/validate_solution.py` greps the tree for `https://*.sharepoint.*`,
+  bare GUIDs and list names as string literals, and fails the build on a hit.
 
-The one unavoidable exception is the connection reference in the exported
-solution, which carries an environment-specific id. It is parameterised in
-`solution/src/Other/Customizations.xml` and supplied at import time by a
-deployment settings file, never edited in place.
+The unavoidable exception is the connection reference in the exported solution,
+which carries an environment-specific id. It is parameterised in
+`configuration/connection-references.json` and supplied at import time, never
+edited in place.
 
 ---
 
-## Releases and rollback
+## Release discipline
 
 No Pipelines. Semantic versions, packaged, tagged and reversible.
 
 ```
-v<MAJOR>.<MINOR>.<PATCH>
-
-MAJOR  a schema change that requires a provisioning run
-MINOR  a screen, flow or requirement change
-PATCH  a fix with no schema or contract change
+v0.1.0  scaffold
+v0.2.0  requirement engine
+v0.3.0  facility security
+v0.4.0  document ingestion
+v0.5.0  QC workflow
+v0.6.0  reconciled build (this one)
+v0.9.0  UAT
+v1.0.0  operational release
 ```
 
-Each release:
+Every release produces `dist/MissionFeedingOperations_vX.Y.Z.zip`, a
+`CHANGELOG.md` entry, and the deployment settings for that environment.
+**Canonical source lives in this repo, not inside Power Apps.** Even if the
+tenant forces an import-as-new-app pattern, any release can be recreated
+exactly.
 
-1. `python3 scripts/eom_schema.py --validate && python3 scripts/validate_solution.py`
-2. `bash tests/run_tests.sh`
-3. Export the solution as **managed** for production, **unmanaged** for the
-   source of truth. Commit the unpacked YAML; commit the managed ZIP to
-   `dist/MissionFeedingOperations_v<version>.zip`.
-4. Update `CHANGELOG.md`.
-5. `git tag -a v<version>`.
+Export daily during active development.
 
-**Rollback is importing the previous ZIP from `dist/`.** It is tested as
-part of the release, not assumed. A rollback across a MAJOR boundary
-requires the matching provisioning run and is documented per release in the
-CHANGELOG; there is no automatic down-migration and none is pretended.
+**Rollback is importing the previous ZIP from `dist/`,** and it is tested as
+part of the release rather than assumed. A rollback across a schema change
+needs the matching provisioning run and is documented per release; there is no
+automatic down-migration and none is pretended. Schema changes are additive —
+a retired column is marked unused, never deleted, because deleting a SharePoint
+column destroys its data irreversibly.
 
-Schema changes are additive only within a MAJOR version. A column is
-retired by setting it unused and documenting it, never by deletion —
-deleting a SharePoint column destroys its data irreversibly.
+**Do not promise zero-touch deployment.** Tenant-specific SharePoint rebinding
+after import is a real manual step and `docs/DEPLOYMENT.md` says so.

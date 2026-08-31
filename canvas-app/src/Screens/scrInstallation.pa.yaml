@@ -1,15 +1,17 @@
 # =============================================================================
-# scrInstallation — installation rollup.
+# scrInstallation — the requirement grid. "My package" for a facility user.
 #
-# Two things this screen has to get right:
+# Drill-through, not a vertical render of every facility:
+#   Portfolio -> Installation -> Facility -> Requirement -> Submission/version
 #
-#   1. Installation- and Contract-scope rows have a null Facility_ID. They are
-#      reached through Installation_ID, never through IsBlank(Facility_ID) —
-#      which does not delegate and does not mean what it looks like.
-#   2. A facility user must not receive an installation figure derived from
-#      their neighbours. When the viewer's scope is narrower than the heading,
-#      the figure is labelled as covering their facilities only. It is never
-#      silently narrowed and presented as the installation total.
+# Installation- and Contract-scope rows appear here with their scope labelled,
+# so nobody wonders why the SIK bill isn't on every DFAC. They carry a null
+# Facility_ID and belong to the installation directly, not to any one DFAC.
+#
+# The rollup runs over what the viewer may see. A facility-scoped user gets
+# their own facility plus the installation's shared obligations — never their
+# neighbours' packages. That leak is fixed in MF_VisibleItems, server-side,
+# before anything is counted.
 # =============================================================================
 
 Screens:
@@ -17,14 +19,7 @@ Screens:
     Properties:
       Fill: =clrSurfaceAlt
       OnVisible: |
-        =Concurrent(
-            Set(locInstallation, Coalesce(locInstallation, gblCurrentFacility.Installation_ID)),
-            If(
-                MF_ShouldLog("ScreenView"),
-                Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
-                      MF_TelemetryRow("ScreenView", "Debug", "scrInstallation", locInstallation, ""))
-            )
-        )
+        =Set(locSelectedInstallation, Coalesce(locSelectedInstallation, gblMyInstallation))
 
     Children:
       - conRoot:
@@ -55,39 +50,45 @@ Screens:
                       Variant: Subtle
                       Properties:
                         Text: ="Back"
-                        AccessibleLabel: ="Back to my work"
+                        AccessibleLabel: ="Back to home"
                         OnSelect: =Back(ScreenTransition.None)
                         TabIndex: =0
                   - cmbInstallation:
                       Control: ComboBox
                       Properties:
-                        Items: |
-                          =If(
-                              MF_IsGlobalScope,
-                              Filter(MF_Installation, Is_Active = true),
-                              Filter(
-                                  MF_Installation,
-                                  Is_Active = true,
-                                  Installation_ID in MF_MyInstallationIDs || Portfolio_ID in MF_MyPortfolioIDs
-                              )
-                          )
-                        DisplayFields: =["Title"]
+                        Items: =MF_InstallationChoices
+                        DisplayFields: =["Installation_Name"]
                         SelectMultiple: =false
-                        OnChange: =Set(locInstallation, Self.Selected.Installation_ID)
+                        Visible: =CountRows(MF_InstallationChoices) > 1
+                        DefaultSelectedItems: =Filter(MF_InstallationChoices, Installation_ID = locSelectedInstallation)
+                        OnChange: =Set(locSelectedInstallation, Self.Selected.Installation_ID); Set(locSelectedFacility, Blank())
                         AccessibleLabel: ="Installation"
-                        LayoutMinWidth: =240
+                        LayoutMinWidth: =220
                         TabIndex: =0
-                  - cmbPeriod:
+                  - cmbFacilityFilter:
                       Control: ComboBox
                       Properties:
-                        Items: =MF_SelectablePeriods
-                        DisplayFields: =["Title"]
+                        Items: =MF_FacilityChoices(locSelectedInstallation)
+                        DisplayFields: =["Facility_Name"]
                         SelectMultiple: =false
-                        DefaultSelectedItems: =[MF_CurrentPeriod]
-                        OnChange: =Set(locPeriod, Self.Selected)
-                        AccessibleLabel: ="Reporting period"
-                        LayoutMinWidth: =160
+                        Visible: =CountRows(MF_FacilityChoices(locSelectedInstallation)) > 1
+                        OnChange: =Set(locSelectedFacility, Self.Selected.Facility_ID)
+                        AccessibleLabel: ="Facility. Leave blank to see the whole installation."
+                        LayoutMinWidth: =200
                         TabIndex: =0
+                  - lblOperatingModel:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # The operating model lives on the FACILITY. One base
+                        # can run a legacy DFAC and a Food 2.0 cafe, and their
+                        # requirement sets differ — so it is shown here, beside
+                        # the facility, not beside the installation.
+                        Text: =LookUp('MF Facility', Facility_ID = locSelectedFacility).Operating_Model
+                        Color: =clrTextSecondary
+                        Visible: =!IsBlank(locSelectedFacility)
+                        AccessibleLabel: ="Operating model: " & Self.Text
+                        TabIndex: =-1
 
             - conContent:
                 Control: GroupContainer
@@ -103,142 +104,95 @@ Screens:
                   TabIndex: =-1
                 Children:
 
-                  - cardInstallation:
+                  - cardPackage:
                       Control: Component
                       ComponentName: cmpMetricCard
                       Properties:
-                        Label: ="Installation, " & Coalesce(locPeriod.Title, MF_CurrentPeriod.Title)
-                        Items: =MF_ItemsForInstallation(locInstallation, Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID))
-                        # Non-blank when the viewer's scope is narrower than
-                        # the heading. Rendered as text, never hidden.
-                        ScopeQualifier: =MF_ScopeQualifier(locInstallation)
+                        Label: ="Package - " & locPeriod
+                        Items: |
+                          =If(
+                              IsBlank(locSelectedFacility),
+                              MF_VisibleItems(locPeriod),
+                              Filter(MF_VisibleItems(locPeriod), Facility_ID = locSelectedFacility)
+                          )
+                        ScopeQualifier: =MF_ScopeQualifier()
 
-                  - lblScopeRows:
+                  - lblScopeBreakdown:
                       Control: Text
                       Variant: Caption
                       Properties:
-                        # Installation- and Contract-scope obligations are the
+                        # Installation- and contract-scope obligations are the
                         # ones people forget exist. Count them explicitly.
                         Text: |
                           =With(
-                              { items: MF_ItemsForInstallation(locInstallation, Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)) },
-                              Text(CountRows(Filter(items, Requirement_Scope.Value = "Facility"))) & " facility-scope, " &
-                              Text(CountRows(Filter(items, Requirement_Scope.Value = "Installation"))) & " installation-scope, " &
-                              Text(CountRows(Filter(items, Requirement_Scope.Value = "Contract"))) & " contract-scope"
+                              { items: MF_VisibleItems(locPeriod) },
+                              Text(CountRows(Filter(items, Requirement_Scope = "Facility"))) & " facility, " &
+                              Text(CountRows(Filter(items, Requirement_Scope = "Installation"))) & " installation, " &
+                              Text(CountRows(Filter(items, Requirement_Scope = "Contract"))) & " contract"
                           )
                         Color: =clrTextSecondary
                         AutoHeight: =true
                         TabIndex: =-1
 
-                  - galFacilities:
+                  - galRequirements:
                       Control: Gallery
                       Variant: verticalGallery
                       Properties:
-                        # Facilities the viewer may see, at this installation.
-                        # MF_MyFacilities is already scoped.
-                        Items: =Filter(MF_MyFacilities, Installation_ID = locInstallation)
-                        TemplateSize: =64
-                        Visible: =CountRows(Self.AllItems) > 0
-                        AccessibleLabel: ="Facilities at this installation"
-                        TabIndex: =0
-                      Children:
-                        - conFacilityRow:
-                            Control: GroupContainer
-                            Variant: horizontalAutoLayoutContainer
-                            Properties:
-                              LayoutAlignItems: =LayoutAlignItems.Center
-                              LayoutGap: =12
-                              LayoutWrap: =true
-                              PaddingTop: =8
-                              PaddingBottom: =8
-                              TabIndex: =-1
-                            Children:
-                              - lblFacilityName:
-                                  Control: Text
-                                  Variant: Body
-                                  Properties:
-                                    Text: =ThisItem.Title
-                                    FontWeight: =FontWeight.Semibold
-                                    FillPortions: =2
-                                    LayoutMinWidth: =160
-                                    TabIndex: =-1
-                              - lblOperatingModel:
-                                  Control: Text
-                                  Variant: Caption
-                                  Properties:
-                                    # The operating model lives on the facility.
-                                    # One base runs a legacy DFAC and a Food 2.0
-                                    # cafe, and their requirement sets differ —
-                                    # so it is shown here, on the facility row.
-                                    Text: =ThisItem.Operating_Model.Value
-                                    Color: =clrTextSecondary
-                                    FillPortions: =1
-                                    LayoutMinWidth: =120
-                                    AccessibleLabel: ="Operating model: " & ThisItem.Operating_Model.Value
-                                    TabIndex: =-1
-                              - lblFacilityProgress:
-                                  Control: Text
-                                  Variant: Body
-                                  Properties:
-                                    Text: |
-                                      =With(
-                                          { r: MF_FacilityRollup(ThisItem.Facility_ID, Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)) },
-                                          If(r.denominator = 0, "Nothing due", Text(r.complete) & " of " & Text(r.denominator))
-                                      )
-                                    FillPortions: =1
-                                    LayoutMinWidth: =110
-                                    AccessibleLabel: |
-                                      =With(
-                                          { r: MF_FacilityRollup(ThisItem.Facility_ID, Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)) },
-                                          ThisItem.Title & ": " &
-                                          If(r.denominator = 0, "nothing due", Text(r.complete) & " of " & Text(r.denominator) & " accepted")
-                                      )
-                                    TabIndex: =-1
-                              - btnOpenFacility:
-                                  Control: Button
-                                  Variant: Secondary
-                                  Properties:
-                                    Text: ="Open"
-                                    AccessibleLabel: ="Open the checklist for " & ThisItem.Title
-                                    OnSelect: =Set(gblCurrentFacility, ThisItem); Navigate(scrHome, ScreenTransition.None)
-                                    TabIndex: =0
-
-                  - lblScopeItemsHeading:
-                      Control: Text
-                      Variant: Body
-                      Properties:
-                        Text: ="Installation and contract obligations"
-                        FontWeight: =FontWeight.Semibold
-                        TabIndex: =-1
-
-                  - galScopeItems:
-                      Control: Gallery
-                      Variant: verticalGallery
-                      Properties:
-                        # Reached by scope, not by asking whether Facility_ID
-                        # is blank. See Delegation.fx, the IsBlank trap.
                         Items: |
-                          =Filter(
-                              MF_ItemsForInstallation(locInstallation, Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)),
-                              Requirement_Scope.Value in ["Installation", "Contract"]
+                          =If(
+                              IsBlank(locSelectedFacility),
+                              MF_VisibleItems(locPeriod),
+                              Filter(
+                                  MF_VisibleItems(locPeriod),
+                                  Facility_ID = locSelectedFacility
+                                      || Requirement_Scope = "Installation"
+                                      || Requirement_Scope = "Contract"
+                              )
                           )
-                        TemplateSize: =72
+                        TemplateSize: =84
                         Visible: =CountRows(Self.AllItems) > 0
-                        AccessibleLabel: ="Installation and contract scope obligations"
+                        AccessibleLabel: ="Requirement package for " & locPeriod
                         TabIndex: =0
                       Children:
-                        - scopeRow:
+                        - itemRow:
                             Control: Component
                             ComponentName: cmpEOMItem
                             Properties:
                               Item: =ThisItem
-                              ShowFacility: =true
-                              OnPrimaryAction: =Set(locSelectedItem, ThisItem); Navigate(scrUpload, ScreenTransition.None)
+                              ShowScopeTarget: =true
+                              OnPrimaryAction: |
+                                =Set(locSelectedItem, ThisItem);
+                                 Navigate(
+                                     If(
+                                         ThisItem.Final_Status = "RECEIVED_PENDING_QC" && gblCanQC,
+                                         scrReview,
+                                         If(ThisItem.Received_Flag, scrActivity, scrUpload)
+                                     ),
+                                     ScreenTransition.None
+                                 )
 
-                  - emptyScopeItems:
+                  - emptyPackage:
                       Control: Component
                       ComponentName: cmpEmptyState
                       Properties:
-                        Visible: =CountRows(galScopeItems.AllItems) = 0
-                        Title: ="No installation or contract obligations this period"
-                        Body: ="Installation-scope and contract-scope requirements generate rows with no facility. If you expected one here, check that the requirement is active and effective for this period."
+                        Visible: =CountRows(galRequirements.AllItems) = 0
+                        Title: ="No requirements generated for this period"
+                        Body: |
+                          ="Expected items are generated on the 1st of each month. If " & locPeriod &
+                           " has just opened they will appear shortly. A facility with no requirement set at all is a configuration gap - it appears on System Health."
+                        ActionLabel: ="Choose another period"
+                        OnAction: =Back(ScreenTransition.None)
+
+                  - btnOpenFolder:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Open EOM folder"
+                        Visible: =!IsBlank(LookUp('MF Installation', Installation_ID = locSelectedInstallation).EOM_Folder_URL)
+                        # Describes the destination, not "click here". Gate A6.
+                        AccessibleLabel: |
+                          ="Open the SharePoint EOM folder for " &
+                           LookUp('MF Installation', Installation_ID = locSelectedInstallation).Installation_Name &
+                           ", in a new tab"
+                        OnSelect: =Launch(LookUp('MF Installation', Installation_ID = locSelectedInstallation).EOM_Folder_URL, {}, LaunchTarget.New)
+                        TabIndex: =0

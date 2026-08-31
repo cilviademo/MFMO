@@ -1,287 +1,216 @@
 // =============================================================================
-// App.Formulas.fx  —  named formulas over a bloated OnStart.
+// App.Formulas.fx — named formulas.
 //
-// Named formulas are declarative and lazily evaluated: they recompute when
-// their inputs change and they cost nothing until read. OnStart is imperative,
-// runs once, blocks the first screen, and goes stale the moment configuration
-// changes underneath it. Everything that CAN be a named formula IS one; App
-// OnStart is reduced to the four things that genuinely cannot be
-// (see canvas-app/src/App.pa.yaml).
+// Microsoft's current guidance: prefer named formulas over a bloated
+// App.OnStart. They evaluate lazily, recalculate when their inputs change, and
+// do not delay app start. Anything derived belongs here; OnStart keeps only
+// what genuinely cannot be expressed as a formula.
 //
-// Prefer With() for scoped subformulas over chains of Set(). A Set() chain
-// creates order dependencies between lines that no reader can see.
+// Named formulas cannot ClearCollect. That is a feature here — it forces
+// server-side filtering instead of pulling lists into memory.
 //
-// Load order does not matter here. Named formulas resolve by dependency.
+// Carried forward from V3 with the status functions removed: they now live in
+// StatusEngine.fx as ONE evaluation rather than three parallel switches.
 // =============================================================================
 
 
-// -----------------------------------------------------------------------------
-// Configuration. No URL, site GUID or list name is hard-coded anywhere.
-// Every one of these reads MF_App_Config, and every one has a compiled default
-// that is safe when the list is unreachable.
-// -----------------------------------------------------------------------------
-MF_ConfigRows =
-    Filter(MF_App_Config, Is_Active = true);
-
-MF_Config(Key: Text, Fallback: Text): Text =
-    With(
-        { row: LookUp(MF_ConfigRows, Title = Key) },
-        If(IsBlank(row.Config_Value), Fallback, row.Config_Value)
-    );
-
-MF_ConfigNumber(Key: Text, Fallback: Number): Number =
-    With(
-        { v: MF_Config(Key, "") },
-        If(IsBlank(v) || !IsNumeric(v), Fallback, Value(v))
-    );
-
-MF_ConfigBool(Key: Text, Fallback: Boolean): Boolean =
-    With(
-        { v: Lower(MF_Config(Key, "")) },
-        Switch(v, "true", true, "false", false, Fallback)
-    );
-
-gblAppVersion       = MF_Config("AppVersion", "0.0.0-unconfigured");
-gblSchemaVersion    = MF_Config("SchemaVersion", "unknown");
-gblTenantCloud      = MF_Config("TenantCloud", "UNKNOWN");
-gblSiteUrl          = MF_Config("SiteUrl", "");
-gblEvidencePath     = MF_Config("EvidenceLibraryPath", "");
-gblSupportContact   = MF_Config("SupportContact", "");
-gblMaintenanceText  = MF_Config("MaintenanceMessage", "Mission Feeding Operations is temporarily unavailable.");
-
-// The kill switch. Fallback FALSE on both: a configuration outage must not
-// lock every user out, and must not silently unlock writes either — the flows
-// enforce ReadOnlyMode independently, so FALSE here is safe.
-MF_MaintenanceMode  = MF_ConfigBool("MaintenanceMode", false);
-MF_ReadOnlyMode     = MF_ConfigBool("ReadOnlyMode", false);
-
-MF_DueSoonWindowDays = MF_ConfigNumber("DueSoonWindowDays", 7);
-MF_MaxUploadBytes    = MF_ConfigNumber("MaxUploadSizeMB", 50) * 1024 * 1024;
-MF_PageSize          = MF_ConfigNumber("DefaultPageSize", 100);
-MF_DelegationWarnAt  = MF_ConfigNumber("DelegationWarningThreshold", 2000);
-
-
-// -----------------------------------------------------------------------------
-// Feature flags. Everything outside the R1 core degrades gracefully behind one.
-// Default_Value is what we fall back to when the list is unreachable, so an
-// outage never turns an optional dependency ON.
-// -----------------------------------------------------------------------------
-MF_FlagRows = Filter(MF_Feature_Flags, Is_Active = true);
-
-MF_Flag(FlagName: Text): Boolean =
-    With(
-        { f: LookUp(MF_FlagRows, Title = FlagName) },
-        If(
-            IsBlank(f.Title),
-            false,                                  // unknown flag is OFF
-            Switch(
-                f.Scope,
-                "Global", f.Flag_Value,
-                "Role",   f.Flag_Value && (gblRole in Split(f.Enabled_For_Roles, ";").Value),
-                "User",   f.Flag_Value && (Lower(gblCurrentUser.Email) in Lower(f.Enabled_For_UPNs)),
-                f.Default_Value
-            )
-        )
-    );
-
-// A flag whose Requires_Capability gate is not GREEN is refused regardless of
-// its value. See docs/government-environment-mode.md.
-MF_FlagEnabled(FlagName: Text): Boolean =
-    With(
-        { f: LookUp(MF_FlagRows, Title = FlagName) },
-        MF_Flag(FlagName) &&
-        (IsBlank(f.Requires_Capability) || MF_Config(f.Requires_Capability, "RED") = "GREEN")
-    );
-
-
-// -----------------------------------------------------------------------------
-// Identity and role. No sign-in: CAC resolves identity before the app loads,
-// so there is no credential control, no sign-in screen and nothing to tab past.
-// -----------------------------------------------------------------------------
+// --- identity ------------------------------------------------------------
+// No sign-in. On the network CAC identifies the user before the app loads.
+// There is no login screen and no "welcome back" state; the app resolves
+// identity, scope and permissions from MF_Security_Mapping on open.
 gblCurrentUser = User();
 
-MF_MyMappings =
-    Filter(
-        MF_Security_Mapping,
-        Is_Active = true,
-        Principal_UPN = gblCurrentUser.Email          // delegable: indexed equality
-    );
 
-MF_HasAnyAccess = CountRows(MF_MyMappings) > 0;
+// --- configuration -------------------------------------------------------
+// No URL, site GUID or list name is hard-coded anywhere. Every value below is
+// read from MF_App_Config, which mirrors the environment variables so that
+// neither path is load-bearing alone.
+MF_ConfigRows = Filter('MF App Config', Active_Flag = true);
 
-// Highest privilege wins. Ranked, not alphabetical.
-gblRole =
-    With(
-        { r: MF_MyMappings },
-        If( "Admin" in r.Role,               "Admin",
-            "PortfolioManager" in r.Role,    "PortfolioManager",
-            "InstallationManager" in r.Role, "InstallationManager",
-            "Reviewer" in r.Role,            "Reviewer",
-            "FacilityManager" in r.Role,     "FacilityManager",
-            "FacilityUser" in r.Role,        "FacilityUser",
-            "None"
-        )
-    );
+MF_Config(Key: Text, Fallback: Text): Text =
+    With( { row: LookUp(MF_ConfigRows, Config_Key = Key) },
+          If(IsBlank(row.Config_Value), Fallback, row.Config_Value) );
+
+MF_ConfigNumber(Key: Text, Fallback: Number): Number =
+    With( { v: MF_Config(Key, "") },
+          If(IsBlank(v) || !IsNumeric(v), Fallback, Value(v)) );
+
+MF_ConfigBool(Key: Text, Fallback: Boolean): Boolean =
+    Switch( Lower(MF_Config(Key, "")), "true", true, "false", false, Fallback );
+
+gblAppVersion     = MF_Config("AppVersion", "0.0.0-unconfigured");
+gblSchemaVersion  = MF_Config("SchemaVersion", "unknown");
+gblTenantCloud    = MF_Config("TenantCloud", "UNKNOWN");
+gblOpenPeriod     = MF_Config("OpenReportingPeriod", Text(DateAdd(Today(), -1, Months), "yyyy-mm"));
+gblFiscalYear     = MF_Config("CurrentFiscalYear", "");
+gblSupportMessage = MF_Config("SupportMessage", "Mission Feeding Operations is briefly unavailable for maintenance.");
+gblSupportContact = MF_Config("SupportContact", "");
+gblPowerBIURL     = MF_Config("PowerBIReportURL", "");
+gblEOMRootPath    = MF_Config("EOM_Root_Path", "/EOM");
+
+// The kill switch. Both default FALSE: a configuration outage must not lock
+// every user out, and must not silently unlock writes either — the flows check
+// ReadOnlyMode independently, so FALSE here is safe.
+gblMaintenanceMode = MF_ConfigBool("MaintenanceMode", false);
+gblReadOnlyMode    = MF_ConfigBool("ReadOnlyMode", false);
+gblRequireQC       = MF_ConfigBool("RequireQC", true);
+
+MF_MaxUploadBytes  = MF_ConfigNumber("MaxUploadSizeMB", 50) * 1024 * 1024;
+MF_DelegationWarnAt = MF_ConfigNumber("DelegationWarningThreshold", 2000);
+
+
+// --- scope ---------------------------------------------------------------
+// Delegable: filters on UPN, an indexed column, server-side.
+gblMyScope =
+    Filter('MF Security Mapping',
+           UPN = gblCurrentUser.Email,
+           Active_Flag = true);
+
+gblHasAccess = CountRows(gblMyScope) > 0;
+
+// Widest scope wins, ranked rather than alphabetical.
+gblScopeType =
+    With( { s: gblMyScope },
+        If( "Enterprise"   in s.Scope_Type, "Enterprise",
+            "Portfolio"    in s.Scope_Type, "Portfolio",
+            "Installation" in s.Scope_Type, "Installation",
+            "Facility"     in s.Scope_Type, "Facility",
+            "None" ) );
+
+gblRole = First(gblMyScope).Role;
+
+gblCanQC       = CountRows(Filter(gblMyScope, Can_QC = true)) > 0;
+gblCanOnBehalf = CountRows(Filter(gblMyScope, Can_Submit_On_Behalf = true)) > 0;
+gblCanEditReqs = CountRows(Filter(gblMyScope, Can_Edit_Requirements = true)) > 0;
 
 // Never granted by a role. Only by an explicit flag on the mapping row.
-MF_IsDeveloper = CountRows(Filter(MF_MyMappings, Developer_Flag = true)) > 0;
-MF_IsTester    = CountRows(Filter(MF_MyMappings, Tester_Flag = true))    > 0;
+gblIsDeveloper = CountRows(Filter(gblMyScope, Developer_Flag = true)) > 0;
+gblIsTester    = CountRows(Filter(gblMyScope, Tester_Flag = true))    > 0;
 
-// The scopes this user may see. One security mapping serves app filtering and
-// Power BI RLS; these three tables are the app half of it.
-MF_MyFacilityIDs =
-    Distinct(Filter(MF_MyMappings, Scope_Type = "Facility"), Scope_ID).Value;
-MF_MyInstallationIDs =
-    Distinct(Filter(MF_MyMappings, Scope_Type = "Installation"), Scope_ID).Value;
-MF_MyPortfolioIDs =
-    Distinct(Filter(MF_MyMappings, Scope_Type = "Portfolio"), Scope_ID).Value;
-MF_IsGlobalScope =
-    CountRows(Filter(MF_MyMappings, Scope_Type = "Global")) > 0;
+gblMyPortfolio    = First(gblMyScope).Portfolio_ID;
+gblMyInstallation = First(gblMyScope).Installation_ID;
+gblMyFacility     = First(gblMyScope).Facility_ID;
 
-// Facilities the user may act on, resolved once. Small table; safe to hold.
-MF_MyFacilities =
-    If( MF_IsGlobalScope,
-        Filter(MF_Facility, Is_Active = true),
-        Filter(
-            MF_Facility,
-            Is_Active = true,
-            Facility_ID in MF_MyFacilityIDs
-                || Installation_ID in MF_MyInstallationIDs
-                || Portfolio_ID in MF_MyPortfolioIDs
-        )
-    );
+// Write access: read-only mode locks everyone except developers, and
+// maintenance mode locks everyone except developers and admins.
+gblCanWrite     = !gblReadOnlyMode || gblIsDeveloper;
+gblCanEnterApp  = !gblMaintenanceMode || gblIsDeveloper || gblCanEditReqs;
 
-gblCurrentFacility = First(MF_MyFacilities);
-
-
-// -----------------------------------------------------------------------------
-// Reporting periods.
-// -----------------------------------------------------------------------------
-MF_OpenPeriods =
-    SortByColumns(
-        Filter(MF_Reporting_Period, Period_State in ["OPEN", "CLOSING"]),
-        "Period_End", SortOrder.Descending
-    );
-
-MF_CurrentPeriod = First(MF_OpenPeriods);
-
-MF_SelectablePeriods =
-    SortByColumns(
-        Filter(
-            MF_Reporting_Period,
-            Period_End >= DateAdd(Today(), -MF_ConfigNumber("OpenPeriodLookbackMonths", 3), Months)
-        ),
-        "Period_End", SortOrder.Descending
-    );
-
-
-// -----------------------------------------------------------------------------
-// Gate. Evaluated before any screen renders. See App.pa.yaml StartScreen.
-// -----------------------------------------------------------------------------
-MF_StartScreen =
-    If( MF_MaintenanceMode && !MF_IsDeveloper, scrMaintenance,
-        !MF_HasAnyAccess,                     scrNoAccess,
-        scrHome
-    );
-
-// Every write affordance binds DisplayMode to this. The disabled control is a
-// courtesy; the flow-side check on the same config key is the control.
-MF_WriteMode =
-    If(MF_ReadOnlyMode, DisplayMode.Disabled, DisplayMode.Edit);
+MF_WriteMode    = If(gblCanWrite, DisplayMode.Edit, DisplayMode.Disabled);
 
 MF_ReadOnlyBanner =
-    If(MF_ReadOnlyMode,
-       "Read-only mode: submissions and reviews are paused. Contact " & gblSupportContact & ".",
-       "");
+    If( gblReadOnlyMode,
+        "The app is read-only while we finish maintenance. You can view status but not submit.",
+        "" );
+
+// The gate, evaluated before any screen renders. Unmapped users get a clear
+// route to fix it, not an empty app.
+MF_StartScreen =
+    If( !gblHasAccess,      scrNoAccess,
+        !gblCanEnterApp,    scrMaintenance,
+        scrHome );
 
 
-// -----------------------------------------------------------------------------
-// Colour tokens. Declared once. No screen may use a colour literal.
-// Ratios verified in docs/accessibility.md gate A5.
-// -----------------------------------------------------------------------------
-clrStatusBlue      = ColorValue("#0F548C");
-clrStatusBlueBg    = ColorValue("#EFF6FC");
-clrStatusAmber     = ColorValue("#8A5300");
-clrStatusAmberBg   = ColorValue("#FFF9F0");
-clrStatusRed       = ColorValue("#A4262C");
-clrStatusRedBg     = ColorValue("#FDF3F4");
-clrStatusGreen     = ColorValue("#0E700E");
-clrStatusGreenBg   = ColorValue("#F1FAF1");
-clrStatusGray      = ColorValue("#424242");
-clrStatusGrayBg    = ColorValue("#F5F5F5");
-clrText            = ColorValue("#242424");
-clrTextSecondary   = ColorValue("#616161");
-clrSurface         = ColorValue("#FFFFFF");
-clrSurfaceAlt      = ColorValue("#FAF9F8");
-clrBorder          = ColorValue("#D1D1D1");
-clrFocus           = ColorValue("#0F6CBD");
+// --- feature flags -------------------------------------------------------
+// One published app carries released and unreleased screens at once. This is
+// what makes a single-environment tenant survivable. Do not copy the common
+// workaround of hand-renaming old and new screens.
+MF_FlagRows = 'MF Feature Flags';
 
-MF_StatusForeground(FinalStatus: Text): Color =
-    Switch(FinalStatus,
-        "Blue",  clrStatusBlue,
-        "Amber", clrStatusAmber,
-        "Red",   clrStatusRed,
-        "Green", clrStatusGreen,
-        clrStatusGray);
-
-MF_StatusBackground(FinalStatus: Text): Color =
-    Switch(FinalStatus,
-        "Blue",  clrStatusBlueBg,
-        "Amber", clrStatusAmberBg,
-        "Red",   clrStatusRedBg,
-        "Green", clrStatusGreenBg,
-        clrStatusGrayBg);
+MF_IsFeatureOn(Key: Text): Boolean =
+    With( { f: LookUp(MF_FlagRows, Feature_Key = Key) },
+        If( IsBlank(f.Feature_Key), false,          // unknown flag is OFF
+            f.Enabled_Prod, true,
+            f.Enabled_Testers && (gblIsTester || gblIsDeveloper), true,
+            false ) );
 
 
-// -----------------------------------------------------------------------------
-// Navigation. Built as a table so scrHome's nav gallery has no per-item logic
-// and a feature flag demonstrably removes a screen rather than hiding a button.
-// -----------------------------------------------------------------------------
+// --- scope-resolved reference data ---------------------------------------
+// Small tables, safe to hold. Everything transactional stays server-filtered.
+MF_MyInstallations =
+    Switch( gblScopeType,
+        "Enterprise", Filter('MF Installation', Active_Flag = true),
+        "Portfolio",  Filter('MF Installation', Active_Flag = true, Portfolio_ID = gblMyPortfolio),
+        Filter('MF Installation', Active_Flag = true, Installation_ID = gblMyInstallation) );
+
+MF_MyFacilities =
+    Switch( gblScopeType,
+        "Facility",     Filter('MF Facility', Active_Flag = true, Facility_ID = gblMyFacility),
+        "Installation", Filter('MF Facility', Active_Flag = true, Installation_ID = gblMyInstallation),
+        "Portfolio",    Filter('MF Facility', Active_Flag = true,
+                               Installation_ID in MF_MyInstallations.Installation_ID),
+        Filter('MF Facility', Active_Flag = true) );
+
+// A DFAC manager with one facility row sees no dropdowns at all, just an
+// upload box. Everything else is the exception path.
+MF_ShowDropdowns = CountRows(MF_MyFacilities) > 1 || gblCanOnBehalf;
+
+// Last 13 periods, newest first. Reporting_Period is YYYY-MM throughout.
+MF_SelectablePeriods =
+    ForAll( Sequence(13, 0, 1) As n,
+        { Period: Text(DateAdd(Today(), -1 - n.Value, Months), "yyyy-mm") } );
+
+
+// --- navigation ----------------------------------------------------------
+// Role-shaped: three destinations for a facility user, six for an admin.
+// A feature flag removes the destination, not merely the button.
 colNavigation =
     Filter(
         Table(
-            { key: "home",     label: "My work",           screen: "scrHome",              icon: "Home",      roles: "*",                                                   flag: ""                    },
-            { key: "upload",   label: "Submit a document", screen: "scrUpload",            icon: "Upload",    roles: "*",                                                   flag: "EnableAppUpload"     },
-            { key: "inst",     label: "Installation",      screen: "scrInstallation",      icon: "Org",       roles: "InstallationManager;PortfolioManager;Admin;Reviewer",  flag: ""                    },
-            { key: "review",   label: "Review queue",      screen: "scrReview",            icon: "View",      roles: "Reviewer;InstallationManager;Admin",                   flag: ""                    },
-            { key: "unmatch",  label: "Needs classification", screen: "scrUnmatched",      icon: "Help",      roles: "Reviewer;InstallationManager;Admin",                   flag: "EnableUnmatchedQueue"},
-            { key: "history",  label: "History",           screen: "scrHistory",           icon: "History",   roles: "*",                                                   flag: ""                    },
-            { key: "admin",    label: "Requirements",      screen: "scrAdminRequirements", icon: "Settings",  roles: "Admin;PortfolioManager",                              flag: ""                    },
-            { key: "diag",     label: "Diagnostics",       screen: "scrDiagnostics",       icon: "Tools",     roles: "*",                                                   flag: "EnableDiagnosticsScreen" }
+            { key: "home",     label: "Home",           screen: "scrHome",              flag: "",                need: "all"    },
+            { key: "package",  label: "My package",     screen: "scrInstallation",      flag: "",                need: "all"    },
+            { key: "upload",   label: "Submit",         screen: "scrUpload",            flag: "EOM_UPLOAD",      need: "write"  },
+            { key: "review",   label: "Review",         screen: "scrReview",            flag: "EOM_QC",          need: "qc"     },
+            { key: "unmatch",  label: "Needs classification", screen: "scrUnmatched",   flag: "EOM_UNMATCHED",   need: "qc"     },
+            { key: "activity", label: "Activity",       screen: "scrActivity",          flag: "",                need: "all"    },
+            { key: "admin",    label: "Requirements",   screen: "scrAdminRequirements", flag: "EOM_ADMIN_REQS",  need: "admin"  },
+            { key: "diag",     label: "Diagnostics",    screen: "scrDiagnostics",       flag: "EOM_DIAGNOSTICS", need: "dev"    }
         ),
-        (roles = "*" || gblRole in Split(roles, ";").Value)
-        && (IsBlank(flag) || MF_FlagEnabled(flag))
-        // scrDiagnostics additionally requires the mapping-level flag. A normal
-        // user must not reach it by any navigation, deep link or keyboard route.
-        && (key <> "diag" || MF_IsDeveloper)
+        (IsBlank(flag) || MF_IsFeatureOn(flag))
+        && Switch( need,
+               "all",   true,
+               "write", gblCanWrite,
+               "qc",    gblCanQC,
+               "admin", gblCanEditReqs,
+               "dev",   gblIsDeveloper,
+               false )
     );
 
 
-// -----------------------------------------------------------------------------
-// Telemetry. Structured business events, not a debug log. Every row answers a
-// question somebody will ask about the programme.
-//
-// Called as a behaviour function from OnVisible / OnSelect, so it lives here as
-// a formula only for the payload; the Patch itself is in the control.
-// -----------------------------------------------------------------------------
+// --- colour tokens -------------------------------------------------------
+// Declared once. No screen may use a colour literal. Ratios verified in
+// docs/accessibility.md.
+clrStatusBlue    = ColorValue("#0F548C");   clrStatusBlueBg  = ColorValue("#EFF6FC");
+clrStatusAmber   = ColorValue("#8A5300");   clrStatusAmberBg = ColorValue("#FFF9F0");
+clrStatusRed     = ColorValue("#A4262C");   clrStatusRedBg   = ColorValue("#FDF3F4");
+clrStatusGreen   = ColorValue("#0E700E");   clrStatusGreenBg = ColorValue("#F1FAF1");
+clrStatusGray    = ColorValue("#424242");   clrStatusGrayBg  = ColorValue("#F5F5F5");
+clrText          = ColorValue("#242424");
+clrTextSecondary = ColorValue("#616161");
+clrSurface       = ColorValue("#FFFFFF");
+clrSurfaceAlt    = ColorValue("#FAF9F8");
+clrBorder        = ColorValue("#D1D1D1");
+clrFocus         = ColorValue("#0F6CBD");
+
+
+// --- telemetry -----------------------------------------------------------
+// Business events, not click tracking. Every row answers a question somebody
+// will ask about the programme.
 gblSessionId = GUID();
 
-MF_TelemetryRow(EventType: Text, Severity: Text, ScreenName: Text, EntityId: Text, Detail: Text) =
+MF_EventRow(EventType: Text, Result: Text, RecordId: Text, ErrorCode: Text, ErrorMessage: Text) =
     {
-        Title:          Text(gblSessionId) & "|" & EventType,
-        Event_Time:     Now(),
-        Event_Type:     EventType,
-        Severity:       Severity,
-        User_UPN:       gblCurrentUser.Email,
-        App_Version:    gblAppVersion,
-        Screen_Name:    ScreenName,
-        Correlation_ID: Text(gblSessionId),
-        Entity_ID:      EntityId,
-        Detail_Json:    Detail
+        Event_ID:        "EVT-" & Text(Now(), "yyyymmddhhmmss") & "-" & Text(gblSessionId),
+        Event_DateTime:  Now(),
+        User_UPN:        gblCurrentUser.Email,
+        Role:            gblRole,
+        Portfolio_ID:    gblMyPortfolio,
+        Installation_ID: gblMyInstallation,
+        Facility_ID:     gblMyFacility,
+        Event_Type:      EventType,
+        Record_ID:       RecordId,
+        Result:          Result,
+        Error_Code:      ErrorCode,
+        Error_Message:   ErrorMessage,
+        App_Version:     gblAppVersion
     };
-
-// Sampling applies to ScreenView only. Upload, QCDecision, AccessDenied and
-// Error are always written — the events that matter are never sampled away.
-MF_ShouldLog(EventType: Text): Boolean =
-    EventType in ["Upload", "UploadFailed", "QCDecision", "AccessDenied", "Error", "AppOpen"]
-    || Rand() * 100 <= MF_ConfigNumber("TelemetrySamplingPercent", 100);

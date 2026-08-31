@@ -1,6 +1,7 @@
-Title,Installation_ID,Installation_Code,Service_Branch,Region,Portfolio_ID,Is_Active
-Fort Liberty,INST-FTLIB,FTLIB,Army,Southeast,PORT-CONUS-EAST,TRUE
-Joint Base Lewis-McChord,INST-JBLM,JBLM,Joint,Northwest,PORT-CONUS-WEST,TRUE
-Naval Station Norfolk,INST-NSNOR,NSNOR,Navy,Southeast,PORT-CONUS-EAST,TRUE
-Camp Humphreys,INST-CPHUM,CPHUM,Army,Pacific,PORT-OCONUS,TRUE
-Fort Example (decommissioned),INST-FTEXM,FTEXM,Army,Southeast,PORT-CONUS-EAST,FALSE
+Installation_ID,Installation_Name,Portfolio_ID,MAJCOM,EOM_Folder_URL,Active_Flag
+INST-LACKLAND,Lackland AFB,PORT-3,AETC,,TRUE
+INST-MINOT,Minot AFB,PORT-3,AFGSC,,TRUE
+INST-MALMSTROM,Malmstrom AFB,PORT-3,AFGSC,,TRUE
+INST-WHITEMAN,Whiteman AFB,PORT-3,AFGSC,,TRUE
+INST-CREECH,Creech AFB,PORT-4,ACC,,TRUE
+INST-CLOSED,Example AFB (closed),PORT-3,AETC,,FALSE

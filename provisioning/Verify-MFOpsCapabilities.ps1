@@ -1,17 +1,18 @@
 <#
 .SYNOPSIS
-    Verifies the capability gates in docs/government-environment-mode.md and
-    records the result in MF_App_Config.
+    Verifies the capability gate register in docs/government-environment-mode.md
+    and records the result in MF_App_Config.
 
 .DESCRIPTION
-    Build step 1. Gates 1-5 are hard: if any of them is RED, stop. Nothing
-    downstream is worth building until they are green, and discovering a
-    missing connector after the app is written costs a rebuild.
+    Build step 1. Microsoft availability does not equal local DAF
+    authorization: new connectors are disabled by default in GCC High and DoD
+    until an administrator reviews them, so nothing here is assumed.
 
-    Every gate writes one MF_App_Config row keyed Capability.<n>.<name> with
-    a value of GREEN, SOFT_FAIL or RED, the verification date and the
-    identity that ran the check. A feature flag naming a capability in
-    Requires_Capability is refused by the app unless that key reads GREEN.
+    The four MVP dependencies are blockers. If any is unavailable, stop —
+    discovering a missing connector after the app is written costs a rebuild.
+
+    Each gate writes one MF_App_Config row keyed Capability.<Name>, with the
+    verdict, the date and the identity that checked it.
 #>
 [CmdletBinding()]
 param(
@@ -30,68 +31,68 @@ $pnpEnv = switch ($TenantCloud) {
 }
 
 $gates = @(
-    @{ N = 1;  Name = 'SharePointLists';   Hard = $true;  Test = 'Create and delete a temporary custom list' }
-    @{ N = 2;  Name = 'SharePointLibrary'; Hard = $true;  Test = 'Create a library and enable major versioning' }
-    @{ N = 3;  Name = 'PowerApps';         Hard = $true;  Test = 'Canvas app creation is licensed and permitted' }
-    @{ N = 4;  Name = 'PowerAutomate';     Hard = $true;  Test = 'SharePoint connector available; flow can be created' }
-    @{ N = 5;  Name = 'EntraIdentity';     Hard = $true;  Test = 'Office365Users connector resolves the signed-in user' }
-    @{ N = 6;  Name = 'PowerBI';           Hard = $false; Test = 'Gov-region workspace available' }
-    @{ N = 7;  Name = 'Outlook';           Hard = $false; Test = 'Office 365 Outlook connector available' }
-    @{ N = 8;  Name = 'ModernControls';    Hard = $false; Test = 'Fluent 2 modern controls enabled in the environment' }
-    @{ N = 9;  Name = 'AIBuilder';         Hard = $false; Test = 'AI Builder licensed. Expected FALSE. Never a dependency.' }
-    @{ N = 10; Name = 'PremiumConnectors'; Hard = $false; Test = 'Not used by R1. Record for completeness.' }
-    @{ N = 11; Name = 'Pipelines';         Hard = $false; Test = 'Not used by design. Releases are ZIP plus tag.' }
-    @{ N = 12; Name = 'CustomConnectors';  Hard = $false; Test = 'Not used by R1.' }
-    @{ N = 13; Name = 'PCF';               Hard = $false; Test = 'Out of scope for R1.' }
-    @{ N = 14; Name = 'TeamsEmbedding';    Hard = $false; Test = 'Convenience only. App runs in the browser.' }
+    @{ Name = 'SharePointOnline'; Blocker = $true;  Test = 'SharePoint Online connector, custom list and library creation' }
+    @{ Name = 'PowerAppsCanvas';  Blocker = $true;  Test = 'Canvas app creation licensed and permitted' }
+    @{ Name = 'PowerAutomate';    Blocker = $true;  Test = 'Flow creation with the SharePoint connector' }
+    @{ Name = 'PowerBIGov';       Blocker = $true;  Test = 'Power BI gov service. Confirm the service URL for this cloud.' }
+    @{ Name = 'Office365Users';   Blocker = $false; Test = 'Identity connector. Fallback: UPN text only.' }
+    @{ Name = 'Solutions';        Blocker = $false; Test = 'Solution import. Fallback: unmanaged component export.' }
+    @{ Name = 'PacCli';           Blocker = $false; Test = 'PAC CLI authorized against this tenant. Fallback: manual export.' }
+    @{ Name = 'EnvironmentVars';  Blocker = $false; Test = 'Environment variables. Fallback: MF_App_Config rows.' }
+    @{ Name = 'ModernControls';   Blocker = $false; Test = 'Fluent 2 modern controls. Fallback: classic, recorded as a variance.' }
+    @{ Name = 'AIBuilder';        Blocker = $false; Test = 'Expected FALSE. Tier 3 only. Never a dependency.' }
+    @{ Name = 'PCFCreatorKit';    Blocker = $false; Test = 'Not used in R1. Native modern controls first.' }
+    @{ Name = 'CodeApps';         Blocker = $false; Test = 'Not used. Requires admin enablement.' }
+    @{ Name = 'CustomConnectors'; Blocker = $false; Test = 'Not used.' }
+    @{ Name = 'HttpGraph';        Blocker = $false; Test = 'Not used.' }
+    @{ Name = 'Dataverse';        Blocker = $false; Test = 'Not used.' }
+    @{ Name = 'Pipelines';        Blocker = $false; Test = 'Not used by design. Requires Managed Environments and premium licensing.' }
 )
 
 Connect-PnPOnline -Url $SiteUrl -Interactive -AzureEnvironment $pnpEnv
-$me = (Get-PnPProperty -ClientObject (Get-PnPWeb) -Property CurrentUser).LoginName
+$me  = (Get-PnPProperty -ClientObject (Get-PnPWeb) -Property CurrentUser).LoginName
 $now = (Get-Date).ToString('yyyy-MM-dd')
 
 Write-Host ''
-Write-Host 'Capability gate register' -ForegroundColor White
-Write-Host "cloud $TenantCloud, verified by $me on $now"
+Write-Host "Capability gate register - $TenantCloud, verified by $me on $now" -ForegroundColor White
 Write-Host ''
 
 $results = @()
 foreach ($gate in $gates) {
-    $key = "Capability.$($gate.N).$($gate.Name)"
-    $label = if ($gate.Hard) { 'HARD' } else { 'soft' }
-    Write-Host ("[{0,-4}] {1,-34} {2}" -f $label, $key, $gate.Test)
+    $key   = "Capability.$($gate.Name)"
+    $label = if ($gate.Blocker) { 'BLOCKER' } else { 'soft   ' }
+    Write-Host ("[{0}] {1,-28} {2}" -f $label, $key, $gate.Test)
 
     if ($RecordOnly) { $verdict = 'UNVERIFIED' }
     else {
-        # Gates 1 and 2 are proven by doing. The rest are attested by the
-        # engineer running this script, because there is no reliable API that
-        # answers "is this connector permitted for this tenant" without
-        # attempting to use it.
-        $answer = Read-Host "      GREEN / SOFT_FAIL / RED"
+        # There is no reliable API that answers "is this connector permitted for
+        # this tenant" without attempting to use it, so these are attested by
+        # the engineer running the script and recorded with their name.
+        $answer  = Read-Host '      AVAILABLE / UNAVAILABLE / NOT_APPLICABLE'
         $verdict = $answer.Trim().ToUpper()
-        if ($verdict -notin @('GREEN', 'SOFT_FAIL', 'RED')) { $verdict = 'UNVERIFIED' }
+        if ($verdict -notin @('AVAILABLE', 'UNAVAILABLE', 'NOT_APPLICABLE')) { $verdict = 'UNVERIFIED' }
     }
 
-    $results += [pscustomobject]@{ Key = $key; Verdict = $verdict; Hard = $gate.Hard }
+    $results += [pscustomobject]@{ Key = $key; Verdict = $verdict; Blocker = $gate.Blocker }
 
     $existing = Get-PnPListItem -List 'MF_App_Config' `
-        -Query "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>$key</Value></Eq></Where></Query></View>"
+        -Query "<View><Query><Where><Eq><FieldRef Name='Config_Key'/><Value Type='Text'>$key</Value></Eq></Where></Query></View>"
     $values = @{
-        Title           = $key
-        Config_Value    = $verdict
-        Config_Type     = 'Text'
-        Environment_Tag = 'PROD'
-        Description     = "$($gate.Test) Verified $now by $me."
-        Is_Active       = $true
+        Config_Key   = $key
+        Config_Value = $verdict
+        Config_Type  = 'String'
+        Description  = "$($gate.Test) Verified $now by $me."
+        Admin_Only   = $true
+        Active_Flag  = $true
     }
     if ($existing.Count -eq 1) { Set-PnPListItem -List 'MF_App_Config' -Identity $existing[0].Id -Values $values | Out-Null }
     else { Add-PnPListItem -List 'MF_App_Config' -Values $values | Out-Null }
 }
 
 Write-Host ''
-$blocking = $results | Where-Object { $_.Hard -and $_.Verdict -ne 'GREEN' }
+$blocking = $results | Where-Object { $_.Blocker -and $_.Verdict -ne 'AVAILABLE' }
 if ($blocking) {
     $blocking | ForEach-Object { Write-Error "BLOCKING: $($_.Key) is $($_.Verdict)" }
-    throw 'One or more hard capability gates are not GREEN. Stop the build. Do not provision lists.'
+    throw 'One or more MVP dependencies are unavailable. Stop the build. Do not provision lists.'
 }
-Write-Host 'All hard gates GREEN. Proceed to Provision-MFOpsLists.ps1.' -ForegroundColor Green
+Write-Host 'All MVP dependencies available. Proceed to Provision-MFOpsLists.ps1.' -ForegroundColor Green

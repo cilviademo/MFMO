@@ -1,182 +1,222 @@
-# Status calculation
+# Status calculation — ONE definition, three runtimes
 
-**Settled. Do not re-derive.** `scripts/status_engine.py` is the reference
-implementation; `canvas-app/formulas/StatusEngine.fx` and
-`flows/EOM03-StatusFact` are transliterations of it, held in agreement by
-`tests/test_status_engine.py`.
+The Power App, the reconciliation flow and Power BI must never disagree about
+what colour a base is. This file is the single definition; the Power Fx, the
+flow spec and the DAX are mechanical translations of it. **Change the rules
+here first, then change all three.**
+
+Reference implementation: `scripts/status_engine.py`.
+Executable specification: `docs/mf-operations-prototype.html`.
+Held in agreement by: `tests/test_status_engine.py`.
+
+**Nothing about status is ever stored by a human.** There is no "set this to
+yellow" control anywhere in the app, and no colour picker exists.
 
 ---
 
-## The shape of the answer
+## Two fields, both stored, neither derived from the other
 
-There is one engine and one evaluation. It takes the row and the date and
-returns a single record:
+| | |
+|---|---|
+| `Final_Status` | the **semantic** string — eight values |
+| `Status_Code` | the **numeric visual** code — 0 to 4 |
+
+Both are written by one evaluation. Power BI conditionally formats the entire
+COP matrix off `Status_Code` alone and labels with `Final_Status`; no DAX in
+the report reproduces any of the logic below.
+
+`Status_Code` is stored, and indexed, precisely so `Filter()` delegates. A
+computed comparison would silently return the first 500 rows.
+
+### The five visual codes
+
+| Code | Colour | Meaning |
+|---|---|---|
+| 0 | Gray | Not applicable, or waived |
+| 1 | Red | Required, missing and past suspense |
+| 2 | Amber | Received awaiting review, correction needed, or not satisfied |
+| 3 | Green | Accepted |
+| 4 | Blue | Not due yet, or informational (provisional requirement) |
+
+**Four states were not enough.** Collapsing "not applicable" and "not due yet"
+into Gray made an installation whose requirements had simply not come due
+display as *Not applicable*, which is false. Blue separates "in progress,
+nothing wrong" from "does not apply".
+
+> The V3 Power Fx returned `0` for a not-due item and had no Blue branch at
+> all, contradicting the decision table in the same document. That is corrected
+> here — see `handoffs/RECONCILIATION.md` C2.
+
+---
+
+## One engine, one evaluation
+
+The engine returns a **state object**, not a code:
 
 ```
 { status, code, label, actionOwner, actionRequired }
 ```
 
-`code` is `Status_Code` — stored, indexed, and the only thing a production
-`Filter()` ever tests. `status` is `Final_Status` — one of five visual
-states. `label` is `Status_Semantic` — the human-readable string stored beside
-the code so a screen reader, an export and a Power BI card all say the same
-words.
+Label, colour and ownership come from a single pass. Two parallel functions —
+one for the code, one for the label — invite divergence, and divergence in a
+status engine is a silent wrong answer.
 
-**Never write a second function that derives the label independently of the
-code.** If a screen needs a label, it reads `Status_Semantic`. If a report
-needs a colour, it reads `Final_Status`. Neither recomputes.
+> V3 shipped *three*: `StatusLabel()`, `StatusColor()` and `StatusSemantic()`,
+> each switching independently over the numeric code, and they had already
+> drifted from the table below. Corrected — `handoffs/RECONCILIATION.md` C1.
 
----
-
-## Five visual states, eleven codes
-
-`Final_Status` and `Status_Code` are independent. Several codes map to one
-visual state, and the mapping is not reversible — which is the point. Four
-states would force *not due yet* and *not applicable* into the same bucket,
-and those are different facts about the world: one is an obligation that has
-not arrived, the other is an obligation that does not exist.
-
-| Code | Visual | Label | Action owner | Action required |
-|---|---|---|---|:-:|
-| `NOT_DUE` | **Blue** | Not due yet | Facility | no |
-| `DUE_SOON` | **Amber** | Due soon | Facility | yes |
-| `SUBMITTED` | **Amber** | Submitted - awaiting review | Reviewer | yes |
-| `IN_REVIEW` | **Amber** | In review | Reviewer | yes |
-| `RETURNED` | **Amber** | Returned for correction | Facility | yes |
-| `ACCEPTED` | **Green** | Accepted | None | no |
-| `OVERDUE` | **Red** | Overdue | Facility | yes |
-| `PROVISIONAL_OVERDUE` | **Gray** | Past suspense - requirement unverified | Program | yes |
-| `WAIVED` | **Gray** | Waived | None | no |
-| `NOT_APPLICABLE` | **Gray** | Not applicable | None | no |
-| `SUPERSEDED` | **Gray** | Superseded | None | no |
-
-Status is never colour-only. Every chip carries its label text, and the
-label is what an assistive technology announces. See `docs/accessibility.md`.
-
-Status is calculated, never chosen. **No colour picker exists anywhere in
-this solution**, and no screen, flow or report may write `Final_Status`
-except by copying what the engine returned.
-
----
-
-## Evaluation order
-
-The order is total and the first match wins. Reordering it changes
-behaviour, so it is asserted by the tests.
+## Item status — decision order, first match wins
 
 ```
-1.  requirement inactive, retired, or not applicable to this
-    facility's operating model              -> NOT_APPLICABLE   Gray
-2.  waived                                  -> WAIVED           Gray
-3.  superseded by another row               -> SUPERSEDED       Gray
-
-    A current-version submission exists; its QC state is the item's state:
-4.  QC = ACCEPTED                           -> ACCEPTED         Green
-5.  QC = RETURNED                           -> RETURNED         Amber
-6.  QC = IN_REVIEW                          -> IN_REVIEW        Amber
-7.  QC = PENDING                            -> SUBMITTED        Amber
-
-    Nothing submitted. Time decides, verification decides the colour:
-8a. as_of > Suspense_Date and requirement VERIFIED   -> OVERDUE  Red
-8b. as_of > Suspense_Date and not VERIFIED  -> PROVISIONAL_OVERDUE  Gray
-8c. Suspense_Date - as_of <= DueSoonWindowDays       -> DUE_SOON Amber
-8d. otherwise                               -> NOT_DUE          Blue
+ 1. Waived_Flag or not Required_Flag        NOT_APPLICABLE       0  none
+ 2. Authority UNVERIFIED and not received   PENDING_VALIDATION   4  Admin,    no action
+ 3. QC = Accepted                           ACCEPTED             3  none
+ 4. QC = Not Applicable                     NOT_APPLICABLE       0  none
+ 5. QC = Correction Required                CORRECTION_REQUIRED  2  Facility, action
+ 6. QC = Wrong Document, past due           OVERDUE              1  Facility, action
+ 7. QC = Wrong Document, before due         NOT_SATISFIED        2  Facility, action
+ 8. Received, QC pending                    RECEIVED_PENDING_QC  2  Reviewer, action
+ 9. Not received, before due                NOT_DUE              4  Facility, no action
+10. Not received, past due                  OVERDUE              1  Facility, action
 ```
 
 Only the **current version** submission is consulted. A rejected v1 under an
-accepted v2 does not make the item Amber; that is what `Is_Current_Version`
-is for.
+accepted v2 does not make the item Amber; that is what `Is_Current` is for.
 
-### Why an UNVERIFIED requirement never goes Red
+**Rules 6 and 7 replace a bug.** A wrong document does not stay Red forever. It
+means the requirement is still *unmet*; whether that is urgent depends on the
+suspense date, not on the reviewer's verdict. A submission-level QC result must
+never become the parent item's status directly.
 
-All twelve seeded requirements are `UNVERIFIED`. Not one of them yet has a
-confirmed regulation, contract clause or policy memo behind it. Turning a
-facility's tile Red on the authority of a requirement the programme has not
-verified would be telling a manager they are in breach of something nobody
-can cite. Step 8b exists so that the provisional state is visible and owned
-by the **Program**, not by the facility — the action required is *verify the
-requirement*, not *submit the document*.
+**Rule 2 is why an unverified requirement is Blue, not Gray and not Red.** It
+is informational: the base has nothing wrong and nothing to answer for. Until
+the authority is confirmed, an unfiled document is not a finding, and the
+action sits with the **Admin** — verify the requirement — rather than with the
+facility.
 
-This is the default path today, not an edge case. A requirement leaves it by
-having `Verification_Status` set to `VERIFIED` with an `Authority_Reference`
-and a `Verification_Date`, which is a deliberate administrative act on
-`scrAdminRequirements`.
+All twelve seeded requirements are `UNVERIFIED`, so **rule 2 is the default
+path today, not an edge case.** A requirement leaves it by being marked
+`Verified` on `scrAdminRequirements`, with a citation, which is a deliberate
+administrative act.
+
+**Rule 9 keeps the matrix calm at the start of a month.** Everything is Blue on
+the 1st and turns Red only after suspense passes — not Amber, which would make
+the whole enterprise look at-risk every month.
 
 ---
 
-## Rollups
+## Action ownership
 
-Two rules, both easy to get wrong.
+`Status_Code` alone cannot answer *"is this mine?"*. Amber covers both
+*correction needed* (the facility's action) and *awaiting review* (AFSVC's).
+Home filters on ownership, not colour.
 
-### Roll up over semantic status, not over colour
+| Status | Owner | Action required |
+|---|---|:-:|
+| `OVERDUE` | Facility | yes |
+| `CORRECTION_REQUIRED` | Facility | yes |
+| `NOT_SATISFIED` | Facility | yes |
+| `RECEIVED_PENDING_QC` | Reviewer | yes |
+| `NOT_DUE` | Facility | no |
+| `PENDING_VALIDATION` | Admin | no |
+| `ACCEPTED` / `NOT_APPLICABLE` | none | no |
 
-A colour rollup counts `[ACCEPTED, NOT_DUE, NOT_DUE]` as one green out of
-three and reports 33% complete. It is 100% complete: two of those
-obligations are not due yet and belong in neither the numerator nor the
-denominator.
+A submitter's *needs your attention* list must not include documents sitting in
+AFSVC's review queue. Those belong under **Waiting on AFSVC**.
+
+---
+
+## Package rollup — over semantic statuses, never over colour codes
+
+The naive colour rollup marks `[ACCEPTED, NOT_DUE, NOT_DUE]` **Complete**,
+because it sees `[3, 4, 4]` and finds no 1 and no 2. That is wrong: two
+requirements have not been filed yet. **It is `IN_PROGRESS`.**
 
 ```
-numerator   = count(Status_Code = ACCEPTED)
-denominator = count(Status_Code not in
-              {NOT_DUE, WAIVED, NOT_APPLICABLE, SUPERSEDED})
+any OVERDUE, CORRECTION_REQUIRED or NOT_SATISFIED   ACTION_REQUIRED   1
+else any RECEIVED_PENDING_QC                        IN_REVIEW         2
+else every applicable non-provisional item ACCEPTED COMPLETE          3
+else anything applicable remains                    IN_PROGRESS       4
+else                                                NOT_APPLICABLE    0
 ```
 
-`MF_EOM_Status` carries these as `Is_Complete` and `Is_In_Denominator` so
-the COP sums two booleans and reconstructs no workflow logic. When the
-denominator is zero the answer is *nothing due*, displayed as such — **not
-0% and not 100%**.
+A provisional requirement neither completes a package nor blocks it: it is
+excluded from the "every item accepted" test but still counted as applicable.
 
-**No percentage is ever stored.** Storing one guarantees a stale figure the
-app must recompute, and `scripts/eom_schema.py --validate` fails the build
-if a column name suggests otherwise.
+> V3's `MFRollup()` and its `Package Status Code` DAX were both that naive
+> colour rollup — on the page below V3's own prose calling it wrong. Corrected
+> — `handoffs/RECONCILIATION.md` C3.
 
-### Roll up over what the viewer may see
+**No completion percentage is stored anywhere.** A ratio quietly treats "not
+yet due" as either done or failing, and neither is true. The COP counts
+packages by state.
 
-A facility user must not receive an installation figure derived from their
-neighbours' rows. The visibility filter is applied *before* the aggregation,
-not after, and it is the same mapping the app and Power BI RLS both use
-(`MF_Security_Mapping`). `rollup()` takes a `visible_predicate` for exactly
-this reason.
+### Rollups run over what the viewer may see
 
-An installation figure shown to someone scoped to one facility is either
-suppressed or labelled as covering their scope only. It is never silently
-narrowed and presented as the installation total.
+A user scoped to one DFAC must not receive an installation figure derived from
+their neighbours' packages — that leaks across a security boundary even when no
+names appear on screen, because the numbers themselves are the disclosure.
+
+Scope is applied **server-side, in the query, before anything is counted**
+(`MF_VisibleItems` in `Delegation.fx`). A facility user's own package rolls
+their facility's items plus the installation- and contract-scope items that
+genuinely belong to them.
+
+A facility package rolls its own items. An installation package rolls its
+facility packages **plus** its Installation-scope and Contract-scope items —
+those have `Facility_ID` null and belong to the installation directly, not to
+any one DFAC. A portfolio rolls its installation packages.
+
+A contract-scope item is visible only when the contract actually covers a
+facility in the viewer's scope.
+
+Any figure whose scope is narrower than its label implies says so, in text.
 
 ---
 
 ## Dates
 
-`Due_Date` and `Suspense_Date` are both offsets in days from
-`Reporting_Period.Period_End`, taken from the requirement:
-
 ```
-Due_Date      = Period_End + Requirement.Due_Offset_Days
-Suspense_Date = Period_End + Requirement.Suspense_Offset_Days
+Due_Date = date( Reporting_Period + Due_Offset_Months , Due_Day )
 ```
 
-`Suspense_Offset_Days >= Due_Offset_Days` is enforced. `Due_Rule`
-(`"EOM+5BD"`) is documentation of where the offsets came from; it is never
-parsed at runtime.
+Both values come from the requirement row, never from a flow. Changing the
+10th to the 15th is a list edit. A `Due_Day` of 31 in a 30-day month clamps to
+the last day of that month rather than rolling into the next.
 
-A QC return writes `New_Suspense_Date` onto the submission and back onto the
-item's `Suspense_Date`. **A return without both a comment and a new suspense
-date is rejected by the flow** — a returned document with no deadline is how
-items disappear.
+`Reporting_Period` is `YYYY-MM`. Dates are `YYYY-MM-DD`. Datetimes carry a time
+part — parse to a day before comparing, so a timestamp never leaks into a day
+comparison.
 
-`DueSoonWindowDays` is a config key, default 7.
+A QC return sets `Correction_Due` on the item. It does not move `Due_Date`:
+the original suspense is what `Days_Late` and `On_Time_Flag` are measured
+against, and rewriting it would erase the fact that the first attempt was late.
 
 ---
 
-## What each screen is allowed to do
+## Who may write what
 
 | Surface | May read | May write |
 |---|---|---|
-| `scrHome`, galleries | `Status_Code`, `Status_Semantic`, `Final_Status` | nothing |
-| `cmpStatusBadge` | the engine's record | nothing |
-| `scrReview` (QC) | submission QC fields | `QC_Status`, `QC_Comment`, `New_Suspense_Date` via flow |
-| `flows/EOM01` | requirement + period | item status fields, from the engine |
-| `flows/EOM03` | item | `MF_EOM_Status`, copied verbatim |
+| galleries, `cmpStatusBadge` | `Final_Status`, `Status_Code` | nothing |
+| `scrReview` (QC) | submission QC fields | `QC_Status`, `QC_Comment`, `Correction_Due`, and the four status fields **from one evaluation** |
+| `scrUnmatched` | unmatched queue | a submission against an **existing** item, and the same four fields |
+| EOM-01 | requirement + period | the item's status fields, at creation |
+| EOM-03 | item + current submission | all four fields, plus `MF_EOM_Status` |
 | Power BI | `MF_EOM_Status` | nothing |
 
-QC decisions are the only human input to status, and they are inputs to the
-engine — not statuses themselves.
+QC decisions are the only human input to status, and they are **inputs to the
+engine**, not statuses themselves.
+
+---
+
+## Power Fx
+
+`canvas-app/formulas/StatusEngine.fx`. `MF_EvaluateStatus()` is the branch-for-
+branch transliteration of the decision order above; `MF_Status()` is the
+lookup a gallery uses to render a row whose status is already stored.
+
+## DAX
+
+`powerbi/MF_EOM_Status.md`. The measures aggregate; they never recompute item
+status, and `Package_State` is materialized by EOM-03 rather than re-derived.

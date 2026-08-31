@@ -1,8 +1,0 @@
-Title,Principal_UPN,Principal_Type,Entra_Group_Id,Role,Scope_Type,Scope_ID,Portfolio_ID,Developer_Flag,Tester_Flag,Is_Active
-dfac1.manager@example.mil|FacilityManager|Facility|FAC-FTLIB-01,dfac1.manager@example.mil,User,,FacilityManager,Facility,FAC-FTLIB-01,PORT-CONUS-EAST,FALSE,FALSE,TRUE
-cafe.manager@example.mil|FacilityManager|Facility|FAC-FTLIB-02,cafe.manager@example.mil,User,,FacilityManager,Facility,FAC-FTLIB-02,PORT-CONUS-EAST,FALSE,FALSE,TRUE
-ftlib.reviewer@example.mil|Reviewer|Installation|INST-FTLIB,ftlib.reviewer@example.mil,User,,Reviewer,Installation,INST-FTLIB,PORT-CONUS-EAST,FALSE,FALSE,TRUE
-ftlib.im@example.mil|InstallationManager|Installation|INST-FTLIB,ftlib.im@example.mil,User,,InstallationManager,Installation,INST-FTLIB,PORT-CONUS-EAST,FALSE,FALSE,TRUE
-mf-portfolio-east@example.mil|PortfolioManager|Portfolio|PORT-CONUS-EAST,mf-portfolio-east@example.mil,Group,00000000-0000-0000-0000-000000000000,PortfolioManager,Portfolio,PORT-CONUS-EAST,PORT-CONUS-EAST,FALSE,FALSE,TRUE
-mf-admins@example.mil|Admin|Global|,mf-admins@example.mil,Group,00000000-0000-0000-0000-000000000001,Admin,Global,,,FALSE,FALSE,TRUE
-build.developer@example.mil|Developer|Global|,build.developer@example.mil,User,,Developer,Global,,,TRUE,TRUE,TRUE

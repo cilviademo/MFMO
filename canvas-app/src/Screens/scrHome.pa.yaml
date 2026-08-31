@@ -1,9 +1,17 @@
 # =============================================================================
-# scrHome — My work.
+# scrHome — role-shaped.
 #
-# The default landing screen. One facility, one period, bounded by construction:
-# at most the requirement count, currently twelve rows. Nothing on this screen
-# can truncate.
+# Home answers one question: WHAT DO I NEED TO DO?
+#
+# A DFAC manager sees their facility, what needs doing, what is waiting on
+# AFSVC, and what was accepted — no portfolio arithmetic. A Portfolio Manager
+# sees the portfolio. Navigation follows permissions: three destinations for a
+# facility user, six for an admin.
+#
+# MY WORK filters on ACTION OWNERSHIP, not on colour. Amber covers both
+# correction needed (the facility's action) and awaiting review (AFSVC's), so a
+# submitter's "needs your attention" list must not contain documents sitting in
+# someone else's queue. Those appear under WAITING ON AFSVC.
 # =============================================================================
 
 Screens:
@@ -13,15 +21,7 @@ Screens:
       OnVisible: |
         =Concurrent(
             Set(locSelectedItem, Blank()),
-            Set(locDialogOpen, false),
-            If(
-                MF_ShouldLog("ScreenView"),
-                Patch(
-                    MF_App_Event_Log,
-                    Defaults(MF_App_Event_Log),
-                    MF_TelemetryRow("ScreenView", "Debug", "scrHome", gblCurrentFacility.Facility_ID, "")
-                )
-            )
+            Set(locDialogOpen, false)
         )
 
     Children:
@@ -35,13 +35,12 @@ Screens:
             TabIndex: =-1
           Children:
 
-            # The first tab stop on every screen. Gate A2.
+            # First tab stop on every screen. Gate A2.
             - btnSkipToContent:
                 Control: Button
                 Variant: Subtle
                 Properties:
                   Text: ="Skip to main content"
-                  # Visible on focus only — present in the tab order at all times.
                   Height: =If(Self.Focus, 32, 1)
                   Opacity: =If(Self.Focus, 1, 0)
                   OnSelect: =SetFocus(galMyWork)
@@ -72,29 +71,18 @@ Screens:
                         Color: =clrText
                         FontWeight: =FontWeight.Semibold
                         TabIndex: =-1
-                  - cmbFacility:
-                      Control: ComboBox
-                      Properties:
-                        # MF_MyFacilities is already scoped by the security
-                        # mapping. A user cannot select a facility they are not
-                        # mapped to, so there is nothing to re-check downstream.
-                        Items: =MF_MyFacilities
-                        DisplayFields: =["Title"]
-                        SearchFields: =["Title"]
-                        SelectMultiple: =false
-                        DefaultSelectedItems: =[gblCurrentFacility]
-                        OnChange: =Set(gblCurrentFacility, Self.Selected)
-                        AccessibleLabel: ="Facility"
-                        LayoutMinWidth: =220
-                        TabIndex: =0
                   - cmbPeriod:
                       Control: ComboBox
                       Properties:
+                        # ONE app-level reporting-period selector. Changing it
+                        # re-renders everything, which is most of the reason a
+                        # separate History destination stopped being needed.
+                        # Nothing anywhere hard-codes a period.
                         Items: =MF_SelectablePeriods
-                        DisplayFields: =["Title"]
+                        DisplayFields: =["Period"]
                         SelectMultiple: =false
-                        DefaultSelectedItems: =[MF_CurrentPeriod]
-                        OnChange: =Set(locPeriod, Self.Selected)
+                        DefaultSelectedItems: =[{ Period: gblOpenPeriod }]
+                        OnChange: =Set(locPeriod, Self.Selected.Period)
                         AccessibleLabel: ="Reporting period"
                         LayoutMinWidth: =160
                         TabIndex: =0
@@ -104,7 +92,7 @@ Screens:
                       Properties:
                         Text: =MF_ReadOnlyBanner
                         Color: =clrStatusAmber
-                        Visible: =MF_ReadOnlyMode
+                        Visible: =gblReadOnlyMode
                         AutoHeight: =true
                         Live: =Live.Polite
                         TabIndex: =-1
@@ -127,15 +115,16 @@ Screens:
                         FillPortions: =0
                         PaddingTop: =12
                         Fill: =clrSurface
+                        # Collapses under 700px rather than clipping. Gate A11.
+                        Visible: =Parent.Width > 700 || locNavOpen
                         TabIndex: =-1
                       Children:
                         - galNav:
                             Control: Gallery
                             Variant: verticalGallery
                             Properties:
-                              # Feature-flagged and role-filtered in
-                              # App.Formulas. A flag demonstrably removes the
-                              # destination, not just the button.
+                              # Role-shaped and feature-flagged in App.Formulas.
+                              # A flag removes the destination, not just the button.
                               Items: =colNavigation
                               TemplateSize: =44
                               AccessibleLabel: ="Main navigation"
@@ -156,7 +145,7 @@ Screens:
                                               "scrInstallation", scrInstallation,
                                               "scrReview", scrReview,
                                               "scrUnmatched", scrUnmatched,
-                                              "scrHistory", scrHistory,
+                                              "scrActivity", scrActivity,
                                               "scrAdminRequirements", scrAdminRequirements,
                                               "scrDiagnostics", scrDiagnostics,
                                               scrHome
@@ -179,54 +168,48 @@ Screens:
                         TabIndex: =-1
                       Children:
 
-                        - conMetrics:
-                            Control: GroupContainer
-                            Variant: horizontalAutoLayoutContainer
+                        - cardPackage:
+                            Control: Component
+                            ComponentName: cmpMetricCard
                             Properties:
-                              LayoutGap: =12
-                              LayoutWrap: =true
-                              TabIndex: =-1
-                            Children:
-                              - cardComplete:
-                                  Control: Component
-                                  ComponentName: cmpMetricCard
-                                  Properties:
-                                    Label: ="This facility, this period"
-                                    Items: |
-                                      =MF_ItemsForFacility(
-                                          gblCurrentFacility.Facility_ID,
-                                          Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
-                                      )
-                                    FillPortions: =1
-                                    LayoutMinWidth: =220
-                              - cardAction:
-                                  Control: Component
-                                  ComponentName: cmpMetricCard
-                                  Properties:
-                                    Label: ="Waiting on you"
-                                    Items: |
-                                      =MF_ActionItemsForFacility(
-                                          gblCurrentFacility.Facility_ID,
-                                          Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
-                                      )
-                                    FillPortions: =1
-                                    LayoutMinWidth: =220
+                              Label: |
+                                =Switch(
+                                    gblScopeType,
+                                    "Facility",     LookUp('MF Facility', Facility_ID = gblMyFacility).Facility_Name,
+                                    "Installation", LookUp('MF Installation', Installation_ID = gblMyInstallation).Installation_Name,
+                                    "Portfolio",    "Portfolio " & gblMyPortfolio,
+                                    "Enterprise"
+                                ) & " - " & locPeriod
+                              # Already scope-filtered server-side. Security is
+                              # applied BEFORE anything is counted.
+                              Items: =MF_VisibleItems(locPeriod)
+                              ScopeQualifier: =MF_ScopeQualifier()
 
-                        - lblCount:
+                        # --- MY WORK: what I owe -----------------------------
+                        - lblMyWorkHeading:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: ="Needs your attention"
+                              FontWeight: =FontWeight.Semibold
+                              Color: =clrText
+                              TabIndex: =-1
+
+                        - lblMyWorkCount:
                             Control: Text
                             Variant: Caption
                             Properties:
-                              # The visible count serves two purposes: the
-                              # screen reader gets a total a virtualised
-                              # gallery cannot announce, and a truncated query
-                              # becomes visible instead of silent.
+                              # The visible count serves two purposes: a screen
+                              # reader gets a total a virtualised gallery cannot
+                              # announce, and a truncated query becomes visible.
                               Text: |
                                 =With(
                                     { n: CountRows(galMyWork.AllItems) },
                                     Text(n) & If(n = 1, " item", " items") &
-                                    If(n >= MF_DelegationWarnAt, " - result may be truncated, report this", "")
+                                    If(MF_TruncationSuspected(galMyWork.AllItems),
+                                       " - result may be truncated, report this", "")
                                 )
-                              Color: =If(CountRows(galMyWork.AllItems) >= MF_DelegationWarnAt, clrStatusRed, clrTextSecondary)
+                              Color: =If(MF_TruncationSuspected(galMyWork.AllItems), clrStatusRed, clrTextSecondary)
                               Live: =Live.Polite
                               TabIndex: =-1
 
@@ -234,16 +217,12 @@ Screens:
                             Control: Gallery
                             Variant: verticalGallery
                             Properties:
-                              # Delegable: indexed period first, then indexed
-                              # facility, sorted on an indexed date.
-                              Items: |
-                                =MF_ItemsForFacility(
-                                    gblCurrentFacility.Facility_ID,
-                                    Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
-                                )
-                              TemplateSize: =72
+                              # Ownership, not colour. For a DFAC manager this
+                              # is usually empty or one row — which is the point.
+                              Items: =Filter(MF_MyWork(locPeriod), MF_IsMyAction(Final_Status))
+                              TemplateSize: =80
                               Visible: =CountRows(Self.AllItems) > 0
-                              AccessibleLabel: ="Checklist for " & gblCurrentFacility.Title
+                              AccessibleLabel: ="Requirements needing your action"
                               TabIndex: =0
                             Children:
                               - itemRow:
@@ -251,13 +230,12 @@ Screens:
                                   ComponentName: cmpEOMItem
                                   Properties:
                                     Item: =ThisItem
-                                    ShowFacility: =false
+                                    ShowScopeTarget: =gblScopeType <> "Facility"
                                     OnPrimaryAction: |
                                       =Set(locSelectedItem, ThisItem);
                                        Navigate(
                                            If(
-                                               ThisItem.Status_Code.Value in ["SUBMITTED", "IN_REVIEW"]
-                                                   && gblRole in ["Reviewer", "InstallationManager", "Admin"],
+                                               ThisItem.Final_Status = "RECEIVED_PENDING_QC" && gblCanQC,
                                                scrReview,
                                                scrUpload
                                            ),
@@ -269,10 +247,68 @@ Screens:
                             ComponentName: cmpEmptyState
                             Properties:
                               Visible: =CountRows(galMyWork.AllItems) = 0
-                              Title: ="No checklist items for this period"
+                              Title: ="Nothing needs your attention"
                               Body: |
-                                ="Expected items are generated by the nightly run once a reporting period opens. If " &
-                                 Coalesce(locPeriod.Title, MF_CurrentPeriod.Title) &
-                                 " has just opened, they will appear within a day. If this persists, contact " & gblSupportContact & "."
-                              ActionLabel: ="Choose another period"
-                              OnAction: =SetFocus(cmbPeriod)
+                                ="Everything in " & locPeriod & " is either accepted, waiting on someone else, or not yet due. " &
+                                 "If you expected a requirement here, check the period selector above."
+
+                        # --- WAITING ON SOMEONE ELSE -------------------------
+                        - lblWaitingHeading:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: ="Waiting on AFSVC"
+                              FontWeight: =FontWeight.Semibold
+                              Color: =clrText
+                              Visible: =CountRows(galWaiting.AllItems) > 0
+                              TabIndex: =-1
+
+                        - galWaiting:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Submitted and sitting in the review queue. It is
+                              # not the submitter's action, so it is not in My
+                              # Work — but they still need to see it.
+                              Items: =MF_WaitingOnOthers(locPeriod)
+                              TemplateSize: =80
+                              Visible: =CountRows(Self.AllItems) > 0
+                              AccessibleLabel: ="Submitted and awaiting review"
+                              TabIndex: =0
+                            Children:
+                              - waitingRow:
+                                  Control: Component
+                                  ComponentName: cmpEOMItem
+                                  Properties:
+                                    Item: =ThisItem
+                                    ShowScopeTarget: =gblScopeType <> "Facility"
+                                    OnPrimaryAction: =Set(locSelectedItem, ThisItem); Navigate(scrActivity, ScreenTransition.None)
+
+                        - conFooter:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =8
+                              LayoutWrap: =true
+                              PaddingTop: =8
+                              TabIndex: =-1
+                            Children:
+                              - btnOpenPackage:
+                                  Control: Button
+                                  Variant: Secondary
+                                  Properties:
+                                    Text: ="Open my package"
+                                    AccessibleLabel: ="Open the full requirement package for " & locPeriod
+                                    OnSelect: =Navigate(scrInstallation, ScreenTransition.None)
+                                    TabIndex: =0
+                              - btnOpenCOP:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: ="Open COP in Power BI"
+                                    # Never a hard-coded link. The gov endpoint
+                                    # differs by cloud.
+                                    Visible: =!IsBlank(gblPowerBIURL)
+                                    AccessibleLabel: ="Open the common operational picture in Power BI, in a new tab"
+                                    OnSelect: =Launch(gblPowerBIURL, {}, LaunchTarget.New)
+                                    TabIndex: =0

@@ -1,11 +1,17 @@
 # =============================================================================
 # scrAdminRequirements — the requirement catalogue.
 #
-# This is where a requirement stops being provisional. All twelve seeded rows
-# are UNVERIFIED, which means none of them can drive a Red status. Verifying
-# one is a deliberate administrative act with a named authority behind it, and
-# it changes how every facility's tile behaves — so it is recorded, attributed
-# and telemetered.
+# Requirements are configuration, not code. There is no 'if Legacy then require
+# 1119' anywhere in the app; changing a requirement next year is a list edit.
+#
+# This is also where a requirement stops being provisional. All twelve seeded
+# rows are UNVERIFIED, so none of them can currently drive an adverse status.
+# Verifying one is a deliberate act with a named authority behind it, and it
+# changes how every base's tile behaves — so it is recorded and attributed.
+#
+# Authority and governance detail lives HERE rather than in the facility-facing
+# screens: a DFAC manager needs to know a requirement is provisional, not to
+# read the whole citation debate.
 #
 # There is no colour picker on this screen. There is no colour picker anywhere.
 # =============================================================================
@@ -14,16 +20,7 @@ Screens:
   scrAdminRequirements:
     Properties:
       Fill: =clrSurfaceAlt
-      OnVisible: |
-        =Concurrent(
-            Set(locReq, Blank()),
-            Set(locReqError, ""),
-            If(
-                MF_ShouldLog("ScreenView"),
-                Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
-                      MF_TelemetryRow("ScreenView", "Debug", "scrAdminRequirements", "", ""))
-            )
-        )
+      OnVisible: =Set(locReq, Blank()); Set(locReqError, "")
 
     Children:
       - conRoot:
@@ -52,7 +49,7 @@ Screens:
                       Variant: Subtle
                       Properties:
                         Text: ="Back"
-                        AccessibleLabel: ="Back to my work"
+                        AccessibleLabel: ="Back to home"
                         OnSelect: =Back(ScreenTransition.None)
                         TabIndex: =0
                   - lblTitle:
@@ -81,7 +78,7 @@ Screens:
                       Variant: verticalAutoLayoutContainer
                       Properties:
                         FillPortions: =1
-                        LayoutMinWidth: =320
+                        LayoutMinWidth: =300
                         LayoutGap: =8
                         TabIndex: =-1
                       Children:
@@ -91,9 +88,9 @@ Screens:
                             Properties:
                               Text: |
                                 =With(
-                                    { n: CountRows(Filter(MF_Requirement, Verification_Status.Value = "UNVERIFIED")) },
-                                    Text(n) & " of " & Text(CountRows(MF_Requirement)) &
-                                    " requirements are provisional. A provisional requirement past its suspense date shows Gray, not Red, and the action sits with the programme."
+                                    { n: CountRows(Filter('MF EOM Requirement', Authority_Status = "UNVERIFIED")) },
+                                    Text(n) & " of " & Text(CountRows('MF EOM Requirement')) &
+                                    " requirements are provisional. A provisional requirement generates its checklist row and can be filed against, but it never drives an adverse status and the action sits with the programme."
                                 )
                               Color: =clrText
                               AutoHeight: =true
@@ -103,8 +100,8 @@ Screens:
                             Control: Gallery
                             Variant: verticalGallery
                             Properties:
-                              Items: =SortByColumns(MF_Requirement, "Requirement_ID", SortOrder.Ascending)
-                              TemplateSize: =80
+                              Items: =SortByColumns('MF EOM Requirement', "Sort_Order", SortOrder.Ascending)
+                              TemplateSize: =84
                               AccessibleLabel: ="Requirement catalogue"
                               TabIndex: =0
                             Children:
@@ -121,7 +118,7 @@ Screens:
                                         Control: Text
                                         Variant: Body
                                         Properties:
-                                          Text: =ThisItem.Requirement_ID & " - " & ThisItem.Title
+                                          Text: =ThisItem.Document_Code & " - " & ThisItem.Document_Name
                                           FontWeight: =FontWeight.Semibold
                                           AutoHeight: =true
                                           TabIndex: =-1
@@ -130,19 +127,20 @@ Screens:
                                         Variant: Caption
                                         Properties:
                                           Text: |
-                                            =ThisItem.Requirement_Scope.Value & " scope - " & ThisItem.Frequency.Value &
-                                             " - " & ThisItem.Verification_Status.Value &
-                                             If(ThisItem.Is_Active, "", " - INACTIVE")
+                                            =ThisItem.Applicable_Model & " - " & ThisItem.Requirement_Scope & " scope - " &
+                                             ThisItem.Frequency & " - due day " & ThisItem.Due_Day & " - " &
+                                             ThisItem.Authority_Status &
+                                             If(ThisItem.Active_Flag, "", " - INACTIVE")
                                           Color: =clrTextSecondary
                                           AutoHeight: =true
                                           TabIndex: =-1
-                                    - btnEditReq:
+                                    - btnOpenReq:
                                         Control: Button
                                         Variant: Secondary
                                         Properties:
                                           Text: ="Open"
-                                          AccessibleLabel: ="Open " & ThisItem.Requirement_ID & " " & ThisItem.Title
-                                          OnSelect: =Set(locReq, ThisItem); SetFocus(lblReqDetailHeading)
+                                          AccessibleLabel: ="Open " & ThisItem.Requirement_ID & " " & ThisItem.Document_Name
+                                          OnSelect: =Set(locReq, ThisItem); Set(locAuthority, ThisItem.Authority_Reference); SetFocus(lblReqHeading)
                                           TabIndex: =0
 
                         - emptyRequirements:
@@ -150,11 +148,11 @@ Screens:
                             ComponentName: cmpEmptyState
                             Properties:
                               # The catalogue is seeded, so empty here means the
-                              # list did not load - which looks identical to
+                              # list did not load — which looks identical to
                               # "no requirements exist" without this.
                               Visible: =CountRows(galRequirements.AllItems) = 0
                               Title: ="The requirement catalogue is empty"
-                              Body: ="Twelve requirements are seeded at provisioning. An empty catalogue means the list did not load or was never seeded. Do not add requirements here to work around it - contact support."
+                              Body: ="Twelve requirements are seeded at provisioning. An empty catalogue means the list did not load or was never seeded. Do not add requirements here to work around it."
 
                   - conDetail:
                       Control: GroupContainer
@@ -173,18 +171,18 @@ Screens:
                         Visible: =!IsBlank(locReq.Requirement_ID)
                         TabIndex: =-1
                       Children:
-                        - lblReqDetailHeading:
+                        - lblReqHeading:
                             Control: Text
                             Variant: Subtitle
                             Properties:
-                              Text: =locReq.Title
+                              Text: =locReq.Document_Name
                               AutoHeight: =true
                               TabIndex: =0
-                        - lblAuthority:
+                        - lblCurrentAuthority:
                             Control: Text
                             Variant: Caption
                             Properties:
-                              Text: ="Current authority reference: " & Coalesce(locReq.Authority_Reference, "none recorded")
+                              Text: ="Current reference: " & Coalesce(locReq.Authority_Reference, "none recorded")
                               Color: =clrTextSecondary
                               AutoHeight: =true
                               TabIndex: =-1
@@ -192,17 +190,17 @@ Screens:
                             Control: TextInput
                             Variant: MultiLine
                             Properties:
-                              Default: =locReq.Authority_Reference
+                              Default: =locAuthority
                               OnChange: =Set(locAuthority, Self.Value)
                               HintText: ="Regulation, contract clause or policy memo"
                               AccessibleLabel: ="Authority reference. Required to verify this requirement."
                               DisplayMode: =MF_WriteMode
                               TabIndex: =0
-                        - lblVerifyRule:
+                        - lblVerifyWarning:
                             Control: Text
                             Variant: Caption
                             Properties:
-                              Text: ="Verifying this requirement lets a missed suspense turn a facility Red. Do not verify it without a citation you would defend at an inspection."
+                              Text: ="Verifying this requirement lets a missed suspense turn a base red. Do not verify it without a citation you would defend at an inspection."
                               Color: =clrTextSecondary
                               AutoHeight: =true
                               TabIndex: =-1
@@ -221,35 +219,30 @@ Screens:
                             Variant: Primary
                             Properties:
                               Text: ="Mark verified"
-                              AccessibleLabel: ="Mark " & locReq.Title & " as verified"
+                              AccessibleLabel: ="Mark " & locReq.Document_Name & " as verified"
                               DisplayMode: |
                                 =If(
-                                    MF_ReadOnlyMode
-                                        || !(gblRole in ["Admin", "PortfolioManager"])
-                                        || IsBlank(Trim(Coalesce(locAuthority, locReq.Authority_Reference))),
-                                    DisplayMode.Disabled,
-                                    DisplayMode.Edit
-                                )
+                                    !gblCanWrite || !gblCanEditReqs || IsBlank(Trim(Coalesce(locAuthority, ""))),
+                                    DisplayMode.Disabled, DisplayMode.Edit)
                               TabIndex: =0
                               OnSelect: |
                                 =If(
-                                    IsBlank(Trim(Coalesce(locAuthority, locReq.Authority_Reference))),
+                                    IsBlank(Trim(Coalesce(locAuthority, ""))),
                                     Set(locReqError, "Record the authority reference before verifying. A verified requirement with no citation is worse than a provisional one."),
-                                    Patch(
-                                        MF_Requirement,
-                                        locReq,
-                                        {
-                                            Verification_Status: { Value: "VERIFIED" },
-                                            Verification_Date: Today(),
-                                            Authority_Reference: Coalesce(locAuthority, locReq.Authority_Reference)
-                                        }
-                                    );
-                                    Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
-                                          MF_TelemetryRow("AdminAction", "Warning", "scrAdminRequirements", locReq.Requirement_ID,
-                                              JSON({ action: "VERIFY_REQUIREMENT", requirement: locReq.Requirement_ID })));
-                                    Notify(
-                                        locReq.Title & " is now verified. Items past suspense against it will show Red from the next status run.",
-                                        NotificationType.Success
-                                    );
+                                    Patch('MF EOM Requirement', locReq,
+                                        { Authority_Status: "Verified",
+                                          Authority_Reference: locAuthority });
+                                    Patch('MF EOM Audit', Defaults('MF EOM Audit'),
+                                        { Audit_ID: "AUD-" & Text(Now(), "yyyymmddhhmmss"),
+                                          Entity_Type: "Requirement",
+                                          Entity_ID: locReq.Requirement_ID,
+                                          Action: "Reclassified",
+                                          Actor_UPN: gblCurrentUser.Email,
+                                          Action_DateTime: Now(),
+                                          Old_Value: "UNVERIFIED",
+                                          New_Value: "Verified",
+                                          Detail: locAuthority });
+                                    Notify(locReq.Document_Name & " is now verified. Items past suspense against it will show Overdue from the next nightly run.",
+                                           NotificationType.Success);
                                     Set(locReq, Blank())
                                 )

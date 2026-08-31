@@ -1,138 +1,153 @@
 {
-  "_comment": "Status engine acceptance cases. Every branch of docs/status-calculation.md, in order, plus the traps. as_of is 2026-11-10 unless a case overrides it.",
-  "as_of": "2026-11-10",
+  "_comment": "Status engine acceptance cases. Every branch of the decision order in docs/status-calculation.md, in order, plus the traps. today is 2026-09-12 unless a case overrides it.",
+  "today": "2026-09-12",
   "cases": [
     {
-      "name": "requirement inactive",
-      "input": { "suspense_date": "2026-11-05", "requirement_is_active": false },
-      "expect": { "code": "NOT_APPLICABLE", "status": "Gray", "actionOwner": "None", "actionRequired": false, "is_complete": false, "is_in_denominator": false }
+      "name": "1. waived",
+      "input": { "due_date": "2026-09-10", "waived_flag": true, "authority_status": "Verified" },
+      "expect": { "status": "NOT_APPLICABLE", "code": 0, "actionOwner": "None", "actionRequired": false }
     },
     {
-      "name": "requirement retired",
-      "input": { "suspense_date": "2026-11-05", "requirement_verification_status": "RETIRED" },
-      "expect": { "code": "NOT_APPLICABLE", "status": "Gray", "actionOwner": "None", "actionRequired": false }
+      "name": "1. not required",
+      "input": { "due_date": "2026-09-10", "required_flag": false, "authority_status": "Verified" },
+      "expect": { "status": "NOT_APPLICABLE", "code": 0 }
     },
     {
-      "name": "does not apply to this operating model",
-      "input": { "suspense_date": "2026-11-05", "applies_to_facility": false },
-      "expect": { "code": "NOT_APPLICABLE", "status": "Gray", "is_in_denominator": false }
+      "name": "1. waived beats an accepted submission",
+      "input": { "due_date": "2026-09-10", "waived_flag": true, "received_flag": true, "qc_status": "Accepted" },
+      "expect": { "status": "NOT_APPLICABLE", "code": 0 }
     },
     {
-      "name": "waived",
-      "input": { "suspense_date": "2026-11-05", "waived": true, "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "WAIVED", "status": "Gray", "actionOwner": "None", "is_in_denominator": false }
+      "name": "2. provisional and nothing received is Blue, owned by Admin, no action",
+      "input": { "due_date": "2026-09-10", "authority_status": "UNVERIFIED" },
+      "expect": { "status": "PENDING_VALIDATION", "code": 4, "actionOwner": "Admin", "actionRequired": false }
     },
     {
-      "name": "waived beats an accepted submission",
-      "input": { "suspense_date": "2026-11-05", "waived": true, "has_current_submission": true, "qc_status": "ACCEPTED" },
-      "expect": { "code": "WAIVED", "status": "Gray" }
+      "name": "2. provisional stays Blue however late it gets",
+      "input": { "due_date": "2025-01-01", "authority_status": "UNVERIFIED" },
+      "expect": { "status": "PENDING_VALIDATION", "code": 4 }
     },
     {
-      "name": "superseded",
-      "input": { "suspense_date": "2026-11-05", "superseded": true },
-      "expect": { "code": "SUPERSEDED", "status": "Gray", "is_in_denominator": false }
+      "name": "2. provisional but received falls through to the QC rules",
+      "input": { "due_date": "2026-09-10", "authority_status": "UNVERIFIED", "received_flag": true, "qc_status": "Pending Review" },
+      "expect": { "status": "RECEIVED_PENDING_QC", "code": 2, "actionOwner": "Reviewer" }
     },
     {
-      "name": "accepted",
-      "input": { "suspense_date": "2026-11-20", "has_current_submission": true, "qc_status": "ACCEPTED" },
-      "expect": { "code": "ACCEPTED", "status": "Green", "actionOwner": "None", "actionRequired": false, "is_complete": true, "is_in_denominator": true }
+      "name": "3. accepted",
+      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Accepted" },
+      "expect": { "status": "ACCEPTED", "code": 3, "actionOwner": "None", "actionRequired": false }
     },
     {
-      "name": "accepted after the suspense date is still Green",
-      "input": { "suspense_date": "2026-11-01", "has_current_submission": true, "qc_status": "ACCEPTED", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "ACCEPTED", "status": "Green" }
+      "name": "3. accepted after the due date is still Green",
+      "input": { "due_date": "2026-09-01", "authority_status": "Verified", "received_flag": true, "qc_status": "Accepted" },
+      "expect": { "status": "ACCEPTED", "code": 3 }
     },
     {
-      "name": "returned for correction",
-      "input": { "suspense_date": "2026-11-20", "has_current_submission": true, "qc_status": "RETURNED" },
-      "expect": { "code": "RETURNED", "status": "Amber", "actionOwner": "Facility", "actionRequired": true, "is_complete": false, "is_in_denominator": true }
+      "name": "4. QC not applicable",
+      "input": { "due_date": "2026-09-10", "authority_status": "Verified", "received_flag": true, "qc_status": "Not Applicable" },
+      "expect": { "status": "NOT_APPLICABLE", "code": 0, "actionOwner": "None" }
     },
     {
-      "name": "returned past suspense stays Amber and stays with the facility",
-      "input": { "suspense_date": "2026-11-01", "has_current_submission": true, "qc_status": "RETURNED", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "RETURNED", "status": "Amber", "actionOwner": "Facility" }
+      "name": "5. correction required",
+      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Correction Required" },
+      "expect": { "status": "CORRECTION_REQUIRED", "code": 2, "actionOwner": "Facility", "actionRequired": true }
     },
     {
-      "name": "in review",
-      "input": { "suspense_date": "2026-11-20", "has_current_submission": true, "qc_status": "IN_REVIEW" },
-      "expect": { "code": "IN_REVIEW", "status": "Amber", "actionOwner": "Reviewer", "actionRequired": true }
+      "name": "5. correction required past due stays Amber with the facility",
+      "input": { "due_date": "2026-09-01", "authority_status": "Verified", "received_flag": true, "qc_status": "Correction Required" },
+      "expect": { "status": "CORRECTION_REQUIRED", "code": 2, "actionOwner": "Facility" }
     },
     {
-      "name": "submitted awaiting review",
-      "input": { "suspense_date": "2026-11-20", "has_current_submission": true, "qc_status": "PENDING" },
-      "expect": { "code": "SUBMITTED", "status": "Amber", "actionOwner": "Reviewer", "actionRequired": true }
+      "name": "6. wrong document past due is Red",
+      "input": { "due_date": "2026-09-10", "authority_status": "Verified", "received_flag": true, "qc_status": "Wrong Document" },
+      "expect": { "status": "OVERDUE", "code": 1, "actionOwner": "Facility", "actionRequired": true }
     },
     {
-      "name": "submitted late is Amber with the reviewer, never Red",
-      "input": { "suspense_date": "2026-11-01", "has_current_submission": true, "qc_status": "PENDING", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "SUBMITTED", "status": "Amber", "actionOwner": "Reviewer" }
+      "name": "7. wrong document before due is Amber, not Red",
+      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Wrong Document" },
+      "expect": { "status": "NOT_SATISFIED", "code": 2, "actionOwner": "Facility", "actionRequired": true }
     },
     {
-      "name": "VERIFIED requirement past suspense with nothing submitted is Red",
-      "input": { "suspense_date": "2026-11-05", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "OVERDUE", "status": "Red", "actionOwner": "Facility", "actionRequired": true, "is_complete": false, "is_in_denominator": true }
+      "name": "7. wrong document on the due date is not yet overdue",
+      "input": { "due_date": "2026-09-12", "authority_status": "Verified", "received_flag": true, "qc_status": "Wrong Document" },
+      "expect": { "status": "NOT_SATISFIED", "code": 2 }
     },
     {
-      "name": "UNVERIFIED requirement past suspense stays Gray and the action is the programme's",
-      "input": { "suspense_date": "2026-11-05", "requirement_verification_status": "UNVERIFIED" },
-      "expect": { "code": "PROVISIONAL_OVERDUE", "status": "Gray", "actionOwner": "Program", "actionRequired": true, "is_complete": false, "is_in_denominator": true }
+      "name": "8. received awaiting review",
+      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Pending Review" },
+      "expect": { "status": "RECEIVED_PENDING_QC", "code": 2, "actionOwner": "Reviewer", "actionRequired": true }
     },
     {
-      "name": "one day past suspense, verified",
-      "input": { "suspense_date": "2026-11-09", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "OVERDUE", "status": "Red" }
+      "name": "8. received late is Amber with the reviewer, never Red",
+      "input": { "due_date": "2026-09-01", "authority_status": "Verified", "received_flag": true, "qc_status": "Pending Review" },
+      "expect": { "status": "RECEIVED_PENDING_QC", "code": 2, "actionOwner": "Reviewer" }
     },
     {
-      "name": "on the suspense date is not yet overdue",
-      "input": { "suspense_date": "2026-11-10", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "DUE_SOON", "status": "Amber", "actionOwner": "Facility", "actionRequired": true }
+      "name": "9. verified, nothing received, before due is Blue",
+      "input": { "due_date": "2026-09-30", "authority_status": "Verified" },
+      "expect": { "status": "NOT_DUE", "code": 4, "actionOwner": "Facility", "actionRequired": false }
     },
     {
-      "name": "exactly at the edge of the due-soon window",
-      "input": { "suspense_date": "2026-11-17", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "DUE_SOON", "status": "Amber" }
+      "name": "9. on the due date is not yet overdue",
+      "input": { "due_date": "2026-09-12", "authority_status": "Verified" },
+      "expect": { "status": "NOT_DUE", "code": 4 }
     },
     {
-      "name": "one day outside the due-soon window",
-      "input": { "suspense_date": "2026-11-18", "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "NOT_DUE", "status": "Blue", "actionRequired": false, "is_complete": false, "is_in_denominator": false }
+      "name": "10. verified, nothing received, past due is Red",
+      "input": { "due_date": "2026-09-11", "authority_status": "Verified" },
+      "expect": { "status": "OVERDUE", "code": 1, "actionOwner": "Facility", "actionRequired": true }
     },
     {
-      "name": "no suspense date at all",
-      "input": { "suspense_date": null },
-      "expect": { "code": "NOT_DUE", "status": "Blue" }
-    },
-    {
-      "name": "a wider due-soon window moves the boundary",
-      "input": { "suspense_date": "2026-11-25", "due_soon_window_days": 21, "requirement_verification_status": "VERIFIED" },
-      "expect": { "code": "DUE_SOON", "status": "Amber" }
+      "name": "no due date at all",
+      "input": { "due_date": null, "authority_status": "Verified" },
+      "expect": { "status": "NOT_DUE", "code": 4 }
     }
   ],
-  "rollups": [
+  "packages": [
     {
-      "name": "a colour rollup would call this 33 percent; it is 100 percent",
-      "codes": ["ACCEPTED", "NOT_DUE", "NOT_DUE"],
-      "expect": { "in_denominator": 1, "complete": 1, "complete_ratio": 1.0 }
+      "name": "the colour rollup would say Complete; it is In progress",
+      "statuses": ["ACCEPTED", "NOT_DUE", "NOT_DUE"],
+      "expect": { "state": "IN_PROGRESS", "code": 4 }
     },
     {
-      "name": "waived and not applicable leave the denominator entirely",
-      "codes": ["ACCEPTED", "WAIVED", "NOT_APPLICABLE", "SUPERSEDED"],
-      "expect": { "in_denominator": 1, "complete": 1, "complete_ratio": 1.0 }
+      "name": "everything applicable accepted",
+      "statuses": ["ACCEPTED", "ACCEPTED", "NOT_APPLICABLE"],
+      "expect": { "state": "COMPLETE", "code": 3 }
     },
     {
-      "name": "nothing due is not zero percent and not one hundred percent",
-      "codes": ["NOT_DUE", "NOT_DUE", "WAIVED"],
-      "expect": { "in_denominator": 0, "complete": 0, "complete_ratio": null }
+      "name": "nothing applicable",
+      "statuses": ["NOT_APPLICABLE", "NOT_APPLICABLE"],
+      "expect": { "state": "NOT_APPLICABLE", "code": 0 }
     },
     {
-      "name": "a provisional overdue row counts against completeness",
-      "codes": ["ACCEPTED", "PROVISIONAL_OVERDUE"],
-      "expect": { "in_denominator": 2, "complete": 1, "complete_ratio": 0.5 }
+      "name": "one overdue beats everything",
+      "statuses": ["ACCEPTED", "ACCEPTED", "OVERDUE", "RECEIVED_PENDING_QC"],
+      "expect": { "state": "ACTION_REQUIRED", "code": 1 }
+    },
+    {
+      "name": "not satisfied is action required, not in review",
+      "statuses": ["ACCEPTED", "NOT_SATISFIED"],
+      "expect": { "state": "ACTION_REQUIRED", "code": 1 }
+    },
+    {
+      "name": "awaiting review with nothing adverse",
+      "statuses": ["ACCEPTED", "RECEIVED_PENDING_QC"],
+      "expect": { "state": "IN_REVIEW", "code": 2 }
+    },
+    {
+      "name": "a provisional row neither completes nor blocks",
+      "statuses": ["ACCEPTED", "PENDING_VALIDATION"],
+      "expect": { "state": "COMPLETE", "code": 3 }
+    },
+    {
+      "name": "provisional alone is in progress, not complete",
+      "statuses": ["PENDING_VALIDATION", "PENDING_VALIDATION"],
+      "expect": { "state": "IN_PROGRESS", "code": 4 }
     },
     {
       "name": "the realistic mid-month mix",
-      "codes": ["ACCEPTED", "ACCEPTED", "SUBMITTED", "RETURNED", "OVERDUE", "NOT_DUE", "NOT_APPLICABLE"],
-      "expect": { "in_denominator": 5, "complete": 2, "action_required": 3 }
+      "statuses": ["ACCEPTED", "ACCEPTED", "RECEIVED_PENDING_QC", "NOT_DUE", "PENDING_VALIDATION"],
+      "expect": { "state": "IN_REVIEW", "code": 2 }
     }
   ]
 }

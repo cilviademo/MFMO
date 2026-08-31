@@ -15,7 +15,7 @@ the previous ZIP from `dist/`. See `docs/government-environment-mode.md`.
 bash tests/run_tests.sh
 
 # pack (requires PAC CLI; see the fallback below if it is not authorized)
-pac solution pack --zipfile dist/MissionFeedingOperations_v1.0.0.zip \
+pac solution pack --zipfile dist/MissionFeedingOperations_v0.6.0.zip \
     --folder solution/src --packagetype Managed
 ```
 
@@ -42,7 +42,7 @@ parameterised in `Customizations.xml` and supplied at import time by a
 deployment settings file:
 
 ```bash
-pac solution import --path dist/MissionFeedingOperations_v1.0.0.zip \
+pac solution import --path dist/MissionFeedingOperations_v0.6.0.zip \
     --settings-file solution/deployment-settings.json
 ```
 
@@ -50,32 +50,33 @@ pac solution import --path dist/MissionFeedingOperations_v1.0.0.zip \
 connection ids and the site URL. A template is below; fill it in per
 environment and keep it out of source control.
 
-```json
-{
-  "ConnectionReferences": [
-    { "LogicalName": "mfo_sharepointonline", "ConnectionId": "", "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline" },
-    { "LogicalName": "mfo_office365users",   "ConnectionId": "", "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_office365users" },
-    { "LogicalName": "mfo_office365",        "ConnectionId": "", "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_office365" }
-  ],
-  "EnvironmentVariables": [
-    { "SchemaName": "mfo_SiteUrl",             "Value": "" },
-    { "SchemaName": "mfo_EvidenceLibraryPath", "Value": "" }
-  ]
-}
-```
+The full set is in `configuration/connection-references.json` and
+`configuration/environment-variables.json`. Fill in a settings file per
+environment and keep it out of source control.
 
-`mfo_office365` (Outlook) is referenced only by EOM-04's notification branch,
-which is behind `EnableNotifications` and ships `False`. If capability gate 7
-is not green, leave its connection id empty: the flow's else-branch runs
-instead and records what it would have sent.
+`mfops_office365` (Outlook) is referenced only by EOM-04's notification branch,
+which ships disabled. If the Outlook connector is unavailable, leave its
+connection id empty: EOM-04 records what it would have sent to `MF_EOM_Audit`
+instead, which is what you read for a full cycle before enabling it anyway.
+
+`mfops_teams` is declared for escalation and is not used in R1.
 
 ## Versioning
 
-`Solution.xml` carries `<Version>`. Bump it with the release, matching
-`MF_App_Config.AppVersion` and the git tag.
+`Solution.xml` carries `<Version>`, currently `0.6.0`. Bump it with the
+release, matching `MF_App_Config.AppVersion` and the git tag. The release
+ladder is in `docs/government-environment-mode.md`.
 
 | Part | Meaning |
 |---|---|
 | MAJOR | a schema change requiring a provisioning run |
 | MINOR | a screen, flow or requirement change |
 | PATCH | a fix with no schema or contract change |
+
+## What is NOT a solution component
+
+**The SharePoint lists.** They are provisioned by
+`provisioning/Provision-MFOpsLists.ps1` from `scripts/eom_schema.py`, which is
+the single source of truth. Carrying list definitions in two places is how they
+drift, and the drift is invisible until a column is silently missing in one
+environment.

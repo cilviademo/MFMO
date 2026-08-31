@@ -1,46 +1,65 @@
 # MissionFeedingOperations
 
 A government-compatible, source-controlled Power Platform solution. Release 1
-is the end-of-month and end-of-year document requirement, discovery,
-classification, versioning, QC and COP workflow for mission feeding
-facilities.
+is the End-of-Month document requirement, discovery, reconciliation,
+versioning, QC and COP workflow for Air Force mission feeding.
 
-Target: a single Power Platform environment in a US Government cloud.
-SharePoint, Power Apps, Power Automate, Power BI and Entra identity only.
-Everything else degrades behind a feature flag.
+```
+Teams / SharePoint   document repository and front door
+Power Apps           human workflow and QC
+Power Automate       generation, discovery, reconciliation, notification
+Power BI             leadership COP
+SharePoint Lists     configuration, workflow state, security, audit
+```
+
+Single GCC / GCC High / DoD environment. No Dataverse, no premium connectors,
+no AI Builder, no Pipelines.
 
 ---
 
-## Read these first
+## Where this build came from
 
-Three files hold decisions that are already settled. Do not re-derive them.
+Three inputs, and they do not all agree. **`docs/handoffs/RECONCILIATION.md` is
+the decision record** — read it before changing anything load-bearing.
+
+| Input | What it is |
+|---|---|
+| [`docs/handoffs/MASTER_HANDOFF.md`](docs/handoffs/MASTER_HANDOFF.md) | The consolidated project handoff. Broadest scope. |
+| [`docs/handoffs/CODEX_BUILD_HANDOFF.md`](docs/handoffs/CODEX_BUILD_HANDOFF.md) | The build handoff written against V3. Later, and corrects two MASTER conclusions. |
+| [`reference/v3/`](reference/) | The V3 artifacts as delivered. Prior art, not live source. |
+
+**Precedence: V3 for what exists, CODEX for what to do next, MASTER for
+everything neither covers.** Where V3's code disagreed with V3's own
+documentation, the documentation won — three such defects are corrected here
+and listed as C1–C3 in the record.
+
+## Read these first
 
 | | |
 |---|---|
-| [`docs/status-calculation.md`](docs/status-calculation.md) | One engine, one evaluation. Eleven codes, five visual states, and why an unverified requirement never goes Red. |
-| [`docs/government-environment-mode.md`](docs/government-environment-mode.md) | Cloud endpoints, the capability gate register, the kill switch, feature flags, releases and rollback. |
-| [`docs/accessibility.md`](docs/accessibility.md) | Section 508 as an acceptance gate, not a review comment. |
+| [`docs/status-calculation.md`](docs/status-calculation.md) | One engine, one evaluation. Eight semantic statuses over five visual codes. |
+| [`docs/government-environment-mode.md`](docs/government-environment-mode.md) | Cloud endpoints, capability gates, the kill switch, releases and rollback. |
+| [`docs/accessibility.md`](docs/accessibility.md) | Section 508 as a build gate, not a review step. |
 
-Then [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the build order and the
+Then [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the build order and
 acceptance tests, and [`docs/data-model.md`](docs/data-model.md) — generated,
-never hand-edited — for the schema.
+never hand-edited.
 
-`docs/mf-operations-prototype.html` is a live prototype: it runs the real
-engine rather than mocking it up. Open it in a browser, change the date, and
-watch the rows re-evaluate.
+`docs/mf-operations-prototype.html` is the executable specification: it runs
+the real engine. Open it in a browser.
 
 ---
 
 ## Build state
 
 ```
-Schema version            2.0  (12 lists, 164 columns)   validated
+Schema version            3.0  (12 lists, 172 columns)   validated
 Requirement seed          12 rows, all UNVERIFIED, 3 inactive
-Status engine             reference + Power Fx + flow, held in agreement
+Status engine             reference + Power Fx + prototype, held in agreement
 EOM-01                    reference implementation, idempotency proven
 Canvas app source         10 screens, 4 components, .pa.yaml
-Flows                     5 flows, 6 definitions
-Local test suite          82 tests, passing
+Flows                     5 implementation specs
+Local test suite          99 tests, passing
 Power Platform build      NOT STARTED
 Solution import tested    NO
 PAC CLI authorized        UNKNOWN  — verify
@@ -48,33 +67,32 @@ Tenant cloud              UNKNOWN  — GCC, GCC High or DoD, confirm
 ```
 
 **Two answers gate everything**: which government cloud this tenant is in, and
-whether you may run PAC CLI against it. Neither changes the design; both
-change the deployment scripts. Both currently read `UNKNOWN` in
-`configuration/app_config.csv`. Do not guess either one.
+whether PAC CLI may run against it. Neither changes the design; both change the
+deployment scripts. Do not guess either one.
 
 ---
 
 ## Layout
 
 ```
-scripts/eom_schema.py            single source of truth. Nothing else declares a list or a column.
-scripts/status_engine.py         the reference status engine
-scripts/generate_expected_items.py   EOM-01 reference implementation
-scripts/validate_solution.py     pre-release gate
+scripts/eom_schema.py             single source of truth. Nothing else declares a list.
+scripts/status_engine.py          the reference status engine
+scripts/generate_expected_items.py  EOM-01 reference implementation
+scripts/validate_solution.py      pre-release gate
 
-docs/                            the settled decisions, the deployment runbook, the prototype
-configuration/                   seeds: requirements, config, flags, sample dimensions
-provisioning/                    PowerShell: capability gates, lists and indexes, seeding
-canvas-app/formulas/             App.Formulas, StatusEngine, Delegation
-canvas-app/src/                  .pa.yaml — the app. This is the code.
-flows/                           five flows; the READMEs carry the logic
-powerbi/                         semantic model, measures and RLS
-solution/                        packaging envelope and connection references
-tests/                           82 tests. bash tests/run_tests.sh
-dist/                            release ZIPs. Rollback imports from here.
+docs/                             settled decisions, runbook, prototype
+docs/handoffs/                    the two handoffs and the reconciliation record
+configuration/                    seeds: requirements, config, flags, sample dimensions
+provisioning/                     PowerShell: gates, lists and indexes, seeding
+canvas-app/formulas/              App.Formulas, StatusEngine, Cascade, Delegation
+canvas-app/src/                   .pa.yaml — the app. This is the code.
+flows/                            five implementation specs
+powerbi/                          semantic model, measures, RLS
+solution/                         packaging envelope and connection references
+reference/v3/                     the V3 build as delivered. Not live source.
+tests/                            99 tests. bash tests/run_tests.sh
+dist/                             release ZIPs. Rollback imports from here.
 ```
-
----
 
 ## Run the checks
 
@@ -82,101 +100,95 @@ dist/                            release ZIPs. Rollback imports from here.
 bash tests/run_tests.sh
 ```
 
-Covers the schema, the status engine, EOM-01's three properties, the seeds,
-the delegation and accessibility static checks, and that the Power Fx, the
-flows and the prototype still agree with the reference implementation.
+Covers the schema and its generated artifacts, the status engine and its three
+transliterations, EOM-01's three properties, the seeds, the flow specs, the
+delegation and accessibility static checks, and that the ten reconciliation
+corrections stayed applied.
 
-It does **not** cover anything that needs a tenant: delegation at 5,000+ rows,
-index verification, RLS, the keyboard and screen-reader passes, and the
-maintenance and read-only tests are in `docs/DEPLOYMENT.md`. Passing locally
-is necessary, not sufficient.
+It does **not** cover anything needing a tenant. Delegation at 5,000+ rows,
+index verification, RLS, the keyboard and screen-reader passes and the
+maintenance/read-only tests are in `docs/DEPLOYMENT.md`. Passing locally is
+necessary, not sufficient.
 
 ---
 
 ## The shape of the thing
 
-**The app is the front door for submissions, and folder drops keep working.**
-Users pick their facility and document, then drop the file. Installation,
-facility, document type and reporting period are declared at upload, so the
-file needs no classification and its filename is never read for meaning.
-Files placed directly in a Portfolio FY folder are discovered by flow and
-routed to a small Needs Classification queue.
+**Documents normally go into the Portfolio Teams FY folder, and the app is the
+preferred front door.** Both paths stay open. Uploading through the app
+declares installation, facility, requirement and period, so the file needs no
+classification at all — that declaration is what keeps the stray queue small.
+Files dropped straight into a folder are discovered by EOM-02 and routed to a
+small Needs Classification queue.
 
 Upload goes through a flow to the document library, **not** through the Power
-Apps Attachments control — which binds to a Form, targets lists rather than
+Apps Attachments control, which binds to a Form, targets lists rather than
 libraries, and behaves badly on Teams and mobile. That is a reason not to use
-the control, not a reason to stop people uploading through the app.
+that control, not a reason to stop people uploading through the app.
 
-Obligations are modelled as Facility / Installation / Contract × Requirement ×
-Reporting Period. Each uploaded file is a child submission version. Every
-version is preserved.
+Obligations are Facility / Installation / Contract × Requirement × Reporting
+Period. `MF_EOM_Item` is the persistent expected row; `MF_EOM_Submission` is
+the versioned evidence. The checklist row is never duplicated on resubmission
+and no file is ever overwritten.
 
-`MF_EOM_Item` is persistent; `MF_EOM_Submission` is versioned. The checklist
-row is never duplicated on resubmission and no file is ever overwritten.
-
-The operating model lives on the **facility**, not the installation: one base
-can run a legacy DFAC and a Food 2.0 café, and requirements follow the
-facility. Installation- and contract-scope requirements carry a null
+`Operating_Model` lives on the **facility**, not the installation: Lackland
+runs a legacy DFAC and a Food 2.0 cafe, and they generate different requirement
+sets. Installation- and Contract-scope requirements carry a **null**
 `Facility_ID` — null, not empty string.
 
 ---
 
-## Non-negotiables
+## Prime directives
 
-These are load-bearing. Each is enforced by a test, a validator check, or
-both.
+1. Do not build another giant dashboard or monolithic SharePoint list.
+2. Do not make Power Apps the *required* document repository. Folder drops keep
+   working.
+3. **Filenames are never authoritative** and are never a classification method,
+   at any tier.
+4. **Never silently ignore an unmatched file.**
+5. Do not hard-code Legacy / Food 2.0 / MAFFO requirements in app formulas.
+   Requirements are configuration.
+6. Do not hard-code "due by the 10th" — `Due_Day` is a list column.
+7. Do not assume Food 2.0 requirements equal Legacy requirements.
+8. Do not let Power BI reconstruct workflow logic from raw submissions.
+9. **Retain every version.** Nothing is overwritten or deleted.
+10. No AI Builder, Dataverse, Graph, custom connectors, PCF, premium pipelines
+    or multiple environments in MVP.
+11. **Do not expose data outside the viewer's scope through rollups.**
+12. **An unverified requirement cannot create an adverse status.**
 
-1. **Never store a percentage or a computed status the app must recompute.**
-   `Status_Code` is stored precisely so `Filter()` on it delegates.
-2. **`Operating_Model` lives on the facility.**
-3. **`Requirement_Scope` is Facility | Installation | Contract.**
-4. **`MF_EOM_Item` is persistent; `MF_EOM_Submission` is versioned.**
-5. **`Facility_ID` is null, not empty string,** at installation and contract
-   scope.
-6. **An UNVERIFIED requirement never drives a Red status.** All twelve seeded
-   requirements are provisional today, so this is the default path.
-7. **Status is calculated, never chosen.** No colour picker exists anywhere.
-8. **Status is never colour-only.** Every chip carries text.
-   1. **One status engine, one evaluation**, returning
-      `{status, code, label, actionOwner, actionRequired}`. Never a second
-      function deriving the label independently of the code.
-   2. **`Final_Status` and `Status_Code` are independent.** Five visual
-      states, not four — Blue separates *not due yet* from *not applicable*.
-   3. **Rollups run over semantic statuses and over what the viewer may see.**
-   4. **No sign-in.** CAC resolves identity before the app loads.
-9. **Filenames are never authoritative.**
-10. **The list row is truth; the file path is convenience.** Store
-    `SharePoint_File_ID`, not just the URL.
-11. **One security mapping** serves app filtering and Power BI RLS.
-12. **Do not invent a requirement.** An upload with no matching expected item
-    goes to Needs Classification, never creates a tracker row.
+## Status, in one paragraph
 
----
+`Final_Status` is the semantic string, `Status_Code` is the numeric visual code
+0–4. Both are stored, written together by one evaluation, and neither derived
+from the other. Five codes, not four: Blue separates *not due yet* from *not
+applicable*. A provisional requirement past its due date is Blue, owned by the
+programme — and since all twelve seeded requirements are `UNVERIFIED`, that is
+the default path today. Package rollups run over semantic statuses, never over
+colour: `[ACCEPTED, NOT_DUE, NOT_DUE]` is **In progress**, not Complete. There
+is no colour picker anywhere.
 
 ## Delegation
 
-A non-delegable query returns the first 500 rows — 2,000 at most — and reports
-success. No error, no warning, no log entry. A Portfolio Manager sees "3
-overdue" when there are eleven, and nobody finds out until an inspection.
+A non-delegable query silently returns the first 500 rows and reports success.
+A Portfolio Manager sees "3 overdue" when there are eleven, and nobody finds
+out until an IG does.
 
-`MF_EOM_Item` passes that ceiling in the first quarter. Every production query
-filters server-side on indexed columns with `Reporting_Period_ID` first, and
-they all live in `canvas-app/formulas/Delegation.fx` so the set is reviewable.
-`scripts/validate_solution.py` fails the build on an anti-pattern or on a
-query that reaches a high-volume list from outside that file.
+`MF_EOM_Item` passes that ceiling inside the first year. Every production query
+lives in `canvas-app/formulas/Delegation.fx`, filters server-side on indexed
+columns with `Reporting_Period` first, and `validate_solution.py` fails the
+build on an anti-pattern or an inline query.
 
-**Indexes must exist before a list crosses 5,000 items — you cannot add them
-afterward.** The provisioning script creates and verifies them, and throws if
-one is missing.
+**Indexes must exist before a list crosses 5,000 items — SharePoint will not
+add them afterward.**
 
 ---
 
-## What R1 deliberately does not do
+## Out of scope for R1
 
-FMAT, SAIIT, training, equipment, contracts and Five-Year Plans. The shell is
-built so that `Requirement · Scope · Due · Status · Action` is the same row in
-every later module, and R2–R4 reuse it without new UX.
+FMAT, SAIIT automation, Go for Green, ServSafe/training, equipment, contracts
+and the Five-Year Plan. The shell is built so `Requirement · Scope · Due ·
+Status · Action` is the same row in every later module.
 
-Also out of scope: content-based classification, AI Builder, backfill of prior
-periods, PCF components, Code Apps, Pipelines, and any composite readiness
-score.
+Also out: content-based classification, AI Builder, historical backfill, PCF
+components, Code Apps, Pipelines, and any composite readiness score.

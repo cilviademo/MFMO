@@ -1,40 +1,52 @@
-# Flows
+# Flows — five
 
-Five flows. Between them they own every write that matters, because the app
-enforces nothing on its own: a disabled button is a courtesy, and the check
-inside the flow is the control.
+The Power App handles all human interaction and all QC writes. Power Automate
+does only what the app cannot: scheduled generation, background discovery,
+recalculation, notification, and the one write the app is not allowed to make
+directly.
 
-| Flow | Trigger | Owns |
+**The separate "Portfolio QC Flow" from the earliest design stays deleted.**
+When a Portfolio Manager clicks Accept, the app patches the list. EOM-04 only
+notices the resulting state change.
+
+| Flow | Trigger | Purpose |
 |---|---|---|
-| `EOM01-GenerateExpectedItems` | Recurrence, nightly | Creating the persistent checklist rows |
-| `EOM02-FileIntake` | SharePoint, **library level** | Discovering folder drops, routing strays to Needs Classification |
-| `EOM03-StatusFact` | Recurrence, nightly after EOM-01 | Writing `MF_EOM_Status`, the canonical Power BI fact |
-| `EOM04-QCDecision` | Power Apps (V2) | QC accept and return, and the flag-gated notifications |
-| `EOM05-AppUpload` | Power Apps (V2) | The front door: writing the file to the library and the submission row |
+| EOM-01 Expected Package Generator | Recurrence, 1st of month 05:00 | Create the expected `MF_EOM_Item` rows |
+| EOM-02 File Intake | File created in the Portfolio library | Catch folder drops the app did not create |
+| EOM-03 Reconciliation | Recurrence, nightly 02:00 | Recalculate `Final_Status` / `Status_Code`, rebuild `MF_EOM_Status` |
+| EOM-04 Notifications | Recurrence, daily 07:00 | Suspense reminders and escalation. Ships disabled. |
+| EOM-05 App Upload | Called by `scrUpload` | Write the file to the library and the submission row |
+
+## Why these are Markdown specs and not `definition.json`
+
+Flow definitions are environment-bound. A hand-written export that has never
+been imported, never validated against a connector and never run is not
+source — it is a drawing of source, and its fidelity is implied rather than
+real. A wrong-environment export is worse than none.
+
+So each subfolder holds a `definition.md` written as an implementation spec.
+Build these in the tenant against these specs, then export the solution and
+commit the artifact to `dist/`. The spec stays the reviewable source; the
+export is the build output.
+
+An earlier commit on this branch shipped fabricated Logic Apps JSON for these
+flows. It was removed — see `docs/handoffs/RECONCILIATION.md` §8.
 
 ## Rules every flow follows
 
-1. **First action reads `MF_App_Config`.** No URL, site GUID or list name is
-   hard-coded in a flow definition. The site and library paths come from
-   configuration at run time.
-2. **`ReadOnlyMode` is checked server-side.** `EOM04` and `EOM05` terminate
-   with a friendly failure if it is on, regardless of what the app allowed.
-3. **The status engine is applied in one place per flow**, in the order
-   defined in `docs/status-calculation.md`. No flow derives a label or a
-   colour independently of the code.
-4. **Never invent a requirement.** `EOM02` has no path that creates an
-   `MF_EOM_Item`.
-5. **Never overwrite a file, never duplicate a checklist row.** `EOM05`
-   increments `Version_Number` and flips `Is_Current_Version`; it never
-   patches over an existing file or row.
-6. **Every run writes to `MF_App_Event_Log`** with the `correlationId` the
-   app passed, so an app action and its flow runs are one story.
-7. **Idempotency is by business key, not by run history.** Re-running a flow
-   after a partial failure is always safe.
-
-## Importing
-
-The definitions here are the reviewable source. They carry
-`$connections` placeholders rather than environment-specific connection ids;
-those are supplied by the deployment settings file at import time and are
-never edited in place. See `docs/DEPLOYMENT.md`.
+1. **First action reads `MF_App_Config`.** No site URL, GUID or list name is
+   literal in a flow. Environment variables where the tenant supports them,
+   `MF_App_Config` rows where it does not; neither path is load-bearing alone.
+2. **`ReadOnlyMode` is checked server-side.** EOM-04 and EOM-05 refuse to
+   write when it is on, regardless of what the app allowed. The disabled
+   control is a courtesy; this is the control.
+3. **The status engine is applied in one place per flow**, in the order in
+   `docs/status-calculation.md`. No flow derives a label or a colour
+   independently of the semantic status.
+4. **Never invent a requirement.** No flow has a path that creates an
+   `MF_EOM_Item` from a file.
+5. **Never overwrite a file, never duplicate a checklist row.**
+6. **Every run writes to `MF_EOM_Audit`**, and business events to
+   `MF_App_Event_Log`, stamped with `App_Version`.
+7. **Idempotency is by deterministic business key**, not by run history.
+   Re-running after a partial failure is always safe.

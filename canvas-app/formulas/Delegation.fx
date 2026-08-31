@@ -1,20 +1,20 @@
 // =============================================================================
-// Delegation.fx  —  patterns, anti-patterns, and the queries this app is
-//                   allowed to run.
+// Delegation.fx — patterns, anti-patterns, and every query this app is
+//                 allowed to run against a high-volume list.
 //
 // THE FAILURE THAT DOES NOT ANNOUNCE ITSELF
 //
-// A non-delegable query returns the first 500 rows — 2,000 at the maximum
-// data row limit — and reports success. No error, no warning at runtime, no
-// entry in the log. A Portfolio Manager sees "3 overdue" when there are
-// eleven, and nobody finds out until an inspection.
+// A non-delegable query silently returns only the first 500 rows (2,000
+// maximum). It does not warn the user and it does not fail. It returns a WRONG
+// answer. A Portfolio Manager sees "3 overdue" when there are eleven, and
+// nobody finds out until an IG does.
 //
-// MF_EOM_Item at 89 installations x facilities x requirements x 12 months x
-// the first year of versions passes that ceiling comfortably in the first
-// quarter. MF_EOM_Status passes it in the first month.
+// At 89 installations x facilities x requirements x 12 months, MF EOM Item
+// passes that ceiling inside the first year. MF EOM Audit and MF App Event Log
+// pass it sooner.
 //
-// So: every production query filters server-side on indexed columns, and
-// Reporting_Period_ID comes first. The indexes are created by
+// So: every query below filters server-side on indexed columns, most selective
+// first, with Reporting_Period leading. The indexes are created by
 // provisioning/Provision-MFOpsLists.ps1 BEFORE any list crosses 5,000 items,
 // because SharePoint will not add one afterward.
 // =============================================================================
@@ -23,50 +23,45 @@
 // -----------------------------------------------------------------------------
 // WHAT DELEGATES TO SHAREPOINT
 //
-//   =  <>  <  <=  >  >=          on Text, Number, DateTime, Boolean
-//   And / Or / Not               (&&  ||  !)
-//   StartsWith                   on Text
+//   =  <>  <  <=  >  >=        on Text, Number, DateTime, Boolean
+//   And / Or / Not             (&&  ||  !)
+//   StartsWith                 on Text
 //   Filter, LookUp, Search
-//   SortByColumns                on a single indexed column
-//   CountRows                    ONLY on an already-filtered delegable table,
-//                                and only under the row limit
-//   in                           ONLY as a membership test against a literal
-//                                or small in-memory table on the RIGHT
+//   SortByColumns              on a single indexed column
+//   CountRows                  only on an already-filtered delegable table
 //
 // WHAT DOES NOT
 //
-//   Search() across several columns
-//   IsBlank()   on a list column          <- the trap, see below
-//   Len(), Left(), Right(), Mid(), Upper(), Lower(), Trim()
-//   Sum / Average / Max / Min / StdevP    on a SharePoint source
-//   GroupBy, AddColumns, ShowColumns, DropColumns, Distinct  (all client-side)
+//   IsBlank() on a list column                <- the trap, see below
+//   Len / Left / Right / Mid / Upper / Lower / Trim
+//   Sum / Average / Max / Min / StdevP        on a SharePoint source
+//   GroupBy, AddColumns, Distinct, ShowColumns   (all client-side)
 //   ForAll over a data source
-//   Choice column compared with = to a text literal
-//     (SharePoint choice is a record: use .Value)
-//   Any expression that references a control property inside the Filter
-//     predicate in a way the compiler cannot resolve to a constant
-//   CountRows() on an unfiltered list
 //   Sort() (as distinct from SortByColumns)
+//   multi-column Search()
+//   a Choice column compared with = to a text literal without .Value
+//   any predicate the compiler cannot resolve to a constant
 // -----------------------------------------------------------------------------
 
 
 // -----------------------------------------------------------------------------
-// THE IsBlank TRAP  —  and why Facility_ID is null, not empty string.
+// THE IsBlank TRAP — and why Facility_ID is null, not empty string.
 //
 // Installation- and Contract-scope rows carry a NULL Facility_ID. It has to be
-// null rather than "" because those two look identical in a gallery and behave
+// null rather than "" because the two look identical in a gallery and behave
 // differently in every Filter():
 //
-//   IsBlank(Facility_ID)               NOT DELEGABLE. Silently truncates.
-//   Facility_ID = ""                   does not match a true null in SharePoint.
+//   IsBlank(Facility_ID)        NOT DELEGABLE. Silently truncates.
+//   Facility_ID = ""            does not match a true null in SharePoint.
 //
-// The delegable way to ask "is this a facility-scope row" is to ask the
-// question the data actually models — the scope — on an indexed choice column:
+// The delegable way to ask "is this a facility row" is to ask the question the
+// data actually models — the scope — on an indexed column:
 //
-//   Filter(MF_EOM_Item, Requirement_Scope.Value = "Facility")     DELEGABLE
+//   Filter('MF EOM Item', Requirement_Scope = "Facility")     DELEGABLE
 //
-// That is why Requirement_Scope is denormalized onto the item at generation
-// time, and why the schema forbids an empty string in Facility_ID.
+// That is why Requirement_Scope is denormalized onto the item at generation.
+// The same reasoning put Authority_Status there: rule 2 of the status engine
+// reads it, and a lookup to MF EOM Requirement would not delegate either.
 // -----------------------------------------------------------------------------
 
 
@@ -74,180 +69,176 @@
 // ANTI-PATTERNS — every one of these has shipped somewhere and lied quietly.
 // -----------------------------------------------------------------------------
 //
-// BAD   Filter(MF_EOM_Item, Status_Code.Value = "OVERDUE")
-//       Unbounded across every period ever generated. Truncates at 500.
-// GOOD  Filter(MF_EOM_Item,
-//              Reporting_Period_ID = MF_CurrentPeriod.Period_ID,
-//              Status_Code.Value = "OVERDUE")
+// BAD   ClearCollect( colAllItems, 'MF EOM Item' )
+//       The whole list. 500 rows of 250,000, with no indication. Every count
+//       downstream is wrong.
 //
-// BAD   Filter(MF_EOM_Item, IsBlank(Facility_ID))
+// BAD   Filter( 'MF EOM Item', Status_Code < 3 )
+//       Unbounded across every period ever generated. Add the period.
+// GOOD  Filter( 'MF EOM Item', Reporting_Period = locPeriod, Status_Code < 3 )
+//
+// BAD   Filter( 'MF EOM Item', IsBlank(Facility_ID) )
 //       Not delegable, and does not mean what it looks like.
-// GOOD  Filter(MF_EOM_Item, Requirement_Scope.Value = "Installation")
+// GOOD  Filter( 'MF EOM Item', Requirement_Scope = "Installation" )
 //
-// BAD   CountRows(Filter(MF_EOM_Item, Status_Code.Value <> "ACCEPTED"))
+// BAD   Filter( 'MF EOM Item', Status_Code = MFItemStatusCode(...) )
+//       Computed comparison, non-delegable. This is why Status_Code is STORED.
+//
+// BAD   Filter( 'MF EOM Item', StartsWith(EOM_Item_Key, "LACKLAND") )
+//       StartsWith does not delegate on SharePoint. Filter on Installation_ID.
+//
+// BAD   CountRows(Filter('MF EOM Item', Final_Status <> "ACCEPTED"))
 //       Counts a truncated set and reports it as a total. This is the
 //       "3 overdue when there are eleven" failure exactly.
-// GOOD  Count the fact instead — MF_EOM_Status carries Is_Complete and
-//       Is_In_Denominator precomputed by EOM-03 — or count within one
-//       period and one facility, which is bounded by construction.
 //
-// BAD   Filter(MF_EOM_Item, Facility_ID in MF_MyFacilityIDs)
-//       'in' with a table on the right does not delegate. It pulls the list
-//       down and filters locally.
-// GOOD  Filter(MF_EOM_Item,
-//              Reporting_Period_ID = period,
-//              Facility_ID = gblCurrentFacility.Facility_ID)
-//       One facility at a time. For a multi-facility view, ForAll over the
-//       user's facility LIST (small, in memory) issuing one delegable query
-//       each — never ForAll over the data source.
+// BAD   ForAll( colFacilities, ForAll( colRequirements, Patch(...) ) )
+//       Nested ForAll. Microsoft warns explicitly; this belongs in EOM-01.
 //
-// BAD   SortByColumns(Filter(...), "Requirement_Name")
-//       Requirement_Name is not indexed. Sorting on it is client-side over a
-//       truncated set.
-// GOOD  Sort on Suspense_Date (indexed), or sort the small result client-side
-//       after a delegable filter has already bounded it.
+// BAD   Filter( 'MF EOM Item', Installation_ID = galParent.Selected.Installation_ID )
+//       Cross-screen control reference. Use a variable.
 //
-// BAD   Search(MF_EOM_Item, txtSearch.Text, "Facility_Name", "Requirement_Name")
-//       Multi-column Search does not delegate.
-// GOOD  StartsWith on one indexed column, inside a period filter.
-//
-// BAD   Filter(MF_EOM_Submission, EOM_Item_ID = ThisItem.EOM_Item_ID)
-//         used as a gallery Items on a 200-row parent gallery
-//       200 gallery rows issue 200 queries. The screen appears to hang.
-// GOOD  One query for the period's submissions, then relate in memory, or
-//       read Current_Submission_ID and Current_Version_Number off the item —
-//       which is why the item denormalizes them.
-//
-// BAD   ClearCollect(colAll, MF_EOM_Item)
-//       The whole list. 500 rows of 250,000, with no indication.
-// GOOD  Never collect a large source. Bind the gallery to the delegable
-//       Filter directly and let virtualisation page it.
+// BAD   a gallery bound to 'MF App Event Log' or 'MF EOM Audit'
+//       Append-only and unbounded. Query by Record_ID or Entity_ID only.
 // -----------------------------------------------------------------------------
 
 
 // -----------------------------------------------------------------------------
-// THE APPROVED QUERIES.
+// SECURITY BEFORE ROLLUP
 //
-// These are the only shapes that touch MF_EOM_Item, MF_EOM_Submission or
-// MF_EOM_Status in production. Each filters on indexed columns with
-// Reporting_Period_ID first. Adding a new one means adding it here.
+// A facility-scoped user previously received an installation package rollup
+// computed from every facility at that base. That leaks across a security
+// boundary even when no names appear on screen — the numbers themselves are
+// the disclosure.
+//
+// Scope is applied server-side, in the query, before anything is counted. A
+// contract-scope item is visible only when the contract actually covers a
+// facility in the viewer's scope.
 // -----------------------------------------------------------------------------
 
-// My work: one facility, one period. Bounded by construction — at most the
-// requirement count, currently twelve.
-MF_ItemsForFacility(FacilityId: Text, PeriodId: Text): Table =
+// Items for one facility and period. Bounded by construction — at most the
+// requirement count. Reporting_Period first, then the indexed facility.
+MF_ItemsForFacility(FacilityId: Text, Period: Text): Table =
     SortByColumns(
-        Filter(
-            MF_EOM_Item,
-            Reporting_Period_ID = PeriodId,          // indexed, first
-            Facility_ID = FacilityId                 // indexed
-        ),
-        "Suspense_Date", SortOrder.Ascending          // indexed
-    );
+        Filter( 'MF EOM Item',
+                Reporting_Period = Period,
+                Facility_ID = FacilityId ),
+        "Due_Date", SortOrder.Ascending );
 
-// Installation view. Bounded by facilities x requirements for one period.
-// Includes the installation-scope rows, whose Facility_ID is null — reached
-// through Installation_ID, never through IsBlank().
-MF_ItemsForInstallation(InstallationId: Text, PeriodId: Text): Table =
+// Everything at one installation for a period, including the Installation- and
+// Contract-scope rows whose Facility_ID is null. Reached through
+// Installation_ID, never through IsBlank().
+MF_ItemsForInstallation(InstallationId: Text, Period: Text): Table =
     SortByColumns(
-        Filter(
-            MF_EOM_Item,
-            Reporting_Period_ID = PeriodId,
-            Installation_ID = InstallationId
-        ),
-        "Suspense_Date", SortOrder.Ascending
-    );
+        Filter( 'MF EOM Item',
+                Reporting_Period = Period,
+                Installation_ID = InstallationId ),
+        "Due_Date", SortOrder.Ascending );
 
-// Portfolio view. This is the one that would truncate if Portfolio_ID were not
-// denormalized onto the item — a join to MF_Facility would be client-side.
-// Still bounded per period, and the COP should prefer MF_EOM_Status.
-MF_ItemsForPortfolio(PortfolioId: Text, PeriodId: Text): Table =
-    Filter(
-        MF_EOM_Item,
-        Reporting_Period_ID = PeriodId,
-        Portfolio_ID = PortfolioId
-    );
+// Portfolio view. This is the query that would truncate if Portfolio_ID were
+// not denormalized onto the item — a join to MF Facility would be client-side.
+MF_ItemsForPortfolio(PortfolioId: Text, Period: Text): Table =
+    Filter( 'MF EOM Item',
+            Reporting_Period = Period,
+            Portfolio_ID = PortfolioId );
 
-// Action list. Action_Required is stored and indexed precisely so this
-// delegates instead of being computed over a truncated set.
-MF_ActionItemsForFacility(FacilityId: Text, PeriodId: Text): Table =
-    Filter(
-        MF_EOM_Item,
-        Reporting_Period_ID = PeriodId,
-        Facility_ID = FacilityId,
-        Action_Required = true
-    );
+// The scope-correct item set for the current viewer. Every rollup starts here.
+// A Facility-scoped user gets their facility's rows plus the installation- and
+// contract-scope rows that genuinely belong to them.
+MF_VisibleItems(Period: Text): Table =
+    Switch( gblScopeType,
+        "Facility",
+            Filter( 'MF EOM Item',
+                    Reporting_Period = Period,
+                    Installation_ID = gblMyInstallation,
+                    // Their own facility rows, plus the shared obligations of
+                    // the installation. NOT their neighbours' facility rows.
+                    ( Facility_ID = gblMyFacility
+                      || Requirement_Scope = "Installation"
+                      || Requirement_Scope = "Contract" ) ),
+        "Installation",
+            Filter( 'MF EOM Item',
+                    Reporting_Period = Period,
+                    Installation_ID = gblMyInstallation ),
+        "Portfolio",
+            Filter( 'MF EOM Item',
+                    Reporting_Period = Period,
+                    Portfolio_ID = gblMyPortfolio ),
+        Filter( 'MF EOM Item', Reporting_Period = Period ) );
 
-// Review queue. QC_Status and Is_Current_Version are both indexed.
-MF_ReviewQueue(PeriodId: Text): Table =
+// A contract row is only theirs if the contract covers one of their facilities.
+// Applied in memory over the already-scoped set above, which is bounded.
+MF_ContractItemIsMine(ContractId: Text): Boolean =
+    IsBlank(ContractId)
+    || CountRows(Filter(MF_MyFacilities, Contract_ID = ContractId)) > 0;
+
+// Health check: does this facility have any expected items at all for the
+// period? A facility with no requirement set is a configuration gap, not a
+// facility with nothing to do, and it sits silently green until something
+// looks for it.
+MF_HasItems(FacilityId: Text, Period: Text): Boolean =
+    CountRows(MF_ItemsForFacility(FacilityId, Period)) > 0;
+
+// My work: what I owe, not what someone else owes. Action_Owner and
+// Action_Required are stored and indexed precisely so this delegates.
+MF_MyWork(Period: Text): Table =
     SortByColumns(
-        Filter(
-            MF_EOM_Submission,
-            Is_Current_Version = true,
-            Classification_Status.Value = "CLASSIFIED",
-            QC_Status.Value in ["PENDING", "IN_REVIEW"]
-        ),
-        "Submitted_On", SortOrder.Ascending
-    );
+        Filter( MF_VisibleItems(Period), Action_Required = true ),
+        "Due_Date", SortOrder.Ascending );
 
-// Needs Classification. Reached by Classification_Status, never by asking
-// whether EOM_Item_ID is blank.
+// Waiting on someone else. A submitter's "needs your attention" list must not
+// contain documents sitting in AFSVC's review queue.
+MF_WaitingOnOthers(Period: Text): Table =
+    Filter( MF_VisibleItems(Period),
+            Action_Required = true,
+            Action_Owner = "Reviewer" );
+
+// The review queue. QC_Status and Is_Current are both indexed.
+MF_ReviewQueue(): Table =
+    SortByColumns(
+        Filter( 'MF EOM Submission',
+                Is_Current = true,
+                QC_Status = "Pending Review" ),
+        "Uploaded_DateTime", SortOrder.Ascending );
+
+// Needs Classification. Reached by Resolution_Status, never by asking whether
+// a foreign key is blank.
 MF_UnmatchedQueue(): Table =
     SortByColumns(
-        Filter(
-            MF_EOM_Submission,
-            Classification_Status.Value = "NEEDS_CLASSIFICATION"
-        ),
-        "Submitted_On", SortOrder.Ascending
-    );
+        Filter( 'MF Unmatched File', Resolution_Status = "Needs Classification" ),
+        "Discovered_DateTime", SortOrder.Ascending );
 
-// One item by id. Delegable on the indexed EOM_Item_ID and bounded to a
-// single row, so it is safe to call from a gallery row's OnSelect. It is here
-// rather than inline on a screen because EVERY query against a high-volume
-// list lives in this file - that is what makes the set reviewable.
-MF_ItemById(ItemId: Text): Record =
-    LookUp(MF_EOM_Item, EOM_Item_ID = ItemId);
-
-// Version history for one item. Bounded by the version count.
+// Version history for one item. EOM_Item_ID is indexed and this stays small.
 MF_VersionsForItem(ItemId: Text): Table =
     SortByColumns(
-        Filter(MF_EOM_Submission, EOM_Item_ID = ItemId),
-        "Version_Number", SortOrder.Descending
-    );
+        Filter( 'MF EOM Submission', EOM_Item_ID = ItemId ),
+        "Version_No", SortOrder.Descending );
+
+// One item by id, for a gallery row's OnSelect. Delegable and single-row.
+MF_ItemById(ItemId: Text): Record =
+    LookUp('MF EOM Item', EOM_Item_ID = ItemId);
+
+// Activity for one record. Never an unfiltered read of the audit list.
+MF_ActivityForRecord(EntityId: Text): Table =
+    SortByColumns(
+        Filter('MF EOM Audit', Entity_ID = EntityId),
+        "Action_DateTime", SortOrder.Descending );
 
 
 // -----------------------------------------------------------------------------
-// COUNTS AND ROLLUPS
+// COUNTS
 //
-// Counting is where truncation hides. Two rules:
-//
-//   1. Only count a table that a delegable Filter has already bounded to one
-//      period and one scope.
-//   2. Anything wider than that comes from MF_EOM_Status, where EOM-03 has
-//      already resolved Is_Complete and Is_In_Denominator server-side.
-//
-// And the count is displayed next to the row count so a truncation is visible:
-// if the gallery says 500 and the count says 500, suspect truncation. See
-// docs/accessibility.md — the visible count also serves the screen reader.
+// Counting is where truncation hides. Only count a table a delegable Filter has
+// already bounded to one period and one scope, and display the row count beside
+// the figure so a truncation is visible rather than silent: if the gallery says
+// 500 and the count says 500, suspect truncation.
 // -----------------------------------------------------------------------------
 
-MF_FacilityRollup(FacilityId: Text, PeriodId: Text) =
-    With(
-        { items: MF_ItemsForFacility(FacilityId, PeriodId) },
-        {
-            total:      CountRows(items),
-            complete:   CountRows(Filter(items, Status_Code.Value = "ACCEPTED")),
-            denominator:CountRows(Filter(items, !(Status_Code.Value in ["NOT_DUE", "WAIVED", "NOT_APPLICABLE", "SUPERSEDED"]))),
-            action:     CountRows(Filter(items, Action_Required = true)),
-            truncated:  CountRows(items) >= MF_DelegationWarnAt
-        }
-    );
+MF_TruncationSuspected(Items: Table): Boolean =
+    CountRows(Items) >= MF_DelegationWarnAt;
 
-// A facility user must not receive an installation figure derived from their
-// neighbours. The rollup is computed over the rows the viewer may actually
-// see, and it says so when the scope has been narrowed.
-MF_ScopeQualifier(RequestedScope: Text): Text =
-    If( MF_IsGlobalScope || RequestedScope in MF_MyInstallationIDs || RequestedScope in MF_MyPortfolioIDs,
-        "",
-        "Covers your assigned facilities only, not the whole " & RequestedScope & "."
-    );
+// A figure whose scope is narrower than its label says so, in text. It is never
+// silently narrowed and presented as the installation total.
+MF_ScopeQualifier(): Text =
+    If( gblScopeType = "Facility",
+        "Covers your facility and this installation's shared obligations, not the whole base.",
+        "" );

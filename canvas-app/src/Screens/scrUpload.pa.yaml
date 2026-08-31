@@ -1,22 +1,22 @@
 # =============================================================================
 # scrUpload — the front door.
 #
-# The app is the front door for submissions, and folder drops keep working.
-#
 # THE ATTACHMENTS CONTROL IS NOT USED. It binds to a Form, targets lists and
 # Dataverse rather than document libraries, and behaves badly on Teams and
 # mobile. That is a reason not to use the control. It is NOT a reason to stop
-# people uploading through the app — reverting to folder-drop-only would
-# reintroduce the exact classification risk the front door removes.
+# people uploading through the app — reverting to folder-drop-only reintroduces
+# the classification risk the declaration removes.
 #
-# So: the app collects the file and the declared metadata, and calls
-# EOM05_AppUpload. The flow writes to the library and the lists. No
-# Attachments control, no friction, and the declaration that makes
-# classification unnecessary is preserved.
+# The app collects the file and the declared metadata and calls EOM05_AppUpload.
+# The flow writes the library and the lists.
 #
-# Installation, facility, document type and reporting period are DECLARED
-# here. That is tier 0, the production baseline, ~95% of volume. The file
-# needs no classification and its filename is never read for meaning.
+# For a DFAC manager with one facility, MF_ShowDropdowns is false and the screen
+# is a title, a period label and a drop target. Everything else is the exception
+# path.
+#
+# Installation, facility, requirement and period are DECLARED here, so nothing
+# downstream has to classify the file. Filenames are never validated;
+# Accepted_File_Types is advisory.
 # =============================================================================
 
 Screens:
@@ -31,11 +31,7 @@ Screens:
             // Arriving from a gallery row pre-declares everything. Arriving
             // from the nav declares nothing and the user picks.
             Set(locItem, locSelectedItem),
-            If(
-                MF_ShouldLog("ScreenView"),
-                Patch(MF_App_Event_Log, Defaults(MF_App_Event_Log),
-                      MF_TelemetryRow("ScreenView", "Debug", "scrUpload", locSelectedItem.EOM_Item_ID, ""))
-            )
+            Set(locOnBehalf, false)
         )
 
     Children:
@@ -45,7 +41,6 @@ Screens:
           Properties:
             Width: =Parent.Width
             Height: =Parent.Height
-            LayoutGap: =0
             TabIndex: =-1
           Children:
 
@@ -67,7 +62,7 @@ Screens:
                       Variant: Subtle
                       Properties:
                         Text: ="Back"
-                        AccessibleLabel: ="Back to my work"
+                        AccessibleLabel: ="Back to home"
                         OnSelect: =Back(ScreenTransition.None)
                         TabIndex: =0
                   - lblTitle:
@@ -77,6 +72,13 @@ Screens:
                         Text: ="Submit a document"
                         Color: =clrText
                         TabIndex: =-1
+                  - lblPeriod:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: ="Reporting period " & locPeriod
+                        Color: =clrTextSecondary
+                        TabIndex: =-1
 
             - conContent:
                 Control: GroupContainer
@@ -85,6 +87,7 @@ Screens:
                   FillPortions: =1
                   LayoutGap: =16
                   LayoutMinWidth: =320
+                  LayoutMaxWidth: =720
                   PaddingLeft: =20
                   PaddingRight: =20
                   PaddingTop: =16
@@ -92,108 +95,93 @@ Screens:
                   TabIndex: =-1
                 Children:
 
-                  # --- Declaration. Tier 0. -----------------------------------
-                  - lblDeclareHeading:
-                      Control: Text
-                      Variant: Body
-                      Properties:
-                        Text: ="What are you submitting?"
-                        FontWeight: =FontWeight.Semibold
-                        Color: =clrText
-                        TabIndex: =-1
-
+                  # --- Declaration. Tier 0. ----------------------------------
                   - cmbInstallation:
                       Control: ComboBox
                       Properties:
-                        Items: =Distinct(MF_MyFacilities, Installation_ID)
+                        Items: =MF_InstallationChoices
+                        DisplayFields: =["Installation_Name"]
                         SelectMultiple: =false
-                        DefaultSelectedItems: =[{ Value: gblCurrentFacility.Installation_ID }]
-                        OnChange: =Set(locInstallation, Self.Selected.Value)
+                        # Hidden when the user has exactly one, which is most
+                        # of them.
+                        Visible: =MF_ShowDropdowns && CountRows(MF_InstallationChoices) > 1
+                        DefaultSelectedItems: =Filter(MF_InstallationChoices, Installation_ID = locSelectedInstallation)
+                        OnChange: =Set(locSelectedInstallation, Self.Selected.Installation_ID); Set(locSelectedFacility, Blank())
                         AccessibleLabel: ="Installation. Required."
                         TabIndex: =0
 
                   - cmbFacility:
                       Control: ComboBox
                       Properties:
-                        Items: =Filter(MF_MyFacilities, Installation_ID = Coalesce(locInstallation, gblCurrentFacility.Installation_ID))
-                        DisplayFields: =["Title"]
+                        Items: =MF_FacilityChoices(locSelectedInstallation)
+                        DisplayFields: =["Facility_Name"]
                         SelectMultiple: =false
-                        DefaultSelectedItems: =[gblCurrentFacility]
-                        OnChange: =Set(gblCurrentFacility, Self.Selected)
+                        Visible: =MF_ShowDropdowns && CountRows(MF_FacilityChoices(locSelectedInstallation)) > 1
+                        DefaultSelectedItems: =Filter(MF_MyFacilities, Facility_ID = locSelectedFacility)
+                        OnChange: =Set(locSelectedFacility, Self.Selected.Facility_ID)
                         AccessibleLabel: ="Facility. Required."
-                        TabIndex: =0
-
-                  - cmbPeriod:
-                      Control: ComboBox
-                      Properties:
-                        Items: =MF_SelectablePeriods
-                        DisplayFields: =["Title"]
-                        SelectMultiple: =false
-                        DefaultSelectedItems: =[MF_CurrentPeriod]
-                        OnChange: =Set(locPeriod, Self.Selected)
-                        AccessibleLabel: ="Reporting period. Required."
                         TabIndex: =0
 
                   - cmbRequirement:
                       Control: ComboBox
                       Properties:
-                        # Only obligations that actually exist for this
-                        # facility and period. Never invent a requirement:
-                        # if the document does not match an expected item,
-                        # there is nothing to select and the user is told why.
+                        # Facility-scope requirements for THIS facility's model
+                        # and type. Installation- and contract-scope belong on
+                        # the installation screen: putting them here is how a
+                        # DFAC manager ends up filing the base's SIK bill.
                         Items: |
-                          =MF_ItemsForFacility(
-                              gblCurrentFacility.Facility_ID,
-                              Coalesce(locPeriod.Period_ID, MF_CurrentPeriod.Period_ID)
+                          =With(
+                              { f: LookUp('MF Facility', Facility_ID = locSelectedFacility) },
+                              MF_RequirementChoices(f.Operating_Model, f.Facility_Type)
                           )
-                        DisplayFields: =["Requirement_Name"]
-                        SearchFields: =["Requirement_Name"]
+                        DisplayFields: =["Document_Name"]
+                        SearchFields: =["Document_Name", "Document_Code"]
                         SelectMultiple: =false
-                        DefaultSelectedItems: =If(IsBlank(locItem), [], [locItem])
-                        OnChange: =Set(locItem, Self.Selected)
-                        AccessibleLabel: ="Document type. Required."
+                        OnChange: =Set(locRequirementId, Self.Selected.Requirement_ID)
+                        AccessibleLabel: ="Document. Required."
                         TabIndex: =0
 
-                  - lblNoRequirement:
+                  - lblProvisionalNote:
                       Control: Text
                       Variant: Caption
                       Properties:
-                        Text: |
-                          ="No expected item matches this facility and period. An upload with no matching expected item goes to the Needs Classification queue and does not create a checklist row. If this document is genuinely required, ask a portfolio manager to add the requirement."
+                        Text: =MF_RequirementAuthorityNote(locRequirementId)
                         Color: =clrTextSecondary
-                        Visible: =CountRows(cmbRequirement.Items) = 0
+                        Visible: =MF_RequirementIsProvisional(locRequirementId)
                         AutoHeight: =true
-                        Live: =Live.Polite
                         TabIndex: =-1
 
-                  # --- The file ----------------------------------------------
-                  - lblFileHeading:
-                      Control: Text
-                      Variant: Body
+                  - tglOnBehalf:
+                      Control: Toggle
                       Properties:
-                        Text: ="Choose the file"
-                        FontWeight: =FontWeight.Semibold
-                        Color: =clrText
-                        TabIndex: =-1
+                        # Exception path for emailed and recovered documents.
+                        # Without it, an emailed document uploaded by an AFSVC
+                        # MFM misattributes to AFSVC and the missing counts go
+                        # wrong silently.
+                        Visible: =gblCanOnBehalf && MF_IsFeatureOn("EOM_ON_BEHALF")
+                        Default: =false
+                        OnChange: =Set(locOnBehalf, Self.Value)
+                        AccessibleLabel: ="Submitting on behalf of another location"
+                        TabIndex: =0
 
+                  # --- The file ---------------------------------------------
                   - lblFilenameNote:
                       Control: Text
                       Variant: Caption
                       Properties:
-                        # Say it out loud so nobody spends an afternoon
-                        # renaming files to please a system that ignores names.
-                        Text: ="The filename does not matter. You have declared the facility, document type and period above, so the file is classified by your declaration and never by its name."
+                        Text: |
+                          ="The filename does not matter. You have declared the facility, document and period above, so the file is classified by your declaration and never by its name."
                         Color: =clrTextSecondary
                         AutoHeight: =true
                         TabIndex: =-1
 
                   - addFile:
-                      # AddMediaButton with a file-picker media type, NOT the
-                      # Attachments control. The bytes go to EOM05_AppUpload
-                      # as a base64 payload; the flow writes the library.
+                      # AddMedia with a file picker — NOT the Attachments
+                      # control. The bytes go to EOM05_AppUpload; the flow
+                      # writes the library.
                       Control: AddMedia
                       Properties:
-                        Text: ="Choose file"
+                        Text: ="Drop file here or browse"
                         AccessibleLabel: ="Choose a file to submit"
                         DisplayMode: =MF_WriteMode
                         OnChange: =Set(locUploadError, "")
@@ -208,7 +196,7 @@ Screens:
                         Live: =Live.Polite
                         TabIndex: =-1
 
-                  # --- Errors. Announced, in text, with a correction. --------
+                  # --- Errors: announced, in text, with a correction ---------
                   - lblUploadError:
                       Control: Text
                       Variant: Body
@@ -225,18 +213,16 @@ Screens:
                       Control: Button
                       Variant: Primary
                       Properties:
-                        Text: =If(locUploadBusy, "Submitting...", "Submit document")
+                        Text: =If(locUploadBusy, "Submitting...", "Submit")
                         AccessibleLabel: |
                           ="Submit " & Coalesce(addFile.FileName, "the chosen file") &
-                           " as " & Coalesce(locItem.Requirement_Name, "the chosen document type") &
-                           " for " & gblCurrentFacility.Title &
-                           ", " & Coalesce(locPeriod.Title, MF_CurrentPeriod.Title)
+                           " as " & Coalesce(cmbRequirement.Selected.Document_Name, "the chosen document") &
+                           " for " & Coalesce(cmbFacility.Selected.Facility_Name, "your facility") &
+                           ", " & locPeriod
                         DisplayMode: |
                           =If(
-                              MF_ReadOnlyMode
-                                  || locUploadBusy
-                                  || IsBlank(addFile.Media)
-                                  || IsBlank(locItem.EOM_Item_ID),
+                              !gblCanWrite || locUploadBusy
+                                  || IsBlank(addFile.Media) || IsBlank(locRequirementId),
                               DisplayMode.Disabled,
                               DisplayMode.Edit
                           )
@@ -244,38 +230,37 @@ Screens:
                         OnSelect: |
                           =Set(locUploadError, "");
                            Set(locUploadBusy, true);
-                           // Client-side checks first, so the user gets a fast,
-                           // specific error. The flow repeats every one of them,
-                           // because a disabled button is a courtesy and the
-                           // server-side check is the control.
+                           // Resolve the expected item from the declaration.
+                           // NEVER invent a requirement: no expected row means
+                           // no obligation the system knows about.
+                           Set(
+                               locItem,
+                               LookUp(
+                                   'MF EOM Item',
+                                   Reporting_Period = locPeriod,
+                                   Facility_ID = locSelectedFacility,
+                                   Requirement_ID = locRequirementId
+                               )
+                           );
                            If(
-                               MF_ReadOnlyMode,
-                                   Set(locUploadError, "Read-only mode is on, so submissions are paused. Contact " & gblSupportContact & "."),
+                               !gblCanWrite,
+                                   Set(locUploadError, "The app is read-only while we finish maintenance. You can view status but not submit."),
                                IsBlank(locItem.EOM_Item_ID),
-                                   Set(locUploadError, "Choose a document type before submitting. If none is listed, no expected item matches this facility and period."),
-                               Coalesce(locPeriod.Period_State.Value, MF_CurrentPeriod.Period_State.Value) = "CLOSED",
-                                   Set(locUploadError, "This reporting period is closed. Ask your installation manager to reopen it, or choose a different period."),
-                               // Size is checked here and again in the flow.
+                                   Set(locUploadError, "We found the file but there's no expected requirement matching that facility, document and period. Send it to Needs Classification and someone will confirm whether the requirement should exist."),
+                               // Client-side size check. The flow repeats it.
                                Set(
                                    locUploadResult,
                                    EOM05_AppUpload.Run(
                                        {
-                                           correlationId: Text(gblSessionId),
-                                           // The declaration. This is the
-                                           // classification. Tier 0.
-                                           eomItemId:     locItem.EOM_Item_ID,
-                                           eomItemKey:    locItem.Title,
-                                           facilityId:    locItem.Facility_ID,
-                                           installationId: locItem.Installation_ID,
-                                           requirementId: locItem.Requirement_ID,
-                                           periodId:      locItem.Reporting_Period_ID,
-                                           // Evidence only. Never authoritative.
-                                           fileName:      addFile.FileName,
-                                           fileContent:   addFile.Media,
-                                           submittedBy:   gblCurrentUser.Email,
-                                           channel:       "APP_UPLOAD",
-                                           classificationMethod: "DECLARED",
-                                           appVersion:    gblAppVersion
+                                           eomItemId:      locItem.EOM_Item_ID,
+                                           eomItemKey:     locItem.EOM_Item_Key,
+                                           fileName:       addFile.FileName,
+                                           fileContent:    addFile.Media,
+                                           uploadedBy:     gblCurrentUser.Email,
+                                           onBehalfOf:     If(locOnBehalf, locSelectedFacility, Blank()),
+                                           intakeMethod:   "App upload",
+                                           classification: "Declared at upload",
+                                           appVersion:     gblAppVersion
                                        }
                                    )
                                )
@@ -283,41 +268,47 @@ Screens:
                            Set(locUploadBusy, false);
                            If(
                                locUploadResult.ok,
-                               Patch(
-                                   MF_App_Event_Log, Defaults(MF_App_Event_Log),
-                                   MF_TelemetryRow("Upload", "Info", "scrUpload", locItem.EOM_Item_ID,
-                                       JSON({ version: locUploadResult.versionNumber, channel: "APP_UPLOAD", method: "DECLARED" }))
-                               );
-                               Notify(
-                                   "Submitted. This is version " & locUploadResult.versionNumber &
-                                   " of " & locItem.Requirement_Name & ". Previous versions are retained.",
-                                   NotificationType.Success
-                               );
-                               Back(ScreenTransition.None),
+                                   Notify(
+                                       "Submitted. Version " & locUploadResult.versionNo &
+                                       ". Previous versions are kept.",
+                                       NotificationType.Success
+                                   );
+                                   Reset(addFile);
+                                   Back(ScreenTransition.None),
                                !IsBlank(locUploadResult) && !locUploadResult.ok,
-                               Set(locUploadError, locUploadResult.message);
-                               Patch(
-                                   MF_App_Event_Log, Defaults(MF_App_Event_Log),
-                                   MF_TelemetryRow("UploadFailed", "Error", "scrUpload", locItem.EOM_Item_ID,
-                                       JSON({ code: locUploadResult.code, message: locUploadResult.message }))
-                               )
+                                   Set(locUploadError, locUploadResult.message)
                            )
 
                   - lblVersionNote:
                       Control: Text
                       Variant: Caption
                       Properties:
-                        # Resubmission creates v2 and retains v1. The checklist
-                        # row is never duplicated and no file is ever
-                        # overwritten. Say so before they worry about it.
+                        # Nothing is overwritten. Say so before they worry.
                         Text: |
-                          =If(
-                              Coalesce(locItem.Current_Version_Number, 0) > 0,
-                              "This will become version " & (locItem.Current_Version_Number + 1) &
-                              ". Version " & locItem.Current_Version_Number & " is kept and stays viewable in History.",
-                              "This will be version 1."
+                          =With(
+                              { current: LookUp('MF EOM Submission',
+                                                EOM_Item_ID = locItem.EOM_Item_ID,
+                                                Is_Current = true) },
+                              If(
+                                  IsBlank(current.Submission_ID),
+                                  "This will be version 1.",
+                                  "This will become version " & (current.Version_No + 1) &
+                                  ". Version " & current.Version_No &
+                                  " is kept and stays viewable in Activity."
+                              )
                           )
                         Color: =clrTextSecondary
                         Visible: =!IsBlank(locItem.EOM_Item_ID)
+                        AutoHeight: =true
+                        TabIndex: =-1
+
+                  - lblFolderRoute:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # Folder drops keep working. Say it, so nobody thinks
+                        # the app is the only route.
+                        Text: ="You can also drop files straight into the Portfolio FY folder. They are discovered automatically and routed for classification."
+                        Color: =clrTextSecondary
                         AutoHeight: =true
                         TabIndex: =-1

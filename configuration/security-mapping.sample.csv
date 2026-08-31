@@ -1,0 +1,10 @@
+Security_ID,UPN,Scope_Type,Portfolio_ID,Installation_ID,Facility_ID,Role,Can_QC,Can_Submit_On_Behalf,Can_Edit_Requirements,Developer_Flag,Tester_Flag,Active_Flag
+SEC-001,dfac.manager@example.mil,Facility,PORT-3,INST-LACKLAND,FAC-LACK-1234,DFAC Manager,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
+SEC-002,cafe.manager@example.mil,Facility,PORT-3,INST-LACKLAND,FAC-LACK-CAFE,DFAC Manager,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
+SEC-003,accountant@example.mil,Installation,PORT-3,INST-LACKLAND,,Accountant,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
+SEC-004,mfm.lackland@example.mil,Installation,PORT-3,INST-LACKLAND,,MFM,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE
+SEC-005,portfolio3.manager@example.mil,Portfolio,PORT-3,,,Portfolio Manager,TRUE,TRUE,FALSE,FALSE,FALSE,TRUE
+SEC-006,afsvc.leadership@example.mil,Enterprise,,,,AFSVC Leadership,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
+SEC-007,mf.admin@example.mil,Enterprise,,,,Admin,TRUE,TRUE,TRUE,FALSE,FALSE,TRUE
+SEC-008,build.developer@example.mil,Enterprise,,,,Admin,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+SEC-009,minot.dfac@example.mil,Facility,PORT-3,INST-MINOT,FAC-MINOT-1120,DFAC Manager,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE

@@ -24,19 +24,19 @@
   <CustomControls />
 
   <connectionreferences>
-    <connectionreference connectionreferencelogicalname="mfo_sharepointonline">
+    <connectionreference connectionreferencelogicalname="mfops_sharepointonline">
       <connectorid>/providers/Microsoft.PowerApps/apis/shared_sharepointonline</connectorid>
       <connectionreferencedisplayname>Mission Feeding SharePoint</connectionreferencedisplayname>
       <description>Reads and writes every MF_ list and the evidence library. Required; capability gates 1 and 2.</description>
       <iscustomizable>1</iscustomizable>
     </connectionreference>
-    <connectionreference connectionreferencelogicalname="mfo_office365users">
+    <connectionreference connectionreferencelogicalname="mfops_office365users">
       <connectorid>/providers/Microsoft.PowerApps/apis/shared_office365users</connectorid>
       <connectionreferencedisplayname>Mission Feeding Entra identity</connectionreferencedisplayname>
       <description>Resolves the signed-in identity. There is no sign-in screen: CAC resolves identity before the app loads. Capability gate 5.</description>
       <iscustomizable>1</iscustomizable>
     </connectionreference>
-    <connectionreference connectionreferencelogicalname="mfo_office365">
+    <connectionreference connectionreferencelogicalname="mfops_office365">
       <connectorid>/providers/Microsoft.PowerApps/apis/shared_office365</connectorid>
       <connectionreferencedisplayname>Mission Feeding Outlook</connectionreferencedisplayname>
       <description>EOM-04 notifications only, behind EnableNotifications which ships False. Leave the connection id empty if capability gate 7 is not green; the flow logs what it would have sent instead.</description>
@@ -44,17 +44,38 @@
     </connectionreference>
   </connectionreferences>
 
+  <!-- Definitions only. Every value is supplied at import time, and every one
+       has a matching MF_App_Config row so neither path is load-bearing alone.
+       The full set is in configuration/environment-variables.json. -->
   <environmentvariables>
-    <environmentvariabledefinition schemaname="mfo_SiteUrl">
-      <displayname>Mission Feeding site URL</displayname>
-      <description>Set at import. No URL is hard-coded anywhere in the app, the flows or the scripts.</description>
+    <environmentvariabledefinition schemaname="mfops_MF_SharePointSiteURL">
+      <displayname>MF_SharePointSiteURL</displayname>
+      <description>Site collection holding the MF lists. No URL is hard-coded anywhere in the app, the flows or the scripts.</description>
       <type>100000000</type>
       <isrequired>1</isrequired>
     </environmentvariabledefinition>
-    <environmentvariabledefinition schemaname="mfo_EvidenceLibraryPath">
-      <displayname>Evidence library path</displayname>
-      <description>Server-relative path of the evidence document library. EOM-02 binds to it at library level, not folder level.</description>
+    <environmentvariabledefinition schemaname="mfops_MF_FileIntakeLibrary">
+      <displayname>MF_FileIntakeLibrary</displayname>
+      <description>Document library where the Portfolio FY folders live. EOM-02 binds to it at LIBRARY level, not folder level.</description>
       <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_EvidenceRootPath">
+      <displayname>MF_EvidenceRootPath</displayname>
+      <description>Where EOM-05 writes. EOM-02 ignores everything under here, so the app's own writes never come back round as unclassified strays.</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_PowerBIReportURL">
+      <displayname>MF_PowerBIReportURL</displayname>
+      <description>COP deep link. The gov endpoint differs by cloud; never hard-code app.powerbi.com.</description>
+      <type>100000000</type>
+      <isrequired>0</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_NotificationsEnabled">
+      <displayname>MF_NotificationsEnabled</displayname>
+      <description>Master switch for EOM-04. Ship FALSE; enable after reading the suppressed-send log for a full cycle.</description>
+      <type>100000001</type>
       <isrequired>1</isrequired>
     </environmentvariabledefinition>
   </environmentvariables>
