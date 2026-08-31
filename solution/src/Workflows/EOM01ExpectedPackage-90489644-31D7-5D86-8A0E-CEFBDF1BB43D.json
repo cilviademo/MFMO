@@ -1,0 +1,185 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "mfops_sharepointonline"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_SharePointSiteURL"
+          }
+        },
+        "MF_ConfigList (mfops_MF_ConfigList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_ConfigList"
+          }
+        },
+        "MF_RequirementList (mfops_MF_RequirementList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_RequirementList"
+          }
+        },
+        "MF_ItemList (mfops_MF_ItemList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_ItemList"
+          }
+        },
+        "MF_CurrentFiscalYear (mfops_MF_CurrentFiscalYear)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_CurrentFiscalYear"
+          }
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Month",
+            "interval": 1,
+            "schedule": {
+              "monthDays": [
+                1
+              ],
+              "hours": [
+                "5"
+              ],
+              "minutes": [
+                0
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "cd2e72f3-4c90-51be-aa5f-9f5c4c5c161b"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_ExpectedSchemaVersion": {
+          "type": "InitializeVariable",
+          "runAfter": {},
+          "inputs": {
+            "variables": [
+              {
+                "name": "ExpectedSchemaVersion",
+                "type": "string",
+                "value": "5.0"
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c6e0f532-bf38-503a-ad64-6b8f2134c782"
+          }
+        },
+        "READ_THE_SPECIFICATION_FIRST": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": {
+            "flow": "EOM-01 Expected Package Generator",
+            "purpose": "Create the expected MF_EOM_Item rows for the open period.",
+            "specification": "flows/EOM01-ExpectedPackage/definition.md",
+            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
+            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
+            "note": ""
+          },
+          "metadata": {
+            "operationMetadataId": "ea3e64cf-f1db-556a-a5e0-89cf2e211522"
+          }
+        },
+        "Get_the_deployed_schema_version": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "READ_THE_SPECIFICATION_FIRST": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_ConfigList (mfops_MF_ConfigList)')",
+              "$filter": "Config_Key eq 'SchemaVersion'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "2179055b-06fb-54a1-81f3-ad6b6a773161"
+          }
+        },
+        "Stop_on_a_schema_mismatch": {
+          "type": "If",
+          "runAfter": {
+            "Get_the_deployed_schema_version": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "not": {
+              "equals": [
+                "@first(body('Get_the_deployed_schema_version')?['value'])?['Config_Value']",
+                "@variables('ExpectedSchemaVersion')"
+              ]
+            }
+          },
+          "actions": {
+            "CONFIGURATION_REQUIRED": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "CONFIGURATION_REQUIRED",
+                  "message": "This flow expects a different schema version than MF_App_Config reports. A newer flow writing against an older schema patches columns that do not exist, which writes nothing rather than erroring. Stopped before any write. See docs/SHAREPOINT_SCHEMA_MANIFEST.md."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "07673d17-1783-5154-a663-0307ab8a4432"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "metadata": {
+            "operationMetadataId": "8e1439b4-bcc1-57ff-8996-475f6d4ab6a4"
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

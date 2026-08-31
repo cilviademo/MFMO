@@ -1,0 +1,198 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "mfops_sharepointonline"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "mfops_office365"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_SharePointSiteURL"
+          }
+        },
+        "MF_ConfigList (mfops_MF_ConfigList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_ConfigList"
+          }
+        },
+        "MF_ItemList (mfops_MF_ItemList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_ItemList"
+          }
+        },
+        "MF_AuditList (mfops_MF_AuditList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_AuditList"
+          }
+        },
+        "MF_NotificationsEnabled (mfops_MF_NotificationsEnabled)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_NotificationsEnabled"
+          }
+        },
+        "MF_EscalationDaysOverdue (mfops_MF_EscalationDaysOverdue)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_EscalationDaysOverdue"
+          }
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "schedule": {
+              "hours": [
+                "7"
+              ],
+              "minutes": [
+                0
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "c8e727ff-4772-58a8-806a-d95c5aae8481"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_ExpectedSchemaVersion": {
+          "type": "InitializeVariable",
+          "runAfter": {},
+          "inputs": {
+            "variables": [
+              {
+                "name": "ExpectedSchemaVersion",
+                "type": "string",
+                "value": "5.0"
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f7ca0dd2-3245-57c2-a742-41a87c6869f6"
+          }
+        },
+        "READ_THE_SPECIFICATION_FIRST": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": {
+            "flow": "EOM-04 Notifications",
+            "purpose": "Suspense reminders and escalation. SHIPS DISABLED.",
+            "specification": "flows/EOM04-Notifications/definition.md",
+            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
+            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
+            "note": "MF_NotificationsEnabled gates every send. With it FALSE the flow records what it WOULD have sent to MF_EOM_Audit as 'Notification Suppressed'. Read a full cycle of that before enabling anything."
+          },
+          "metadata": {
+            "operationMetadataId": "d78b5fcd-3c64-5500-8d8d-167e4da522a6"
+          }
+        },
+        "Get_the_deployed_schema_version": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "READ_THE_SPECIFICATION_FIRST": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_ConfigList (mfops_MF_ConfigList)')",
+              "$filter": "Config_Key eq 'SchemaVersion'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "746dde5f-b1a6-558f-b5d8-cb2f2a341fdd"
+          }
+        },
+        "Stop_on_a_schema_mismatch": {
+          "type": "If",
+          "runAfter": {
+            "Get_the_deployed_schema_version": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "not": {
+              "equals": [
+                "@first(body('Get_the_deployed_schema_version')?['value'])?['Config_Value']",
+                "@variables('ExpectedSchemaVersion')"
+              ]
+            }
+          },
+          "actions": {
+            "CONFIGURATION_REQUIRED": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "CONFIGURATION_REQUIRED",
+                  "message": "This flow expects a different schema version than MF_App_Config reports. A newer flow writing against an older schema patches columns that do not exist, which writes nothing rather than erroring. Stopped before any write. See docs/SHAREPOINT_SCHEMA_MANIFEST.md."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "327f67fe-7d3b-55e2-a631-d9ade280d38f"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "metadata": {
+            "operationMetadataId": "309f296e-f5e5-53e6-92f6-6785276d63f1"
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

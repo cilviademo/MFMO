@@ -23,13 +23,29 @@ git -C "$ROOT" archive "$TAG" | tar -x -C "$STAGE"
 # of anything.
 find "$STAGE/solution/src" -exec touch -t 200001010000.00 {} +
 
+# Refuse to ship a canvas app binary this build cannot validate. A hand-authored
+# .msapp that Studio rejects fails the import with an error naming an internal
+# file and explaining nothing, which is worse than an honestly incomplete
+# package. CANVAS_APP_ASSEMBLY.md covers building it inside the imported
+# solution instead.
+if find "$STAGE/solution" -name '*.msapp' | grep -q .; then
+    echo "REFUSING TO BUILD: a .msapp is present and this build cannot validate it." >&2
+    exit 1
+fi
+
+# The solution ZIP is packed from INSIDE src/, so [Content_Types].xml sits at
+# the archive root where Power Platform expects it. Zipping the src/ directory
+# itself puts everything one level down and the import rejects it.
 mkdir -p "$OUT"
 rm -f "$OUT/MissionFeedingOperations_$VER.zip"
-( cd "$STAGE/solution" && zip -qrX "$OUT/MissionFeedingOperations_$VER.zip" src )
+( cd "$STAGE/solution/src" && zip -qrX "$OUT/MissionFeedingOperations_$VER.zip" . -x '.*' )
 
 cp "$STAGE/RELEASE_NOTES.md" "$OUT/"
 cp "$STAGE/deployment/DEPENDENCY_MANIFEST.md" "$OUT/"
 cp "$STAGE/docs/SECURITY_VERIFICATION.md" "$OUT/SECURITY_README.md"
+cp "$STAGE/CANVAS_APP_ASSEMBLY.md" "$OUT/"
+cp "$STAGE/deployment/PREFLIGHT.md" "$OUT/"
+cp "$STAGE/provisioning/PROVISION-WITHOUT-POWERSHELL.md" "$OUT/"
 
 COMMIT="$(git -C "$ROOT" rev-parse "$TAG^{commit}")"
 {

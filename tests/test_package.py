@@ -34,6 +34,18 @@ def components(type_id):
             if c.get("type") == str(type_id)]
 
 
+def workflows():
+    """The Workflow entries in Customizations.xml."""
+    tree = ET.parse(os.path.join(SOLUTION, "Customizations.xml"))
+    return list(tree.getroot().iter("Workflow"))
+
+
+def flow_json(rel):
+    with open(os.path.join(ROOT, "solution", "src", rel.lstrip("/")),
+              encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 class TheFilesAreWellFormed(unittest.TestCase):
     def test_solution_xml_parses(self):
         solution_xml()
@@ -62,40 +74,55 @@ class TheManifestIsComplete(unittest.TestCase):
         # the four site bindings get set after import.
         self.assertEqual(self.root.find(".//Managed").text, "0")
 
-    def test_it_declares_the_canvas_app(self):
-        self.assertEqual(len(components(300)), 1)
+    def test_it_declares_five_flows(self):
+        self.assertEqual(len(components(29)) or len(
+            [c for c in self.root.iter("RootComponent")
+             if c.get("type") == "29"]), 5)
 
     def test_it_declares_no_missing_dependency(self):
         self.assertIsNotNone(self.root.find(".//MissingDependencies"))
 
 
 class NoOrphanedReference(unittest.TestCase):
-    """Every schemaName must correspond to something that exists."""
+    """Every declared component must correspond to something that exists.
 
-    def test_every_declared_flow_has_a_specification(self):
-        specs = {d for d in os.listdir(os.path.join(ROOT, "flows"))
-                 if d.startswith("EOM")}
-        for name in components(29):
-            slug = name.replace("mfops_", "")
-            match = [s for s in specs
-                     if s.replace("-", "").lower() == slug.lower()]
-            self.assertTrue(match,
-                            f"{name} is declared but no flows/ directory "
-                            f"matches it. Candidates: {sorted(specs)}")
+    An orphaned RootComponent fails the import with a message naming the
+    missing component and nothing else useful, at the worst possible moment.
+    """
 
-    def test_every_flow_specification_is_declared(self):
-        declared = {n.replace("mfops_", "").lower() for n in components(29)}
-        for d in sorted(os.listdir(os.path.join(ROOT, "flows"))):
-            if not d.startswith("EOM"):
-                continue
-            self.assertIn(d.replace("-", "").lower(), declared,
-                          f"flows/{d} exists but the solution does not "
-                          "declare it — it will not be imported")
+    def test_every_declared_workflow_has_a_json_file(self):
+        for w in workflows():
+            rel = w.find("JsonFileName").text.lstrip("/")
+            path = os.path.join(ROOT, "solution", "src", rel)
+            self.assertTrue(os.path.exists(path),
+                            f"{w.get('Name')} references {rel}, which is absent")
+
+    def test_every_json_file_is_declared(self):
+        declared = {w.find("JsonFileName").text.lstrip("/").split("/")[-1]
+                    for w in workflows()}
+        present = set(os.listdir(os.path.join(ROOT, "solution", "src",
+                                              "Workflows")))
+        self.assertEqual(present, declared,
+                         "a workflow file exists that nothing declares, or vice "
+                         "versa. Either will not be imported")
+
+    def test_every_workflow_root_component_matches_a_workflow(self):
+        ids = {c.get("id", "").strip("{}").lower()
+               for c in solution_xml().iter("RootComponent")
+               if c.get("type") == "29"}
+        declared = {w.get("WorkflowId").strip("{}").lower() for w in workflows()}
+        self.assertEqual(ids, declared)
+
+    def test_the_five_flows_are_present(self):
+        names = {w.get("Name") for w in workflows()}
+        self.assertEqual(len(names), 5)
+        for expected in ("EOM-01", "EOM-02 ", "EOM-02b", "EOM-03", "EOM-04"):
+            self.assertTrue(any(expected in n for n in names), expected)
 
     def test_the_retired_flow_names_are_gone(self):
-        declared = set(components(29))
-        for retired in ("mfops_EOM02FileIntake", "mfops_EOM05AppUpload"):
-            self.assertNotIn(retired, declared)
+        body = read("solution", "src", "Other", "Customizations.xml")
+        for retired in ("EOM02FileIntake", "EOM05AppUpload", "EOM-05"):
+            self.assertNotIn(retired, body)
 
     def test_every_declared_connection_reference_exists(self):
         with open(os.path.join(ROOT, "configuration",
@@ -109,21 +136,140 @@ class NoOrphanedReference(unittest.TestCase):
                                "environment-variables.json"),
                   encoding="utf-8") as fh:
             defined = [v["schemaName"] for v in json.load(fh)["environmentVariables"]]
-        self.assertEqual(components(380), defined,
-                         "the solution's environment variables and "
-                         "environment-variables.json disagree")
+        self.assertEqual(components(380), defined)
 
     def test_the_retired_environment_variables_are_gone(self):
         declared = set(components(380))
         for retired in ("mfops_MF_EvidenceRootPath", "mfops_MF_FileIntakeLibrary"):
-            self.assertNotIn(retired, declared,
-                             "a retired variable is still declared; it belonged "
-                             "to the central-evidence architecture, D-01")
+            self.assertNotIn(retired, declared)
 
     def test_the_four_site_bindings_are_declared(self):
         declared = set(components(380))
         for n in range(1, 5):
             self.assertIn(f"mfops_MF_Portfolio{n}_SiteURL", declared)
+
+
+class ThePackageHasNoCanvasApp(unittest.TestCase):
+    """A hand-authored .msapp that Studio rejects is worse than none.
+
+    The import fails with an error naming an internal file and explaining
+    nothing, and whoever is holding it spends an afternoon assuming the tenant
+    is at fault.
+    """
+
+    def test_no_msapp_and_no_placeholder(self):
+        for base, _, files in os.walk(os.path.join(ROOT, "solution")):
+            for n in files:
+                self.assertFalse(n.endswith(".msapp"),
+                                 f"{n} is a canvas app binary this build "
+                                 "cannot validate")
+
+    def test_no_canvas_app_root_component_is_declared(self):
+        # Type 300 is a canvas app. Declaring one the package does not contain
+        # fails the import.
+        self.assertEqual(components(300), [],
+                         "the manifest declares a canvas app that is not here")
+
+    def test_the_absence_is_stated_in_the_manifest(self):
+        body = read("solution", "src", "Other", "Solution.xml")
+        self.assertRegex(body, r"(?i)canvas app is not in this package")
+
+    def test_the_assembly_guide_exists_and_is_substantive(self):
+        path = os.path.join(ROOT, "CANVAS_APP_ASSEMBLY.md")
+        self.assertTrue(os.path.exists(path),
+                        "the app is excluded but nothing says how to build it")
+        self.assertGreater(len(read("CANVAS_APP_ASSEMBLY.md").strip()), 3000)
+
+
+class TheFlowsAreWiredEvenWhereTheyAreUnfinished(unittest.TestCase):
+    def flows(self):
+        for w in workflows():
+            yield w.get("Name"), flow_json(w.find("JsonFileName").text)
+
+    def test_every_flow_has_a_trigger(self):
+        for name, d in self.flows():
+            triggers = d["properties"]["definition"]["triggers"]
+            self.assertEqual(len(triggers), 1, name)
+
+    def test_every_flow_binds_its_connection_references(self):
+        with open(os.path.join(ROOT, "configuration",
+                               "connection-references.json"),
+                  encoding="utf-8") as fh:
+            known = {c["schemaName"] for c in json.load(fh)["connectionReferences"]}
+        for name, d in self.flows():
+            refs = d["properties"]["connectionReferences"]
+            self.assertTrue(refs, f"{name} binds no connection")
+            for r in refs.values():
+                logical = r["connection"]["connectionReferenceLogicalName"]
+                self.assertIn(logical, known,
+                              f"{name} binds {logical}, which the solution "
+                              "does not declare")
+
+    def test_every_flow_reads_environment_variables_not_literals(self):
+        with open(os.path.join(ROOT, "configuration",
+                               "environment-variables.json"),
+                  encoding="utf-8") as fh:
+            known = {v["schemaName"] for v in json.load(fh)["environmentVariables"]}
+        for name, d in self.flows():
+            params = d["properties"]["definition"]["parameters"]
+            bound = [p["metadata"]["schemaName"] for p in params.values()
+                     if isinstance(p, dict) and "metadata" in p]
+            self.assertTrue(bound, f"{name} reads no environment variable")
+            for b in bound:
+                self.assertIn(b, known, f"{name} reads unknown variable {b}")
+
+    def test_no_flow_contains_a_site_url(self):
+        for name, d in self.flows():
+            body = json.dumps(d)
+            self.assertNotRegex(body, r"https://[a-z0-9.-]+\.(sharepoint|dps)\.",
+                                f"{name} carries a destination")
+
+    def test_every_flow_checks_the_schema_version_before_writing(self):
+        # A flow can be invoked directly, and a scheduled flow has no app in
+        # front of it at all.
+        for name, d in self.flows():
+            actions = d["properties"]["definition"]["actions"]
+            self.assertIn("Stop_on_a_schema_mismatch", actions, name)
+            branch = actions["Stop_on_a_schema_mismatch"]["actions"]
+            self.assertIn("CONFIGURATION_REQUIRED", branch, name)
+            self.assertEqual(
+                branch["CONFIGURATION_REQUIRED"]["type"], "Terminate", name)
+
+    def test_the_expected_schema_version_matches_the_schema(self):
+        import sys as _sys
+        _sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import eom_schema as S
+        for name, d in self.flows():
+            init = d["properties"]["definition"]["actions"][
+                "Initialize_ExpectedSchemaVersion"]
+            self.assertEqual(init["inputs"]["variables"][0]["value"],
+                             S.SCHEMA_VERSION, name)
+
+    def test_every_flow_names_its_specification(self):
+        # An unfinished flow that does not say so is a trap.
+        for name, d in self.flows():
+            readme = d["properties"]["definition"]["actions"][
+                "READ_THE_SPECIFICATION_FIRST"]["inputs"]
+            self.assertTrue(readme["specification"].startswith("flows/"), name)
+            self.assertIn("NOT IMPLEMENTED", readme["status"], name)
+            spec = os.path.join(ROOT, readme["specification"])
+            self.assertTrue(os.path.exists(spec),
+                            f"{name} names a specification that does not exist")
+
+    def test_every_flow_imports_disabled(self):
+        # Flows are enabled one at a time, in order, after EOM-01 is proven.
+        for w in workflows():
+            self.assertEqual(w.find("StateCode").text, "0", w.get("Name"))
+
+    def test_the_submission_flow_does_not_accept_a_caller_identity(self):
+        d = dict(self.flows())["EOM-02 Submission"]
+        schema = d["properties"]["definition"]["triggers"]["Request"][
+            "inputs"]["schema"]["properties"]
+        self.assertNotIn("uploadedBy", schema)
+        self.assertIn("submissionRequestId", schema)
+        self.assertIn("submissionRequestId",
+                      d["properties"]["definition"]["triggers"]["Request"][
+                          "inputs"]["schema"]["required"])
 
 
 class NothingEnvironmentSpecificIsBaked(unittest.TestCase):

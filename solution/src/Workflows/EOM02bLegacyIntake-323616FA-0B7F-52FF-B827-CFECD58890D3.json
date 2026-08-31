@@ -1,0 +1,186 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "mfops_sharepointonline"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_SharePointSiteURL"
+          }
+        },
+        "MF_ConfigList (mfops_MF_ConfigList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_ConfigList"
+          }
+        },
+        "MF_UnmatchedList (mfops_MF_UnmatchedList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_UnmatchedList"
+          }
+        },
+        "MF_SubmissionList (mfops_MF_SubmissionList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_SubmissionList"
+          }
+        },
+        "MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_Portfolio1_SiteURL"
+          }
+        }
+      },
+      "triggers": {
+        "SharePointFileCreated": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "OnNewFileV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)')",
+              "table": "Shared Documents"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 15
+          },
+          "metadata": {
+            "operationMetadataId": "fe99076a-57d8-5dff-9902-9dae901f7b43"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_ExpectedSchemaVersion": {
+          "type": "InitializeVariable",
+          "runAfter": {},
+          "inputs": {
+            "variables": [
+              {
+                "name": "ExpectedSchemaVersion",
+                "type": "string",
+                "value": "5.0"
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fae515cc-88fd-5821-bba0-c46c4bf8b556"
+          }
+        },
+        "READ_THE_SPECIFICATION_FIRST": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": {
+            "flow": "EOM-02b Legacy Intake",
+            "purpose": "Catch folder drops the app did not create. DEPLOY FOUR TIMES, once per portfolio site collection.",
+            "specification": "flows/EOM02b-LegacyIntake/definition.md",
+            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
+            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
+            "note": "A SharePoint trigger binds to ONE site. The four portfolios are four separate site collections, so this flow is deployed four times, each bound to its own MF_Portfolio{n}_SiteURL. One instance covering all four is not an option the connector offers."
+          },
+          "metadata": {
+            "operationMetadataId": "97812783-0639-598f-b5da-460207c371b5"
+          }
+        },
+        "Get_the_deployed_schema_version": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "READ_THE_SPECIFICATION_FIRST": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_ConfigList (mfops_MF_ConfigList)')",
+              "$filter": "Config_Key eq 'SchemaVersion'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "083c6af9-a312-5016-811f-373764b8f409"
+          }
+        },
+        "Stop_on_a_schema_mismatch": {
+          "type": "If",
+          "runAfter": {
+            "Get_the_deployed_schema_version": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "not": {
+              "equals": [
+                "@first(body('Get_the_deployed_schema_version')?['value'])?['Config_Value']",
+                "@variables('ExpectedSchemaVersion')"
+              ]
+            }
+          },
+          "actions": {
+            "CONFIGURATION_REQUIRED": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "CONFIGURATION_REQUIRED",
+                  "message": "This flow expects a different schema version than MF_App_Config reports. A newer flow writing against an older schema patches columns that do not exist, which writes nothing rather than erroring. Stopped before any write. See docs/SHAREPOINT_SCHEMA_MANIFEST.md."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "c7237f06-941b-532b-b973-dfeeddf9bc3f"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "metadata": {
+            "operationMetadataId": "6715727e-37e8-583a-9397-40b35fe396b1"
+          }
+        }
+      },
+      "outputs": {}
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}

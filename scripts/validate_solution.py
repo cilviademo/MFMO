@@ -129,7 +129,12 @@ def check_no_hard_coded_environment():
     addresses a SharePoint list by its identifier, bound at author time. A list
     name as a STRING LITERAL is not, and is what this catches.
     """
-    url = re.compile(r"https://[\w.-]*(sharepoint\.(com|us|mil)|app\.powerbi\.com)", re.I)
+    # Both government SharePoint hosts and the commercial one. This tenant is
+    # DoD, where sites live on .dps.mil -- a rule watching only .sharepoint.*
+    # watches the host a leak cannot occur on and misses the one it can.
+    url = re.compile(
+        r"https://[\w.-]*(sharepoint\.(com|us|mil)|dps\.mil|app\.powerbi\.com)",
+        re.I)
     guid = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.I)
     # A data-source SYMBOL ('MF EOM Item') is unavoidable; a list's INTERNAL
     # name as a bare string literal is not, and that is what this catches.
@@ -146,7 +151,18 @@ def check_no_hard_coded_environment():
                 if url.search(line):
                     fail(f"hard-coded URL at {rel}:{i}")
                     hits += 1
-                if guid.search(line) and "00000000-0000" not in line:
+                # A GUID in source is a destination leak -- a site id, a list
+                # id, a connection id baked into the package. It is NOT a
+                # WorkflowId or an operationMetadataId: those are structural,
+                # every real flow definition has them, and this build derives
+                # them deterministically from the flow name so a rebuild is
+                # byte-identical. Blanket-failing on the shape would mean
+                # either no flows in the package or a weakened rule, and the
+                # rule is the one that stops a tenant id shipping.
+                structural = ("operationMetadataId", "WorkflowId",
+                              "JsonFileName", '<RootComponent type="29"')
+                if (guid.search(line) and "00000000-0000" not in line
+                        and not any(k in line for k in structural)):
                     fail(f"hard-coded GUID at {rel}:{i}")
                     hits += 1
                 for m in literal_list.findall(line):
