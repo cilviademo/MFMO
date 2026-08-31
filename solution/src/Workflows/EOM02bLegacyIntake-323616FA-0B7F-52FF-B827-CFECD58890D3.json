@@ -51,6 +51,13 @@
             "schemaName": "mfops_MF_SubmissionList"
           }
         },
+        "MF_SecurityList (mfops_MF_SecurityList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_SecurityList"
+          }
+        },
         "MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)": {
           "defaultValue": "",
           "type": "String",
@@ -100,25 +107,10 @@
             "operationMetadataId": "fae515cc-88fd-5821-bba0-c46c4bf8b556"
           }
         },
-        "READ_THE_SPECIFICATION_FIRST": {
-          "type": "Compose",
-          "runAfter": {},
-          "inputs": {
-            "flow": "EOM-02b Legacy Intake",
-            "purpose": "Catch folder drops the app did not create. DEPLOY FOUR TIMES, once per portfolio site collection.",
-            "specification": "flows/EOM02b-LegacyIntake/definition.md",
-            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
-            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
-            "note": "A SharePoint trigger binds to ONE site. The four portfolios are four separate site collections, so this flow is deployed four times, each bound to its own MF_Portfolio{n}_SiteURL. One instance covering all four is not an option the connector offers."
-          },
-          "metadata": {
-            "operationMetadataId": "97812783-0639-598f-b5da-460207c371b5"
-          }
-        },
         "Get_the_deployed_schema_version": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "READ_THE_SPECIFICATION_FIRST": [
+            "Initialize_ExpectedSchemaVersion": [
               "Succeeded"
             ]
           },
@@ -176,6 +168,118 @@
           },
           "metadata": {
             "operationMetadataId": "6715727e-37e8-583a-9397-40b35fe396b1"
+          }
+        },
+        "Has_a_submission_already_claimed_this_file": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Stop_on_a_schema_mismatch": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_SubmissionList (mfops_MF_SubmissionList)')",
+              "$filter": "SharePoint_Unique_ID eq '@{triggerOutputs()?['body']?['{Identifier}']}'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "5cb15746-24e7-526f-962f-eef52174dc29"
+          }
+        },
+        "Only_classify_what_the_app_did_not_write": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@length(body('Has_a_submission_already_claimed_this_file')?['value'])",
+              0
+            ]
+          },
+          "actions": {
+            "Suggest_an_installation_from_the_uploader": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "GetItems",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                  "table": "@parameters('MF_SecurityList (mfops_MF_SecurityList)')",
+                  "$filter": "UPN eq '@{triggerOutputs()?['body']?['Author']?['Email']}' and Active_Flag eq 1",
+                  "$top": 1
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "metadata": {
+                "operationMetadataId": "8e9a32fd-2680-57bd-a8e2-e547ccfe5636"
+              }
+            },
+            "Queue_it_for_a_human": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Suggest_an_installation_from_the_uploader": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "PostItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                  "table": "@parameters('MF_UnmatchedList (mfops_MF_UnmatchedList)')",
+                  "item": {
+                    "File_Name": "@{triggerOutputs()?['body']?['Name']}",
+                    "File_URL": "@{triggerOutputs()?['body']?['Path']}",
+                    "Discovered_DateTime": "@{utcNow()}",
+                    "Uploaded_By": "@{triggerOutputs()?['body']?['Author']?['Email']}",
+                    "Suggested_Installation_ID": "@{first(body('Suggest_an_installation_from_the_uploader')?['value'])?['Installation_ID']}",
+                    "Suggested_Document_Code": "",
+                    "Resolution_Status": "Needs Classification"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "metadata": {
+                "operationMetadataId": "d4cc20d3-ab25-555d-801e-c467d4953497"
+              }
+            },
+            "Note_that_nothing_was_invented": {
+              "type": "Compose",
+              "runAfter": {
+                "Queue_it_for_a_human": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": "NEVER INVENT A REQUIREMENT. There is no branch here that creates an MF EOM Item and there must never be one. A file with no matching expected item stays in the queue until a human decides what it is, or decides the requirement should exist -- which is a deliberate act on scrAdminRequirements.",
+              "metadata": {
+                "operationMetadataId": "fbc82dd7-5a94-5330-becc-2e4df812bec0"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Has_a_submission_already_claimed_this_file": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a47d8b7e-7512-536a-91fb-e6eaff1d4d46"
           }
         }
       },

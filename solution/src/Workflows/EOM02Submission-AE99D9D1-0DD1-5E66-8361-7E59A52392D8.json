@@ -65,32 +65,18 @@
             "schemaName": "mfops_MF_AuditList"
           }
         },
-        "MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)": {
+        "MF_InstallationList (mfops_MF_InstallationList)": {
           "defaultValue": "",
           "type": "String",
           "metadata": {
-            "schemaName": "mfops_MF_Portfolio1_SiteURL"
+            "schemaName": "mfops_MF_InstallationList"
           }
         },
-        "MF_Portfolio2_SiteURL (mfops_MF_Portfolio2_SiteURL)": {
+        "MF_DestinationList (mfops_MF_DestinationList)": {
           "defaultValue": "",
           "type": "String",
           "metadata": {
-            "schemaName": "mfops_MF_Portfolio2_SiteURL"
-          }
-        },
-        "MF_Portfolio3_SiteURL (mfops_MF_Portfolio3_SiteURL)": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-            "schemaName": "mfops_MF_Portfolio3_SiteURL"
-          }
-        },
-        "MF_Portfolio4_SiteURL (mfops_MF_Portfolio4_SiteURL)": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-            "schemaName": "mfops_MF_Portfolio4_SiteURL"
+            "schemaName": "mfops_MF_DestinationList"
           }
         }
       },
@@ -173,25 +159,10 @@
             "operationMetadataId": "6a0ebb25-972f-5be2-8417-24e2f03bfcbb"
           }
         },
-        "READ_THE_SPECIFICATION_FIRST": {
-          "type": "Compose",
-          "runAfter": {},
-          "inputs": {
-            "flow": "EOM-02 Submission",
-            "purpose": "Resolve the destination, place the file, write the submission row. Called by scrUpload.",
-            "specification": "flows/EOM02-Submission/definition.md",
-            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
-            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
-            "note": "uploadedBy is NOT an input. The caller's UPN comes from the flow's authenticated context: a client that can name its own user is not an authorisation system."
-          },
-          "metadata": {
-            "operationMetadataId": "48dc71b8-ff34-5394-b037-7c6d6319d8bd"
-          }
-        },
         "Get_the_deployed_schema_version": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "READ_THE_SPECIFICATION_FIRST": [
+            "Initialize_ExpectedSchemaVersion": [
               "Succeeded"
             ]
           },
@@ -249,6 +220,584 @@
           },
           "metadata": {
             "operationMetadataId": "fcd5b9a1-04d8-539f-96f2-2ce5d9dc42bb"
+          }
+        },
+        "Caller": {
+          "type": "Compose",
+          "runAfter": {
+            "Stop_on_a_schema_mismatch": [
+              "Succeeded"
+            ]
+          },
+          "inputs": "@{triggerOutputs()?['headers']?['x-ms-user-email-encoded']}",
+          "metadata": {
+            "operationMetadataId": "df18dd18-be9c-5309-ad01-167c5c30a96d"
+          }
+        },
+        "Get_the_callers_scope": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Caller": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_SecurityList (mfops_MF_SecurityList)')",
+              "$filter": "UPN eq '@{outputs('Caller')}' and Active_Flag eq 1",
+              "$top": 50
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "e8fdcafc-aed3-51df-9d48-0d1d186c5793"
+          }
+        },
+        "Refuse_an_unmapped_or_out_of_scope_caller": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@length(body('Get_the_callers_scope')?['value'])",
+                  0
+                ]
+              },
+              {
+                "equals": [
+                  "@length(filter(body('Get_the_callers_scope')?['value'], or(equals(item()?['Scope_Type']?['Value'], 'Enterprise'), equals(item()?['Installation_ID'], triggerBody()?['installationId']))))",
+                  0
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "PERMISSION_DENIED": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 403,
+                "body": {
+                  "ok": false,
+                  "code": "PERMISSION_DENIED",
+                  "message": "You do not have access to that installation."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "f5be7527-8b35-52eb-acd6-c5d41208e6ed"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Get_the_callers_scope": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3115b4a9-1e58-5e28-8b94-eb5acf39f4a0"
+          }
+        },
+        "Look_for_a_replay": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Refuse_an_unmapped_or_out_of_scope_caller": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_SubmissionList (mfops_MF_SubmissionList)')",
+              "$filter": "Submission_Request_ID eq '@{triggerBody()?['submissionRequestId']}'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "361a504b-6426-55ca-b81c-d772aefb3de8"
+          }
+        },
+        "Return_the_first_result_if_this_is_a_replay": {
+          "type": "If",
+          "expression": {
+            "greater": [
+              "@length(body('Look_for_a_replay')?['value'])",
+              0
+            ]
+          },
+          "actions": {
+            "SUBMISSION_REPLAY": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "ok": true,
+                  "code": "SUBMISSION_REPLAY",
+                  "submissionId": "@{first(body('Look_for_a_replay')?['value'])?['Submission_ID']}",
+                  "versionNo": "@first(body('Look_for_a_replay')?['value'])?['Version_No']",
+                  "message": "Submitted."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "9e412cdb-57f9-5406-b8c3-5faa33e640c2"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Look_for_a_replay": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "db8b6588-06f0-56e0-8ebf-c61397eb239c"
+          }
+        },
+        "Find_the_expected_item": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Return_the_first_result_if_this_is_a_replay": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_ItemList (mfops_MF_ItemList)')",
+              "$filter": "Reporting_Period eq '@{triggerBody()?['reportingPeriod']}' and Requirement_ID eq '@{triggerBody()?['requirementId']}' and Facility_ID eq '@{triggerBody()?['facilityId']}'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "11d9d832-6e80-5eb6-aec6-7e4c72096b55"
+          }
+        },
+        "Refuse_if_nothing_is_expected": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@length(body('Find_the_expected_item')?['value'])",
+              0
+            ]
+          },
+          "actions": {
+            "NO_EXPECTED_ITEM": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "ok": false,
+                  "code": "NO_EXPECTED_ITEM",
+                  "message": "There's no expected requirement matching that facility, document and period. Send it to Needs Classification and someone will confirm whether the requirement should exist."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "7afd4f67-0f2e-515b-b901-7a654126bb67"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Find_the_expected_item": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "be8d2d6d-a51d-5dcf-be7e-579d3843fd1e"
+          }
+        },
+        "Get_the_installation": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Refuse_if_nothing_is_expected": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_InstallationList (mfops_MF_InstallationList)')",
+              "$filter": "Installation_ID eq '@{triggerBody()?['installationId']}'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "dfc65adc-563b-5066-af05-ae748c94904c"
+          }
+        },
+        "Get_the_destination": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Get_the_installation": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_DestinationList (mfops_MF_DestinationList)')",
+              "$filter": "Portfolio_ID eq '@{first(body('Get_the_installation')?['value'])?['Portfolio_ID']}' and Document_Domain eq 'EOM' and Active_Flag eq 1",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "13248c08-bd63-528d-8fb3-847ed8213cba"
+          }
+        },
+        "Fail_closed_on_the_destination": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@length(body('Get_the_destination')?['value'])",
+                  0
+                ]
+              },
+              {
+                "equals": [
+                  "@coalesce(first(body('Get_the_destination')?['value'])?['Verified_By'], '')",
+                  ""
+                ]
+              },
+              {
+                "equals": [
+                  "@coalesce(first(body('Get_the_destination')?['value'])?['Site_URL'], '')",
+                  ""
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "DESTINATION_NOT_USABLE": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "ok": false,
+                  "code": "DESTINATION_NOT_CONFIGURED",
+                  "message": "Uploads for this portfolio aren't configured yet. An administrator has been notified."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "eee02e19-496d-55fd-946d-7e20d9a7f703"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Get_the_destination": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e47a6ed9-b11c-5b8b-b2ee-bc62db4f1817"
+          }
+        },
+        "Destination": {
+          "type": "Compose",
+          "runAfter": {
+            "Fail_closed_on_the_destination": [
+              "Succeeded"
+            ]
+          },
+          "inputs": "@first(body('Get_the_destination')?['value'])",
+          "metadata": {
+            "operationMetadataId": "0d0a0d57-7a0d-507b-aade-7943ad7b7e1b"
+          }
+        },
+        "Root": {
+          "type": "Compose",
+          "runAfter": {
+            "Destination": [
+              "Succeeded"
+            ]
+          },
+          "inputs": "@{concat(outputs('Destination')?['Library_Url_Segment'], '/', outputs('Destination')?['Root_Folder'])}",
+          "metadata": {
+            "operationMetadataId": "bf99741c-c4af-5280-9ff5-975c47d0e927"
+          }
+        },
+        "List_the_fiscal_year_folders": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Root": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@{outputs('Destination')?['Site_URL']}",
+              "table": "@{outputs('Destination')?['Library_Url_Segment']}",
+              "$filter": "FSObjType eq 1"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "66840a62-bc9f-50cc-818a-cf915b208602"
+          }
+        },
+        "Resolve_the_folder": {
+          "type": "Compose",
+          "runAfter": {
+            "List_the_fiscal_year_folders": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "rule": "MATCH, DO NOT CONSTRUCT. Fiscal year: FY26, FY 26, FY-26, FY2026, FY 2026. Month: the full name, then the three-letter form, then the two-digit number, in that order, case- and accent-insensitively. Where a folder states a year it must be the right one.",
+            "reference": "scripts/folder_resolver.py, held to this spec by tests/test_folder_resolver.py",
+            "createMissing": "NEVER. Create_Missing_Folders is FALSE permanently: a flow that creates folders eventually produces 'Aug 26' beside someone's 'August 2026' and nobody notices for a month.",
+            "fallback": "FIND_OR_ROOT. Write to the Monthly Data Call root, Needs_Filing TRUE, Filing_Note naming what was searched for. NEVER above that root: a file at a site or library root looks like it worked and is somewhere nobody will look."
+          },
+          "metadata": {
+            "operationMetadataId": "addc16bc-c521-505f-a65c-32da813e738e"
+          }
+        },
+        "Create_the_file": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Resolve_the_folder": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "CreateFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@{outputs('Destination')?['Site_URL']}",
+              "folderPath": "@{outputs('Root')}",
+              "name": "@{triggerBody()?['fileName']}",
+              "body": "@{triggerBody()?['fileContent']}"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "a85d4521-6311-5280-98ad-4c7b3e482978"
+          }
+        },
+        "Supersede_the_current_version": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Create_the_file": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_SubmissionList (mfops_MF_SubmissionList)')",
+              "$filter": "EOM_Item_ID eq '@{first(body('Find_the_expected_item')?['value'])?['EOM_Item_ID']}' and Is_Current eq 1",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "a72ee19f-10ad-5c40-89d0-dece28134d47"
+          }
+        },
+        "Record_the_submission": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Supersede_the_current_version": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "PostItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_SubmissionList (mfops_MF_SubmissionList)')",
+              "item": {
+                "Submission_Request_ID": "@{triggerBody()?['submissionRequestId']}",
+                "EOM_Item_ID": "@{first(body('Find_the_expected_item')?['value'])?['EOM_Item_ID']}",
+                "Version_No": "@add(length(body('Supersede_the_current_version')?['value']), 1)",
+                "File_Name": "@{triggerBody()?['fileName']}",
+                "SharePoint_Unique_ID": "@{body('Create_the_file')?['{Identifier}']}",
+                "SharePoint_File_ID": "@{body('Create_the_file')?['Id']}",
+                "File_URL": "@{body('Create_the_file')?['Path']}",
+                "Destination_ID": "@{outputs('Destination')?['Destination_ID']}",
+                "Source_Library": "@{outputs('Destination')?['Library_Url_Segment']}",
+                "Source_Path": "@{outputs('Root')}",
+                "Uploaded_By": "@{outputs('Caller')}",
+                "Submitted_On_Behalf_Of": "@{triggerBody()?['onBehalfOf']}",
+                "Intake_Method": "App upload",
+                "Classification_Method": "Declared at upload",
+                "Classification_Confidence": "Declared",
+                "Is_Current": true,
+                "Is_Pilot": "@equals(outputs('Pilot_mode'), 'True')",
+                "QC_Status": "Pending Review"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "9c35bea3-7133-55bf-8839-6023cfb7beeb"
+          }
+        },
+        "Audit_the_upload": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Record_the_submission": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "PostItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_AuditList (mfops_MF_AuditList)')",
+              "item": {
+                "Action": "Uploaded",
+                "Action_DateTime": "@{utcNow()}",
+                "Entity_Type": "Submission",
+                "Entity_ID": "@{body('Record_the_submission')?['Submission_ID']}",
+                "Actor_UPN": "@{outputs('Caller')}",
+                "Detail": "@{concat('Version ', body('Record_the_submission')?['Version_No'], ' of ', triggerBody()?['fileName'])}"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "55a3368d-114d-58ba-a58f-d42f176edea0"
+          }
+        },
+        "Pilot_mode": {
+          "type": "Compose",
+          "runAfter": {
+            "Refuse_an_unmapped_or_out_of_scope_caller": [
+              "Succeeded"
+            ]
+          },
+          "inputs": "@{first(body('Get_the_callers_scope')?['value'])?['Is_Pilot']}",
+          "metadata": {
+            "operationMetadataId": "1469a4dc-34aa-55e3-8058-569707405fd1"
+          }
+        },
+        "Confirm_or_fail_loudly": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@empty(body('Record_the_submission')?['ID'])",
+              true
+            ]
+          },
+          "actions": {
+            "SUBMISSION_NOT_CONFIRMED": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 200,
+                "body": {
+                  "ok": false,
+                  "code": "SUBMISSION_NOT_CONFIRMED",
+                  "correlationId": "@{workflow()['run']['name']}",
+                  "message": "We couldn't confirm your submission. Quote this reference when you report it."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "976df7f0-628f-5929-b983-bb2a5d1fe2d3"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "OK": {
+                "type": "Response",
+                "kind": "Http",
+                "runAfter": {},
+                "inputs": {
+                  "statusCode": 200,
+                  "body": {
+                    "ok": true,
+                    "code": "SUBMISSION_CREATED",
+                    "submissionId": "@{body('Record_the_submission')?['Submission_ID']}",
+                    "versionNo": "@body('Record_the_submission')?['Version_No']",
+                    "needsFiling": "@outputs('Resolve_the_folder')?['needsFiling']",
+                    "message": "Submitted."
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "600714af-5f61-5f59-b9df-17ba6af55319"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Audit_the_upload": [
+              "Succeeded",
+              "Failed"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6833d584-fd13-534a-91eb-41a1cd94b432"
           }
         }
       },

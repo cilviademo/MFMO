@@ -2,7 +2,7 @@
 
 # Data model
 
-Schema version **5.0** — **17 lists**, **284 columns**.
+Schema version **5.0** — **17 lists**, **286 columns**.
 
 Derived from the V3 build with the corrections recorded in [`handoffs/RECONCILIATION.md`](handoffs/RECONCILIATION.md). Regenerate with `python3 scripts/eom_schema.py --markdown > docs/data-model.md`.
 
@@ -12,7 +12,7 @@ Derived from the V3 build with the corrections recorded in [`handoffs/RECONCILIA
 | `MF_Facility` | One row per feeding facility | 19 | 5 | 154 |
 | `MF_EOM_Requirement` | One row per document requirement per operating model | 23 | 4 | 200 |
 | `MF_EOM_Item` | One PERSISTENT row per expected submission per reporting period | 32 | 13 | 250,000 |
-| `MF_EOM_Submission` | One row per uploaded file version | 32 | 12 | 400,000 |
+| `MF_EOM_Submission` | One row per uploaded file version | 33 | 13 | 400,000 |
 | `MF_Unmatched_File` | One row per file found in the FY folder that could not be resolved | 13 | 4 | 5,000 |
 | `MF_Security_Mapping` | One row per user per granted scope | 20 | 8 | 5,000 |
 | `MF_EOM_Audit` | One row per state change | 9 | 4 | 1,000,000 |
@@ -24,7 +24,7 @@ Derived from the V3 build with the corrections recorded in [`handoffs/RECONCILIA
 | `MF_Calendar_Event` | One row per authored calendar entry | 13 | 4 | 20,000 |
 | `MF_Access_Request` | One row per request for access to an installation the requester is not posted to | 11 | 4 | 5,000 |
 | `MF_Notification_Rule` | One row per notification trigger | 9 | 3 | 100 |
-| `MF_Document_Destination` | One row per portfolio per document domain | 14 | 3 | 20 |
+| `MF_Document_Destination` | One row per portfolio per document domain | 15 | 3 | 20 |
 
 ## `MF_Installation`
 
@@ -101,7 +101,7 @@ Unique key: `Requirement_ID`
 | `Document_Name` | Text | Y |  |  |
 | `Applicable_Model` | Choice | Y |  | 'All' applies regardless of facility model Choices: `Legacy/APF`, `Food 2.0`, `MAFFO/MAF`, `AOR/CDS`, `All`. |
 | `Requirement_Scope` | Choice | Y |  | Determines the grain of the generated EOM_Item. Portfolio reserved. Choices: `Facility`, `Installation`, `Contract`. |
-| `Scope_Confidence` | Choice | Y |  | How sure we are of the GRAIN, which is a different question from whether the requirement exists. Marking a scope guess VERIFIED because the document is verified turns a proposal into policy by accident. Choices: `High`, `Medium`, `Low`, `Proposed`. |
+| `Scope_Confidence` | Choice | Y |  | How sure we are of the GRAIN, which is a different question from whether the requirement exists. Marking a scope guess VERIFIED because the document is verified turns a proposal into policy by accident. Choices: `Verified`, `High`, `Medium`, `Low`, `Proposed`. |
 | `Scope_Basis` | Note |  |  | Why that grain. A reason, not a hunch. |
 | `Applicable_Facility_Types` | Text |  |  | Semicolon list. Blank = all types. |
 | `Applicable_Period_Month` | Number |  |  | For Annual requirements: the fiscal month the obligation lands in. 9 for EOY. Null for Monthly and Quarterly. |
@@ -196,6 +196,7 @@ On a government network a user pressing Submit again after a timeout is the NORM
 | `Destination_ID` | Text |  | Y | FK to MF_Document_Destination. Which configured destination received this file, so a routing change is auditable after the fact rather than inferred from a path. |
 | `Source_Library` | Text |  |  | The library the file landed in. Recorded because the four portfolios are four separate site collections and 'Shared Documents' is an assumption until each site is walked. |
 | `Source_Path` | Text |  |  | Where the file was found or placed. Diagnostic only — the list row is truth. |
+| `Is_Pilot` | Boolean |  | Y | Stamped from MF_App_Config.PilotMode at write time, not read from config later. A pilot submission must stay identifiable after PilotMode is turned off, or the first production month silently inherits the pilot's rows and every count is wrong. |
 | `Needs_Filing` | Boolean |  | Y | TRUE when the fiscal-year or month folder could not be matched and the file landed at the Monthly Data Call root under FIND_OR_ROOT. Indexed because Admin filters on it, and the count is the whole point: a file nobody knows is misfiled is worse than one that failed to upload. |
 | `Filing_Note` | Text |  |  | What was looked for and not found — 'no child of FY26 matched August 2026'. The person moving the file needs to know whether to move it or fix the configuration. |
 | `SharePoint_Unique_ID` | Text |  | Y | THE DURABLE HANDLE. The document GUID survives a rename and a move; File_URL survives neither, and under FIND_OR_ROOT files get moved by design. Store the GUID, resolve the URL from it. |
@@ -490,7 +491,8 @@ Unique key: `Destination_ID`
 | `Portfolio_ID` | Text | Y | Y |  |
 | `Document_Domain` | Choice | Y | Y | EOY shares the EOM destination unless a row says otherwise. Choices: `EOM`, `EOY`, `FMAT`, `Other`. |
 | `Site_URL` | Text |  |  | BLANK IN SOURCE, ALWAYS. Bound at import from the environment variable for this portfolio. A .mil site URL committed to source is a destination leak and the pre-release scan blocks it. Never a literal in Power Fx. |
-| `Library_Name` | Text | Y |  | Assumed 'Shared Documents'. Verify per site — assumption is how this breaks on the first real upload. |
+| `Library_Name` | Text | Y |  | The library's DISPLAY name, as a person sees it — often 'Documents'. Shown in messages and in Admin. NEVER used to build a path. |
+| `Library_Url_Segment` | Text | Y |  | The library's URL segment, which is a DIFFERENT STRING from the display name: a library displayed as 'Documents' is 'Shared Documents' in the URL, because the display name was changed after creation and the segment never follows. Building a path from Library_Name produces a URL that 404s on a library that plainly exists, which reads as a permissions problem. EOM-02 builds every path from THIS column. |
 | `Root_Folder` | Text | Y |  | All four differ: 'Legacy_Portfolio 1/H. Monthly Data Call', 'Legacy_Portfolio 2/5. Monthly Data Call', and two without a prefix. The 'H.' and '5.' are sort-order prefixes. No rule derives these; they are configuration. |
 | `Folder_Template` | Text | Y |  | {FiscalYearShort}/{MonthFolder}. These are the names of folders that ALREADY EXIST and are matched, never rendered into a path and created. EOM-02 resolves the tokens; the app never sees them. |
 | `Create_Missing_Folders` | Boolean | Y |  | FALSE, permanently. The FY and month folders are curated by hand. A flow that creates folders will eventually produce 'Aug 26' beside someone's 'August 2026' and nobody notices for a month. The column exists so the decision is visible and auditable, not so it can be flipped. |

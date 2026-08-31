@@ -52,7 +52,7 @@ Set-StrictMode -Version Latest
 
 $script:ExpectedSchemaVersion = '5.0'
 $script:ExpectedListCount     = 17
-$script:ExpectedColumnCount   = 284
+$script:ExpectedColumnCount   = 286
 
 # PnP's cloud identifier differs from the PAC CLI's.
 $script:PnPEnvironment = switch ($TenantCloud) {

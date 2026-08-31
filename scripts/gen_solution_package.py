@@ -49,6 +49,10 @@ import shutil
 import sys
 import uuid
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from flow_bodies import BODIES  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "solution", "src")
 CONFIG = os.path.join(ROOT, "configuration")
@@ -228,19 +232,22 @@ CONNECTOR_API = {
 FLOW_ENV_VARS = {
     "EOM01ExpectedPackage": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
                              "mfops_MF_RequirementList", "mfops_MF_ItemList",
-                             "mfops_MF_CurrentFiscalYear"],
+                             "mfops_MF_InstallationList", "mfops_MF_FacilityList",
+                             "mfops_MF_NonDutyDayList"],
     "EOM02Submission": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
                         "mfops_MF_ItemList", "mfops_MF_SubmissionList",
                         "mfops_MF_SecurityList", "mfops_MF_AuditList",
-                        "mfops_MF_Portfolio1_SiteURL", "mfops_MF_Portfolio2_SiteURL",
-                        "mfops_MF_Portfolio3_SiteURL", "mfops_MF_Portfolio4_SiteURL"],
+                        "mfops_MF_InstallationList", "mfops_MF_DestinationList"],
     "EOM02bLegacyIntake": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
                            "mfops_MF_UnmatchedList", "mfops_MF_SubmissionList",
+                           "mfops_MF_SecurityList",
                            "mfops_MF_Portfolio1_SiteURL"],
     "EOM03Reconciliation": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
-                            "mfops_MF_ItemList", "mfops_MF_StatusList"],
+                            "mfops_MF_ItemList", "mfops_MF_StatusList",
+                            "mfops_MF_SubmissionList"],
     "EOM04Notifications": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
                            "mfops_MF_ItemList", "mfops_MF_AuditList",
+                           "mfops_MF_NotificationRuleList",
                            "mfops_MF_NotificationsEnabled",
                            "mfops_MF_EscalationDaysOverdue"],
 }
@@ -272,37 +279,45 @@ def flow_definition(flow, env_vars):
     site = "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')"
     cfg = "@parameters('MF_ConfigList (mfops_MF_ConfigList)')"
 
-    actions = {
-        "READ_THE_SPECIFICATION_FIRST": {
-            "type": "Compose",
+    def param(schema_name):
+        """The workflow-parameter reference for an environment variable.
+
+        Flows read list names and site URLs from parameters, never literals:
+        no list name and no site URL is hard-coded in any flow.
+        """
+        # Accept either form: the bodies name variables without the publisher
+        # prefix because that is how a person refers to them.
+        if not schema_name.startswith(f"{PREFIX}_"):
+            schema_name = f"{PREFIX}_{schema_name}"
+        display = env_var_display(schema_name, env_vars)
+        return f"@parameters('{display} ({schema_name})')"
+
+    # Every flow makes this comparison independently. The app disabling its own
+    # submit button is not a control: a flow can be invoked directly, and a
+    # scheduled flow has no app in front of it at all.
+    guard = {
+        "Initialize_ExpectedSchemaVersion": {
+            "type": "InitializeVariable",
             "runAfter": {},
-            "inputs": {
-                "flow": flow["display"],
-                "purpose": flow["purpose"],
-                "specification": flow["spec"],
-                "status": ("TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE "
-                           "WIRED. THE BODY IS NOT IMPLEMENTED."),
-                "why": ("The logic is specified in the file named above and was "
-                        "not invented to fill this JSON. A flow whose body was "
-                        "guessed would import cleanly and do the wrong thing, "
-                        "which is worse than one that is obviously unfinished."),
-                "note": flow.get("note", ""),
-            },
-            "metadata": {"operationMetadataId": guid(flow["schema"] + "-readme")},
+            "inputs": {"variables": [{
+                "name": "ExpectedSchemaVersion",
+                "type": "string",
+                # A literal, deliberately. Reading it from the environment
+                # would compare a value with itself.
+                "value": schema_version(),
+            }]},
+            "metadata": {"operationMetadataId": guid(flow["schema"] + "-var")},
         },
-        # Every flow makes this comparison independently. The app disabling its
-        # own submit button is not a control: a flow can be invoked directly,
-        # and a scheduled flow has no app in front of it at all.
         "Get_the_deployed_schema_version": {
             "type": "OpenApiConnection",
-            "runAfter": {"READ_THE_SPECIFICATION_FIRST": ["Succeeded"]},
+            "runAfter": {"Initialize_ExpectedSchemaVersion": ["Succeeded"]},
             "inputs": {
                 "host": {"connectionName": "shared_sharepointonline",
                          "operationId": "GetItems",
                          "apiId": CONNECTOR_API["sharepointonline"]},
                 "parameters": {
-                    "dataset": site,
-                    "table": cfg,
+                    "dataset": param("mfops_MF_SharePointSiteURL"),
+                    "table": param("mfops_MF_ConfigList"),
                     "$filter": "Config_Key eq 'SchemaVersion'",
                     "$top": 1,
                 },
@@ -343,6 +358,15 @@ def flow_definition(flow, env_vars):
         },
     }
 
+    # The body, from flows/<name>/definition.md. Everything in it runs AFTER
+    # the guard clears.
+    body = BODIES[flow["schema"]](param)
+    for name, action in body.items():
+        if not action.get("runAfter"):
+            action["runAfter"] = {"Stop_on_a_schema_mismatch": ["Succeeded"]}
+
+    actions = {**guard, **body}
+
     return {
         "properties": {
             "connectionReferences": {
@@ -360,22 +384,7 @@ def flow_definition(flow, env_vars):
                 "contentVersion": "1.0.0.0",
                 "parameters": params,
                 "triggers": {flow["trigger"]["kind"]: flow["trigger"]["json"]},
-                "actions": {
-                    "Initialize_ExpectedSchemaVersion": {
-                        "type": "InitializeVariable",
-                        "runAfter": {},
-                        "inputs": {"variables": [{
-                            "name": "ExpectedSchemaVersion",
-                            "type": "string",
-                            # A literal, deliberately. Reading it from the
-                            # environment would compare a value with itself.
-                            "value": schema_version(),
-                        }]},
-                        "metadata": {"operationMetadataId": guid(flow["schema"] + "-var")},
-                    },
-                    **{k: (v if k == "READ_THE_SPECIFICATION_FIRST" else v)
-                       for k, v in actions.items()},
-                },
+                "actions": actions,
                 "outputs": {},
             },
         },

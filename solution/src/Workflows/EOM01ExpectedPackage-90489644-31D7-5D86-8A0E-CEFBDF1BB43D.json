@@ -51,11 +51,25 @@
             "schemaName": "mfops_MF_ItemList"
           }
         },
-        "MF_CurrentFiscalYear (mfops_MF_CurrentFiscalYear)": {
+        "MF_InstallationList (mfops_MF_InstallationList)": {
           "defaultValue": "",
           "type": "String",
           "metadata": {
-            "schemaName": "mfops_MF_CurrentFiscalYear"
+            "schemaName": "mfops_MF_InstallationList"
+          }
+        },
+        "MF_FacilityList (mfops_MF_FacilityList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_FacilityList"
+          }
+        },
+        "MF_NonDutyDayList (mfops_MF_NonDutyDayList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_NonDutyDayList"
           }
         }
       },
@@ -99,25 +113,10 @@
             "operationMetadataId": "c6e0f532-bf38-503a-ad64-6b8f2134c782"
           }
         },
-        "READ_THE_SPECIFICATION_FIRST": {
-          "type": "Compose",
-          "runAfter": {},
-          "inputs": {
-            "flow": "EOM-01 Expected Package Generator",
-            "purpose": "Create the expected MF_EOM_Item rows for the open period.",
-            "specification": "flows/EOM01-ExpectedPackage/definition.md",
-            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
-            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
-            "note": ""
-          },
-          "metadata": {
-            "operationMetadataId": "ea3e64cf-f1db-556a-a5e0-89cf2e211522"
-          }
-        },
         "Get_the_deployed_schema_version": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "READ_THE_SPECIFICATION_FIRST": [
+            "Initialize_ExpectedSchemaVersion": [
               "Succeeded"
             ]
           },
@@ -175,6 +174,841 @@
           },
           "metadata": {
             "operationMetadataId": "8e1439b4-bcc1-57ff-8996-475f6d4ab6a4"
+          }
+        },
+        "Period": {
+          "type": "InitializeVariable",
+          "runAfter": {
+            "Stop_on_a_schema_mismatch": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "variables": [
+              {
+                "name": "Period",
+                "type": "string",
+                "value": "@{formatDateTime(addToTime(utcNow(), -1, 'Month'), 'yyyy-MM')}"
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4c603e00-3823-597d-9248-4afe271f128c"
+          }
+        },
+        "Get_the_backfill_window": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Period": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_ConfigList (mfops_MF_ConfigList)')",
+              "$filter": "startswith(Config_Key,'Backfill') and Active_Flag eq 1"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "7699ad6f-e26a-5c46-bb43-391ff4fe9687"
+          }
+        },
+        "Window": {
+          "type": "Compose",
+          "runAfter": {
+            "Get_the_backfill_window": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@{first(filter(body('Get_the_backfill_window')?['value'], item()?['Config_Key'] eq 'BackfillFromPeriod'))?['Config_Value']}",
+            "to": "@{first(filter(body('Get_the_backfill_window')?['value'], item()?['Config_Key'] eq 'BackfillToPeriod'))?['Config_Value']}"
+          },
+          "metadata": {
+            "operationMetadataId": "5c7695de-5196-55af-b9d5-2adbea22c86b"
+          }
+        },
+        "Refuse_a_period_outside_the_window": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "less": [
+                  "@variables('Period')",
+                  "@outputs('Window')['from']"
+                ]
+              },
+              {
+                "greater": [
+                  "@variables('Period')",
+                  "@outputs('Window')['to']"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "PERIOD_OUTSIDE_BACKFILL_WINDOW": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "PERIOD_OUTSIDE_BACKFILL_WINDOW",
+                  "message": "@{concat(variables('Period'), ' is outside the configured backfill window ', outputs('Window')['from'], '..', outputs('Window')['to'], '. Widening it is a one-cell edit in MF App Config, and this flow is idempotent, so a later run against a wider range fills in the earlier periods without disturbing what already exists.')}"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "9a812f76-6ee2-5a7d-b3e5-f91ec823eb41"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Window": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9d1c10a2-c184-5b59-8b7e-c5759025cfde"
+          }
+        },
+        "Get_active_requirements": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Refuse_a_period_outside_the_window": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_RequirementList (mfops_MF_RequirementList)')",
+              "$filter": "Active_Flag eq 1",
+              "$top": 500
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "4777fa49-5491-503d-aa88-0ae006fe96e1"
+          }
+        },
+        "Get_onboarded_installations": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Get_active_requirements": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_InstallationList (mfops_MF_InstallationList)')",
+              "$filter": "Active_Flag eq 1 and Generation_Enabled eq 1",
+              "$top": 500
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "aee73dec-91b6-5b4b-9ce6-b435e11cf20c"
+          }
+        },
+        "Get_active_facilities": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Get_onboarded_installations": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_FacilityList (mfops_MF_FacilityList)')",
+              "$filter": "Active_Flag eq 1",
+              "$top": 2000
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "df9bea80-7b02-5d70-b561-7ba7cf4d98c3"
+          }
+        },
+        "Assert_the_registry_is_not_empty": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@length(body('Get_onboarded_installations')?['value'])",
+                  0
+                ]
+              },
+              {
+                "equals": [
+                  "@length(body('Get_active_facilities')?['value'])",
+                  0
+                ]
+              },
+              {
+                "equals": [
+                  "@length(body('Get_active_requirements')?['value'])",
+                  0
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "EMPTY_INPUT_SET": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "EMPTY_INPUT_SET",
+                  "message": "@{concat('Nothing to generate from: ', length(body('Get_active_requirements')?['value']), ' active requirements, ', length(body('Get_onboarded_installations')?['value']), ' onboarded installations, ', length(body('Get_active_facilities')?['value']), ' active facilities. A run that creates nothing must say so rather than reporting success.')}"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "a86af0bb-cf29-5d0b-944c-5ec2ba629c42"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Get_active_facilities": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1b4b7283-cf0f-577e-aa1b-1e9e875bbd4f"
+          }
+        },
+        "Created": {
+          "type": "InitializeVariable",
+          "runAfter": {
+            "Assert_the_registry_is_not_empty": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "variables": [
+              {
+                "name": "Created",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8b55f618-fbcd-5cd9-b647-8314c271c3cb"
+          }
+        },
+        "Retained": {
+          "type": "InitializeVariable",
+          "runAfter": {
+            "Created": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "variables": [
+              {
+                "name": "Retained",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1ee17d8a-1fd5-572a-a9e4-251b09331e38"
+          }
+        },
+        "Matched": {
+          "type": "InitializeVariable",
+          "runAfter": {
+            "Retained": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "variables": [
+              {
+                "name": "Matched",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "96ff3626-9641-5b8a-9519-00d1bf100e20"
+          }
+        },
+        "For_each_requirement": {
+          "type": "Foreach",
+          "foreach": "@body('Get_active_requirements')?['value']",
+          "actions": {
+            "Does_the_frequency_fall_in_this_period": {
+              "type": "If",
+              "expression": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('For_each_requirement')?['Frequency']",
+                          "Monthly"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('For_each_requirement')?['Frequency']",
+                          "Quarterly"
+                        ]
+                      },
+                      {
+                        "contains": [
+                          "@createArray(12, 3, 6, 9)",
+                          "@int(split(variables('Period'), '-')[1])"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('For_each_requirement')?['Frequency']",
+                          "Semiannual"
+                        ]
+                      },
+                      {
+                        "contains": [
+                          "@createArray(3, 9)",
+                          "@int(split(variables('Period'), '-')[1])"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('For_each_requirement')?['Frequency']",
+                          "Annual"
+                        ]
+                      },
+                      {
+                        "equals": [
+                          "@int(split(variables('Period'), '-')[1])",
+                          "@int(coalesce(items('For_each_requirement')?['Applicable_Period_Month'], '9'))"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Applicable_facilities": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": "@filter(body('Get_active_facilities')?['value'], and(not(empty(trim(coalesce(item()?['Operating_Model'], '')))), or(equals(items('For_each_requirement')?['Applicable_Model'], 'All'), equals(item()?['Operating_Model'], items('For_each_requirement')?['Applicable_Model'])), or(empty(trim(coalesce(items('For_each_requirement')?['Applicable_Facility_Types'], ''))), empty(trim(coalesce(item()?['Facility_Type'], ''))), contains(concat(';', items('For_each_requirement')?['Applicable_Facility_Types'], ';'), concat(';', item()?['Facility_Type'], ';')))))",
+                  "metadata": {
+                    "operationMetadataId": "88d47145-a2cb-59be-a90e-a1ea0e56b7aa"
+                  }
+                },
+                "Count_the_match": {
+                  "type": "SetVariable",
+                  "runAfter": {
+                    "Applicable_facilities": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "name": "Matched",
+                    "value": "@add(variables('Matched'), length(outputs('Applicable_facilities')))"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "67ea993a-b2d1-5307-8490-450e061469d5"
+                  }
+                },
+                "For_each_facility": {
+                  "type": "Foreach",
+                  "foreach": "@outputs('Applicable_facilities')",
+                  "actions": {
+                    "EOM_Item_ID": {
+                      "type": "Compose",
+                      "runAfter": {},
+                      "inputs": "@{concat(variables('Period'), '|', items('For_each_facility')?['Facility_ID'], '|', items('For_each_requirement')?['Requirement_ID'])}",
+                      "metadata": {
+                        "operationMetadataId": "1f2f95e1-4a66-5876-8fb9-1a601686ea1d"
+                      }
+                    },
+                    "Does_it_already_exist": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {
+                        "EOM_Item_ID": [
+                          "Succeeded"
+                        ]
+                      },
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "GetItems",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                        },
+                        "parameters": {
+                          "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                          "table": "@parameters('MF_ItemList (mfops_MF_ItemList)')",
+                          "$filter": "EOM_Item_ID eq '@{outputs('EOM_Item_ID')}'",
+                          "$top": 1
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      },
+                      "metadata": {
+                        "operationMetadataId": "c2b1e14e-5436-5ecf-9237-5212b5a1203e"
+                      }
+                    },
+                    "Create_only_if_absent": {
+                      "type": "If",
+                      "expression": {
+                        "equals": [
+                          "@length(body('Does_it_already_exist')?['value'])",
+                          0
+                        ]
+                      },
+                      "actions": {
+                        "Nominal_dates": {
+                          "type": "Compose",
+                          "runAfter": {},
+                          "inputs": {
+                            "nominalDue": "@{formatDateTime(addToTime(addToTime(startOfMonth(addToTime(concat(variables('Period'), '-01T00:00:00Z'), 1, 'Month')), 0, 'Day'), sub(int(items('For_each_requirement')?['Due_Day']), 1), 'Day'), 'yyyy-MM-dd')}",
+                            "nominalFinal": "@{formatDateTime(addToTime(addToTime(startOfMonth(addToTime(concat(variables('Period'), '-01T00:00:00Z'), 1, 'Month')), 0, 'Day'), sub(int(coalesce(items('For_each_requirement')?['Final_Due_Day'], items('For_each_requirement')?['Due_Day'])), 1), 'Day'), 'yyyy-MM-dd')}"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "713aa875-6eca-5166-ae83-24749b845517"
+                          }
+                        },
+                        "Get_non_duty_days": {
+                          "type": "OpenApiConnection",
+                          "runAfter": {
+                            "Nominal_dates": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_sharepointonline",
+                              "operationId": "GetItems",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                            },
+                            "parameters": {
+                              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                              "table": "@parameters('MF_NonDutyDayList (mfops_MF_NonDutyDayList)')",
+                              "$filter": "Active_Flag eq 1",
+                              "$top": 2000
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "577f70d5-2c0a-58bf-9017-39cabfb3033a"
+                          }
+                        },
+                        "Effective_dates": {
+                          "type": "Compose",
+                          "runAfter": {
+                            "Get_non_duty_days": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "effectiveDue": "@{outputs('Nominal_dates')['nominalDue']}",
+                            "effectiveFinal": "@{outputs('Nominal_dates')['nominalFinal']}",
+                            "policy": "NEXT_DUTY_DAY",
+                            "adjusted": "@not(equals(outputs('Nominal_dates')['nominalDue'], outputs('Nominal_dates')['nominalDue']))",
+                            "TODO_ROLL": "Roll each date forward past any Active MF Non Duty Day row whose Scope_Type is Enterprise or whose Scope_ID matches this installation, and past Saturday and Sunday, for at most 14 days. scripts/status_engine.effective_date is the reference and raises beyond 14."
+                          },
+                          "metadata": {
+                            "operationMetadataId": "10d44fee-6789-5d96-a3ed-6e8d95b2eb53"
+                          }
+                        },
+                        "Today": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "Effective_dates": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "Today",
+                                "type": "string",
+                                "value": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}"
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "7d617c5c-db20-5033-8696-3556692ff6b9"
+                          }
+                        },
+                        "EffectiveDueDate": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "Today": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "EffectiveDueDate",
+                                "type": "string",
+                                "value": "@{outputs('Effective_dates')['effectiveDue']}"
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "6ad5f5d5-8003-548b-a622-4bc8d532a20f"
+                          }
+                        },
+                        "EffectiveFinalCallDate": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "EffectiveDueDate": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "EffectiveFinalCallDate",
+                                "type": "string",
+                                "value": "@{outputs('Effective_dates')['effectiveFinal']}"
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "14c62c26-b063-50a8-95a5-6544634e4c53"
+                          }
+                        },
+                        "RequiredFlag": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "EffectiveFinalCallDate": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "RequiredFlag",
+                                "type": "boolean",
+                                "value": "@equals(items('For_each_requirement')?['Required_Flag'], true)"
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "8357f4e1-6817-53f4-bb2a-ff5a715ee178"
+                          }
+                        },
+                        "WaivedFlag": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "RequiredFlag": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "WaivedFlag",
+                                "type": "boolean",
+                                "value": false
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "0629f6fc-7254-52cf-901d-db8490402b3d"
+                          }
+                        },
+                        "AuthorityStatus": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "WaivedFlag": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "AuthorityStatus",
+                                "type": "string",
+                                "value": "@{items('For_each_requirement')?['Authority_Status']?['Value']}"
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "02e8b0ed-536c-5428-ac0e-d98e11448a55"
+                          }
+                        },
+                        "ReceivedFlag": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "AuthorityStatus": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "ReceivedFlag",
+                                "type": "boolean",
+                                "value": false
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "975fcdaf-57f9-5ad4-bf37-3b5325020349"
+                          }
+                        },
+                        "QCStatus": {
+                          "type": "InitializeVariable",
+                          "runAfter": {
+                            "ReceivedFlag": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "variables": [
+                              {
+                                "name": "QCStatus",
+                                "type": "string",
+                                "value": ""
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "operationMetadataId": "ba6f3a01-a2d2-5498-acdb-865dbb744c8b"
+                          }
+                        },
+                        "Status": {
+                          "type": "Compose",
+                          "runAfter": {
+                            "QCStatus": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": "@{if(or(variables('WaivedFlag'), not(variables('RequiredFlag'))), json('{\"status\":\"NOT_APPLICABLE\",\"code\":0,\"actionOwner\":\"None\",\"actionRequired\":false}'), if(and(contains(createArray('UNVERIFIED','PROPOSED'), variables('AuthorityStatus')), not(variables('ReceivedFlag'))), json('{\"status\":\"PENDING_VALIDATION\",\"code\":4,\"actionOwner\":\"Admin\",\"actionRequired\":false}'), if(equals(variables('QCStatus'), 'Accepted'), json('{\"status\":\"ACCEPTED\",\"code\":3,\"actionOwner\":\"None\",\"actionRequired\":false}'), if(equals(variables('QCStatus'), 'Not Applicable'), json('{\"status\":\"NOT_APPLICABLE\",\"code\":0,\"actionOwner\":\"None\",\"actionRequired\":false}'), if(equals(variables('QCStatus'), 'Recalled'), if(if(empty(variables('EffectiveDueDate')), true, lessOrEquals(ticks(variables('Today')), ticks(variables('EffectiveDueDate')))), json('{\"status\":\"NOT_DUE\",\"code\":4,\"actionOwner\":\"Facility\",\"actionRequired\":false}'), if(if(empty(if(empty(variables('EffectiveFinalCallDate')), variables('EffectiveDueDate'), variables('EffectiveFinalCallDate'))), true, lessOrEquals(ticks(variables('Today')), ticks(if(empty(variables('EffectiveFinalCallDate')), variables('EffectiveDueDate'), variables('EffectiveFinalCallDate'))))), json('{\"status\":\"LATE\",\"code\":5,\"actionOwner\":\"Facility\",\"actionRequired\":true}'), json('{\"status\":\"OVERDUE\",\"code\":1,\"actionOwner\":\"Facility\",\"actionRequired\":true}'))), if(contains(createArray('Correction Required', 'Incomplete', 'Wrong Reporting Period', 'Wrong Facility'), variables('QCStatus')), json('{\"status\":\"RETURNED\",\"code\":1,\"actionOwner\":\"Facility\",\"actionRequired\":true}'), if(equals(variables('QCStatus'), 'Wrong Document'), if(if(empty(if(empty(variables('EffectiveFinalCallDate')), variables('EffectiveDueDate'), variables('EffectiveFinalCallDate'))), false, greater(ticks(variables('Today')), ticks(if(empty(variables('EffectiveFinalCallDate')), variables('EffectiveDueDate'), variables('EffectiveFinalCallDate'))))), json('{\"status\":\"OVERDUE\",\"code\":1,\"actionOwner\":\"Facility\",\"actionRequired\":true}'), json('{\"status\":\"NOT_SATISFIED\",\"code\":1,\"actionOwner\":\"Facility\",\"actionRequired\":true}')), if(variables('ReceivedFlag'), json('{\"status\":\"RECEIVED_PENDING_QC\",\"code\":2,\"actionOwner\":\"Reviewer\",\"actionRequired\":true}'), if(if(empty(variables('EffectiveDueDate')), true, lessOrEquals(ticks(variables('Today')), ticks(variables('EffectiveDueDate')))), json('{\"status\":\"NOT_DUE\",\"code\":4,\"actionOwner\":\"Facility\",\"actionRequired\":false}'), if(if(empty(if(empty(variables('EffectiveFinalCallDate')), variables('EffectiveDueDate'), variables('EffectiveFinalCallDate'))), true, lessOrEquals(ticks(variables('Today')), ticks(if(empty(variables('EffectiveFinalCallDate')), variables('EffectiveDueDate'), variables('EffectiveFinalCallDate'))))), json('{\"status\":\"LATE\",\"code\":5,\"actionOwner\":\"Facility\",\"actionRequired\":true}'), json('{\"status\":\"OVERDUE\",\"code\":1,\"actionOwner\":\"Facility\",\"actionRequired\":true}')))))))))))}",
+                          "metadata": {
+                            "operationMetadataId": "d3a914a5-4532-59c1-b846-960aa563f35e"
+                          }
+                        },
+                        "Create_the_expected_item": {
+                          "type": "OpenApiConnection",
+                          "runAfter": {
+                            "Status": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_sharepointonline",
+                              "operationId": "PostItem",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                            },
+                            "parameters": {
+                              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                              "table": "@parameters('MF_ItemList (mfops_MF_ItemList)')",
+                              "item": {
+                                "EOM_Item_ID": "@{outputs('EOM_Item_ID')}",
+                                "EOM_Item_Key": "@{concat(items('For_each_facility')?['Installation_ID'], '|', items('For_each_facility')?['Facility_ID'], '|', variables('Period'), '|', items('For_each_requirement')?['Document_Code'])}",
+                                "Reporting_Period": "@{variables('Period')}",
+                                "Installation_ID": "@{items('For_each_facility')?['Installation_ID']}",
+                                "Facility_ID": "@{items('For_each_facility')?['Facility_ID']}",
+                                "Portfolio_ID": "@{items('For_each_facility')?['Portfolio_ID']}",
+                                "Requirement_ID": "@{items('For_each_requirement')?['Requirement_ID']}",
+                                "Requirement_Scope": "@{items('For_each_requirement')?['Requirement_Scope']?['Value']}",
+                                "Authority_Status": "@{variables('AuthorityStatus')}",
+                                "Required_Flag": "@variables('RequiredFlag')",
+                                "Received_Flag": false,
+                                "Routing_Org": "@{if(equals(items('For_each_facility')?['Component'], 'ANG'), 'NGB/A1X', items('For_each_requirement')?['Routing_Org'])}",
+                                "Nominal_Due_Date": "@{outputs('Nominal_dates')['nominalDue']}",
+                                "Effective_Due_Date": "@{variables('EffectiveDueDate')}",
+                                "Nominal_Final_Call_Date": "@{outputs('Nominal_dates')['nominalFinal']}",
+                                "Effective_Final_Call_Date": "@{variables('EffectiveFinalCallDate')}",
+                                "NonDutyDay_Policy": "NEXT_DUTY_DAY",
+                                "Final_Status": "@{outputs('Status')['status']}",
+                                "Status_Code": "@outputs('Status')['code']",
+                                "Action_Owner": "@{outputs('Status')['actionOwner']}",
+                                "Action_Required": "@outputs('Status')['actionRequired']"
+                              }
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "f8053bc6-f3b6-5fb6-993c-12143ab1e9cc"
+                          }
+                        },
+                        "Count_it": {
+                          "type": "SetVariable",
+                          "runAfter": {
+                            "Create_the_expected_item": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "name": "Created",
+                            "value": "@add(variables('Created'), 1)"
+                          },
+                          "metadata": {
+                            "operationMetadataId": "d017e04e-9ff8-58a3-8726-9553ca43f66c"
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Leave_the_existing_row_untouched": {
+                            "type": "SetVariable",
+                            "runAfter": {},
+                            "inputs": {
+                              "name": "Retained",
+                              "value": "@add(variables('Retained'), 1)"
+                            },
+                            "metadata": {
+                              "operationMetadataId": "ff6626aa-09c0-58e0-91b0-5f4a2dbe5165"
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Does_it_already_exist": [
+                          "Succeeded"
+                        ]
+                      },
+                      "metadata": {
+                        "operationMetadataId": "adfb6f58-1232-5b94-b75d-00057da03bff"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Count_the_match": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "aa0f861d-f22a-51b7-87ee-6db46376d6f9"
+                  },
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 1
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "49bc04e7-6b34-5ba1-97d7-a3a3d458ccad"
+              }
+            }
+          },
+          "runAfter": {
+            "Matched": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "2edae8c2-dbbd-5c1b-a2c2-a9b4d1be4e5f"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Assert_the_requirement_filter_matched_something": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@variables('Matched')",
+              0
+            ]
+          },
+          "actions": {
+            "VOCABULARY_MATCHED_NOTHING": {
+              "type": "Terminate",
+              "runAfter": {},
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "VOCABULARY_MATCHED_NOTHING",
+                  "message": "Every active requirement filtered to zero facilities. That is a vocabulary mismatch, not an empty month: Applicable_Model or Applicable_Facility_Types names values the registry does not use. Normalise at import; do not widen the filter to make this pass."
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "429e66bf-c12d-540a-b2b1-78551bee99ce"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "For_each_requirement": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "767e36a0-b73b-5a06-b0bf-ad0b866f530e"
+          }
+        },
+        "Summary": {
+          "type": "Compose",
+          "runAfter": {
+            "Assert_the_requirement_filter_matched_something": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "period": "@{variables('Period')}",
+            "created": "@variables('Created')",
+            "retained": "@variables('Retained')",
+            "installationsOnboarded": "@length(body('Get_onboarded_installations')?['value'])",
+            "note": "A base with Generation_Enabled FALSE is NOT COMPLIANT. It has not been asked. Any completion figure must state that denominator."
+          },
+          "metadata": {
+            "operationMetadataId": "7941bb63-aea3-5057-8494-219d9958a72f"
           }
         }
       },

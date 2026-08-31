@@ -41,6 +41,14 @@
       "required": true
     },
     {
+      "schemaName": "mfops_MF_PilotSite_SiteURL",
+      "displayName": "MF_PilotSite_SiteURL",
+      "type": "String",
+      "description": "Site collection hosting the four PILOT destinations. All four pilot rows share this one site and differ by root folder, so routing still exercises four destinations rather than a simplified single one. Blank in source. Retire it when the production PORT#-EOM rows are activated.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
       "schemaName": "mfops_MF_RequirementList",
       "displayName": "MF_RequirementList",
       "type": "String",
@@ -133,6 +141,46 @@
       "displayName": "MF_ConfigList",
       "type": "String",
       "description": "MF App Config - read first, environment variables second",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_InstallationList",
+      "displayName": "MF_InstallationList",
+      "type": "String",
+      "description": "MF Installation - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_FacilityList",
+      "displayName": "MF_FacilityList",
+      "type": "String",
+      "description": "MF Facility - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_NonDutyDayList",
+      "displayName": "MF_NonDutyDayList",
+      "type": "String",
+      "description": "MF Non Duty Day - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_DestinationList",
+      "displayName": "MF_DestinationList",
+      "type": "String",
+      "description": "MF Document Destination - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_NotificationRuleList",
+      "displayName": "MF_NotificationRuleList",
+      "type": "String",
+      "description": "MF Notification Rule - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
       "defaultValue": "",
       "required": true
     },

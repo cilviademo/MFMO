@@ -41,7 +41,7 @@ MF EOM Requirement,Document_Code,Text,Yes,No,
 MF EOM Requirement,Document_Name,Text,Yes,No,
 MF EOM Requirement,Applicable_Model,Choice,Yes,No,Legacy/APF; Food 2.0; MAFFO/MAF; AOR/CDS; All
 MF EOM Requirement,Requirement_Scope,Choice,Yes,No,Facility; Installation; Contract
-MF EOM Requirement,Scope_Confidence,Choice,Yes,No,High; Medium; Low; Proposed
+MF EOM Requirement,Scope_Confidence,Choice,Yes,No,Verified; High; Medium; Low; Proposed
 MF EOM Requirement,Scope_Basis,Note,No,No,
 MF EOM Requirement,Applicable_Facility_Types,Text,No,No,
 MF EOM Requirement,Applicable_Period_Month,Number,No,No,
@@ -113,6 +113,7 @@ MF EOM Submission,Retry_Count,Number,No,No,
 MF EOM Submission,Destination_ID,Text,No,Yes,
 MF EOM Submission,Source_Library,Text,No,No,
 MF EOM Submission,Source_Path,Text,No,No,
+MF EOM Submission,Is_Pilot,Boolean,No,Yes,
 MF EOM Submission,Needs_Filing,Boolean,No,Yes,
 MF EOM Submission,Filing_Note,Text,No,No,
 MF EOM Submission,SharePoint_Unique_ID,Text,No,Yes,
@@ -274,6 +275,7 @@ MF Document Destination,Portfolio_ID,Text,Yes,Yes,
 MF Document Destination,Document_Domain,Choice,Yes,Yes,EOM; EOY; FMAT; Other
 MF Document Destination,Site_URL,Text,No,No,
 MF Document Destination,Library_Name,Text,Yes,No,
+MF Document Destination,Library_Url_Segment,Text,Yes,No,
 MF Document Destination,Root_Folder,Text,Yes,No,
 MF Document Destination,Folder_Template,Text,Yes,No,
 MF Document Destination,Create_Missing_Folders,Boolean,Yes,No,

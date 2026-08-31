@@ -2,7 +2,7 @@
 
 # SharePoint schema manifest
 
-Schema version **5.0** -- **17 lists**, **284 columns**.
+Schema version **5.0** -- **17 lists**, **286 columns**.
 
 ## The internal name is the contract
 
@@ -97,7 +97,7 @@ Every internal name below is a plain identifier: no spaces, so no `_x0020_`, and
 | `Document_Name` | Document Name | Text | YES | no |  |
 | `Applicable_Model` | Applicable Model | Choice | YES | no | `Legacy/APF`<br>`Food 2.0`<br>`MAFFO/MAF`<br>`AOR/CDS`<br>`All` |
 | `Requirement_Scope` | Requirement Scope | Choice | YES | no | `Facility`<br>`Installation`<br>`Contract` |
-| `Scope_Confidence` | Scope Confidence | Choice | YES | no | `High`<br>`Medium`<br>`Low`<br>`Proposed` |
+| `Scope_Confidence` | Scope Confidence | Choice | YES | no | `Verified`<br>`High`<br>`Medium`<br>`Low`<br>`Proposed` |
 | `Scope_Basis` | Scope Basis | Note | no | no |  |
 | `Applicable_Facility_Types` | Applicable Facility Types | Text | no | no |  |
 | `Applicable_Period_Month` | Applicable Period Month | Number | no | no |  |
@@ -167,7 +167,7 @@ Every internal name below is a plain identifier: no spaces, so no `_x0020_`, and
 **Grain:** One row per uploaded file version  
 **Unique key:** Submission_ID, Submission_Request_ID  
 **Volume estimate:** ~400,000 rows  
-**Columns:** 32 -- **indexed:** Submission_ID, Submission_Request_ID, EOM_Item_ID, Uploaded_DateTime, Classification_Status, Portfolio_ID, Destination_ID, Needs_Filing, SharePoint_Unique_ID, SharePoint_File_ID, Is_Current, QC_Status
+**Columns:** 33 -- **indexed:** Submission_ID, Submission_Request_ID, EOM_Item_ID, Uploaded_DateTime, Classification_Status, Portfolio_ID, Destination_ID, Is_Pilot, Needs_Filing, SharePoint_Unique_ID, SharePoint_File_ID, Is_Current, QC_Status
 
 > Crosses the SharePoint delegation ceiling. Every production query against this list must filter on an indexed column.
 
@@ -195,6 +195,7 @@ Every internal name below is a plain identifier: no spaces, so no `_x0020_`, and
 | `Destination_ID` | Destination ID | Text | no | YES |  |
 | `Source_Library` | Source Library | Text | no | no |  |
 | `Source_Path` | Source Path | Text | no | no |  |
+| `Is_Pilot` | Is Pilot | Boolean | no | YES | default `0` (false) |
 | `Needs_Filing` | Needs Filing | Boolean | no | YES | default `0` (false) |
 | `Filing_Note` | Filing Note | Text | no | no |  |
 | `SharePoint_Unique_ID` | SharePoint Unique ID | Text | no | YES |  |
@@ -487,7 +488,7 @@ Every internal name below is a plain identifier: no spaces, so no `_x0020_`, and
 **Grain:** One row per portfolio per document domain  
 **Unique key:** Destination_ID  
 **Volume estimate:** ~20 rows  
-**Columns:** 14 -- **indexed:** Destination_ID, Portfolio_ID, Document_Domain
+**Columns:** 15 -- **indexed:** Destination_ID, Portfolio_ID, Document_Domain
 
 | Internal name | Display name | Type | Required | Indexed | Choices / default |
 |---|---|---|---|---|---|
@@ -496,6 +497,7 @@ Every internal name below is a plain identifier: no spaces, so no `_x0020_`, and
 | `Document_Domain` | Document Domain | Choice | YES | YES | `EOM`<br>`EOY`<br>`FMAT`<br>`Other` |
 | `Site_URL` | Site URL | Text | no | no |  |
 | `Library_Name` | Library Name | Text | YES | no |  |
+| `Library_Url_Segment` | Library Url Segment | Text | YES | no |  |
 | `Root_Folder` | Root Folder | Text | YES | no |  |
 | `Folder_Template` | Folder Template | Text | YES | no |  |
 | `Create_Missing_Folders` | Create Missing Folders | Boolean | YES | no | default `0` (false) |

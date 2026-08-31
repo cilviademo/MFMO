@@ -865,6 +865,7 @@
         "required": true,
         "indexed": false,
         "choices": [
+          "Verified",
           "High",
           "Medium",
           "Low",
@@ -883,6 +884,7 @@
               "type": "Collection(Edm.String)"
             },
             "results": [
+              "Verified",
               "High",
               "Medium",
               "Low",
@@ -2386,6 +2388,22 @@
         }
       },
       {
+        "name": "Is_Pilot",
+        "type": "Boolean",
+        "required": false,
+        "indexed": true,
+        "choices": [],
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Title": "Is_Pilot",
+          "FieldTypeKind": 8,
+          "Required": false,
+          "EnforceUniqueValues": false
+        }
+      },
+      {
         "name": "Needs_Filing",
         "type": "Boolean",
         "required": false,
@@ -2591,6 +2609,7 @@
       "Classification_Status",
       "Portfolio_ID",
       "Destination_ID",
+      "Is_Pilot",
       "Needs_Filing",
       "SharePoint_Unique_ID",
       "SharePoint_File_ID",
@@ -5772,6 +5791,23 @@
             "type": "SP.Field"
           },
           "Title": "Library_Name",
+          "FieldTypeKind": 2,
+          "Required": true,
+          "EnforceUniqueValues": false,
+          "MaxLength": 255
+        }
+      },
+      {
+        "name": "Library_Url_Segment",
+        "type": "Text",
+        "required": true,
+        "indexed": false,
+        "choices": [],
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Title": "Library_Url_Segment",
           "FieldTypeKind": 2,
           "Required": true,
           "EnforceUniqueValues": false,

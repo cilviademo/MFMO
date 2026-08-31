@@ -245,16 +245,25 @@ class TheFlowsAreWiredEvenWhereTheyAreUnfinished(unittest.TestCase):
             self.assertEqual(init["inputs"]["variables"][0]["value"],
                              S.SCHEMA_VERSION, name)
 
-    def test_every_flow_names_its_specification(self):
-        # An unfinished flow that does not say so is a trap.
+    def test_every_flow_has_a_body_beyond_the_guard(self):
+        # The bodies are implemented now. A flow carrying only the schema guard
+        # would be a shell that imports and does nothing.
+        guard = {"Initialize_ExpectedSchemaVersion",
+                 "Get_the_deployed_schema_version", "Stop_on_a_schema_mismatch"}
         for name, d in self.flows():
-            readme = d["properties"]["definition"]["actions"][
-                "READ_THE_SPECIFICATION_FIRST"]["inputs"]
-            self.assertTrue(readme["specification"].startswith("flows/"), name)
-            self.assertIn("NOT IMPLEMENTED", readme["status"], name)
-            spec = os.path.join(ROOT, readme["specification"])
-            self.assertTrue(os.path.exists(spec),
-                            f"{name} names a specification that does not exist")
+            acts = set(d["properties"]["definition"]["actions"])
+            self.assertTrue(acts - guard,
+                            f"{name} is a shell: it has only the schema guard")
+            self.assertGreaterEqual(len(acts), 5, name)
+
+    def test_every_specification_still_exists(self):
+        import glob
+        for d in ("EOM01-ExpectedPackage", "EOM02-Submission",
+                  "EOM02b-LegacyIntake", "EOM03-Reconciliation",
+                  "EOM04-Notifications"):
+            self.assertTrue(
+                os.path.exists(os.path.join(ROOT, "flows", d, "definition.md")),
+                f"flows/{d}/definition.md is the source for its body")
 
     def test_every_flow_imports_disabled(self):
         # Flows are enabled one at a time, in order, after EOM-01 is proven.

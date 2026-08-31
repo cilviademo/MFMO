@@ -109,6 +109,7 @@
       <RootComponent type="380" schemaName="mfops_MF_Portfolio2_SiteURL" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_Portfolio3_SiteURL" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_Portfolio4_SiteURL" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_PilotSite_SiteURL" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_RequirementList" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_ItemList" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_SubmissionList" behavior="0" />
@@ -121,6 +122,11 @@
       <RootComponent type="380" schemaName="mfops_MF_EscalationDaysOverdue" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_StatusList" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_ConfigList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_InstallationList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_FacilityList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_NonDutyDayList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_DestinationList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_NotificationRuleList" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_TenantCloud" behavior="0" />
     </RootComponents>
     <MissingDependencies />

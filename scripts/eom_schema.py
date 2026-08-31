@@ -185,7 +185,13 @@ NON_DUTY_DAY_POLICY = ("NEXT_DUTY_DAY", "PREVIOUS_DUTY_DAY", "NO_ADJUSTMENT")
 # Authority answers "does this requirement exist". Scope answers "at what grain
 # is it filed". They are separate claims: marking a scope guess VERIFIED
 # because the document is verified turns a proposal into policy by accident.
-SCOPE_CONFIDENCE = ("High", "Medium", "Low", "Proposed")
+SCOPE_CONFIDENCE = ("Verified", "High", "Medium", "Low", "Proposed")
+# VERIFIED is a RULING, not a confident guess, and it is a stronger claim than
+# High. High says "the evidence points this way"; Verified says "the programme
+# decided, on a date, and Scope_Basis records who and when". SF 1080, GPC and
+# the 1038 moved Proposed -> Verified on 31 Aug 2026 when the grain was ruled
+# facility, and the distinction matters because changing scope after items
+# exist means regenerating a period. Nothing should quietly become Verified.
 
 FACILITY_TYPE = ("Main DFAC", "Flight Kitchen", "Kiosk", "Satellite", "MAF",
                  "Contract Cafe")
@@ -681,6 +687,11 @@ MF_EOM_Submission = ListDef(
         c("Source_Path", "Text",
           note="Where the file was found or placed. Diagnostic only — the list "
                "row is truth."),
+        c("Is_Pilot", "Boolean", indexed=True,
+          note="Stamped from MF_App_Config.PilotMode at write time, not read "
+               "from config later. A pilot submission must stay identifiable "
+               "after PilotMode is turned off, or the first production month "
+               "silently inherits the pilot's rows and every count is wrong."),
         c("Needs_Filing", "Boolean", indexed=True,
           note="TRUE when the fiscal-year or month folder could not be matched "
                "and the file landed at the Monthly Data Call root under "
@@ -1115,8 +1126,17 @@ MF_Document_Destination = ListDef(
                "source is a destination leak and the pre-release scan blocks "
                "it. Never a literal in Power Fx."),
         c("Library_Name", "Text", req=True,
-          note="Assumed 'Shared Documents'. Verify per site — assumption is "
-               "how this breaks on the first real upload."),
+          note="The library's DISPLAY name, as a person sees it — often "
+               "'Documents'. Shown in messages and in Admin. NEVER used to "
+               "build a path."),
+        c("Library_Url_Segment", "Text", req=True,
+          note="The library's URL segment, which is a DIFFERENT STRING from "
+               "the display name: a library displayed as 'Documents' is "
+               "'Shared Documents' in the URL, because the display name was "
+               "changed after creation and the segment never follows. Building "
+               "a path from Library_Name produces a URL that 404s on a library "
+               "that plainly exists, which reads as a permissions problem. "
+               "EOM-02 builds every path from THIS column."),
         c("Root_Folder", "Text", req=True,
           note="All four differ: 'Legacy_Portfolio 1/H. Monthly Data Call', "
                "'Legacy_Portfolio 2/5. Monthly Data Call', and two without a "

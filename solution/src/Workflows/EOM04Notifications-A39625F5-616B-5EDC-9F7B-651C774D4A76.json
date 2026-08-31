@@ -60,6 +60,13 @@
             "schemaName": "mfops_MF_AuditList"
           }
         },
+        "MF_NotificationRuleList (mfops_MF_NotificationRuleList)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "mfops_MF_NotificationRuleList"
+          }
+        },
         "MF_NotificationsEnabled (mfops_MF_NotificationsEnabled)": {
           "defaultValue": "",
           "type": "String",
@@ -112,25 +119,10 @@
             "operationMetadataId": "f7ca0dd2-3245-57c2-a742-41a87c6869f6"
           }
         },
-        "READ_THE_SPECIFICATION_FIRST": {
-          "type": "Compose",
-          "runAfter": {},
-          "inputs": {
-            "flow": "EOM-04 Notifications",
-            "purpose": "Suspense reminders and escalation. SHIPS DISABLED.",
-            "specification": "flows/EOM04-Notifications/definition.md",
-            "status": "TRIGGER, CONNECTIONS AND ENVIRONMENT VARIABLES ARE WIRED. THE BODY IS NOT IMPLEMENTED.",
-            "why": "The logic is specified in the file named above and was not invented to fill this JSON. A flow whose body was guessed would import cleanly and do the wrong thing, which is worse than one that is obviously unfinished.",
-            "note": "MF_NotificationsEnabled gates every send. With it FALSE the flow records what it WOULD have sent to MF_EOM_Audit as 'Notification Suppressed'. Read a full cycle of that before enabling anything."
-          },
-          "metadata": {
-            "operationMetadataId": "d78b5fcd-3c64-5500-8d8d-167e4da522a6"
-          }
-        },
         "Get_the_deployed_schema_version": {
           "type": "OpenApiConnection",
           "runAfter": {
-            "READ_THE_SPECIFICATION_FIRST": [
+            "Initialize_ExpectedSchemaVersion": [
               "Succeeded"
             ]
           },
@@ -188,6 +180,174 @@
           },
           "metadata": {
             "operationMetadataId": "309f296e-f5e5-53e6-92f6-6785276d63f1"
+          }
+        },
+        "Today": {
+          "type": "InitializeVariable",
+          "runAfter": {
+            "Stop_on_a_schema_mismatch": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "variables": [
+              {
+                "name": "Today",
+                "type": "string",
+                "value": "@{formatDateTime(utcNow(), 'yyyy-MM-dd')}"
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "5ea64c2e-fc91-5d06-a26d-dd710c8da443"
+          }
+        },
+        "Get_the_enabled_rules": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Today": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+              "table": "@parameters('MF_NotificationRuleList (mfops_MF_NotificationRuleList)')",
+              "$filter": "Enabled eq 1",
+              "$top": 100
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "metadata": {
+            "operationMetadataId": "a3b936aa-e069-5e28-85d4-c9ff17ad4793"
+          }
+        },
+        "For_each_rule": {
+          "type": "Foreach",
+          "foreach": "@body('Get_the_enabled_rules')?['value']",
+          "actions": {
+            "Escalation_cutoff": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": "@{formatDateTime(addToTime(utcNow(), mul(-1, int(@parameters('MF_EscalationDaysOverdue (mfops_MF_EscalationDaysOverdue)'))), 'Day'), 'yyyy-MM-dd')}",
+              "metadata": {
+                "operationMetadataId": "ec83a848-416c-5eab-98ef-f8f7f26fec30"
+              }
+            },
+            "Gather_the_recipients_work": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Escalation_cutoff": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "GetItems",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                  "table": "@parameters('MF_ItemList (mfops_MF_ItemList)')",
+                  "$filter": "Action_Required eq 1 and Effective_Due_Date le '@{outputs('Escalation_cutoff')}'",
+                  "$top": 2000
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "metadata": {
+                "operationMetadataId": "132212ae-dd01-5d69-98a6-375ef342ddfc"
+              }
+            },
+            "Send_or_record_the_suppression": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@@parameters('MF_NotificationsEnabled (mfops_MF_NotificationsEnabled)')",
+                  true
+                ]
+              },
+              "actions": {
+                "Send_the_digest": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage": {
+                        "To": "@{items('For_each_rule')?['Recipient_Address']}",
+                        "Subject": "@{items('For_each_rule')?['Subject_Template']}",
+                        "Body": "<p>@{length(body('Gather_the_recipients_work')?['value'])} document(s) need your attention.</p>"
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "metadata": {
+                    "operationMetadataId": "ab78ba82-665f-5761-ab6b-c63c575e5dd0"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Record_what_it_would_have_sent": {
+                    "type": "OpenApiConnection",
+                    "runAfter": {},
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "PostItem",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "@parameters('MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)')",
+                        "table": "@parameters('MF_AuditList (mfops_MF_AuditList)')",
+                        "item": {
+                          "Action": "Notification Suppressed",
+                          "Action_DateTime": "@{utcNow()}",
+                          "Entity_Type": "Notification",
+                          "Entity_ID": "@{items('For_each_rule')?['Rule_ID']}",
+                          "Detail": "@{concat('Would have notified ', items('For_each_rule')?['Recipient_Address'], ' about ', length(body('Gather_the_recipients_work')?['value']), ' item(s).')}"
+                        }
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "metadata": {
+                      "operationMetadataId": "4723578d-160a-56f0-b5e6-b95cac71b6ad"
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Gather_the_recipients_work": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "4968581a-7ac9-58bc-906d-0c230df527ba"
+              }
+            }
+          },
+          "runAfter": {
+            "Get_the_enabled_rules": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f62c4d73-4b06-52d5-b4b3-ad737b36e98b"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
           }
         }
       },

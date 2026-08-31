@@ -29,17 +29,28 @@ PERIOD = "2026-08"
 # folders four ways, so assuming they agree about months is exactly the
 # assumption deployment/site-bindings.md exists to stop.
 SITE_SHAPES = {
+    # PRODUCTION -- four separate site collections, four naming habits.
     "PORT1-EOM": {"fy": "FY26", "month": "Aug 26"},
     "PORT2-EOM": {"fy": "FY 26", "month": "August 2026"},
     "PORT3-EOM": {"fy": "FY2026", "month": "08. August"},
     "PORT4-EOM": {"fy": "FY26", "month": "08"},
+    # PILOT -- one site, four root folders. The naming is consistent because
+    # one team curates all four, which is exactly why the pilot cannot prove
+    # the matcher handles inconsistency: only the production sites can.
+    "PILOT-P1-EOM": {"fy": "FY26", "month": "Aug 26"},
+    "PILOT-P2-EOM": {"fy": "FY26", "month": "Aug 26"},
+    "PILOT-P3-EOM": {"fy": "FY26", "month": "Aug 26"},
+    "PILOT-P4-EOM": {"fy": "FY26", "month": "Aug 26"},
 }
 
 
-def load_destinations():
+def load_destinations(prefix=None):
     with open(os.path.join(ROOT, "configuration", "document-destinations.csv"),
               encoding="utf-8-sig") as fh:
-        return list(csv.DictReader(fh))
+        rows = list(csv.DictReader(fh))
+    if prefix:
+        rows = [r for r in rows if r["Destination_ID"].startswith(prefix)]
+    return rows
 
 
 def bind(row, shape=None):
@@ -77,16 +88,19 @@ def line(label, result, ok):
 
 
 def main():
-    rows = load_destinations()
+    which = sys.argv[1] if len(sys.argv) > 1 else "PORT"
+    rows = load_destinations(which)
     ok = True
-    print(f"Routing dry run — period {PERIOD}, four site collections")
+    label = ("four production site collections" if which == "PORT"
+             else "four pilot destinations on one site")
+    print(f"Routing dry run — period {PERIOD}, {label}")
     print("Creates nothing. Representative bindings; no real site URL is used.\n")
 
     print("HAPPY PATH — one per portfolio")
     for row in rows:
         shape = SITE_SHAPES[row["Destination_ID"]]
         d = bind(row, shape)
-        root = f"{d['Library_Name']}/{d['Root_Folder']}"
+        root = f"{d['Library_Url_Segment']}/{d['Root_Folder']}"
         listing = site(root, shape)
         r = resolve_destination_folder(d, PERIOD, listing)
         expected = f"{root}/{shape['fy']}/{shape['month']}"
@@ -96,7 +110,7 @@ def main():
 
     print("FAILURE PATHS — every one must land somewhere findable")
     row = rows[1]                                  # Portfolio 2, the odd slug
-    root = f"{row['Library_Name']}/{row['Root_Folder']}"
+    root = f"{row['Library_Url_Segment']}/{row['Root_Folder']}"
 
     cases = []
 
@@ -178,17 +192,21 @@ def main():
     ok &= line("Create_Missing_Folders",
                "FALSE on all four rows",
                all(r["Create_Missing_Folders"] == "FALSE" for r in rows))
-    ok &= line("seeded rows fail closed",
-               "Site_URL blank, Verified_By blank, Active_Flag FALSE",
-               all(r["Site_URL"] == "" and r["Verified_By"] == ""
-                   and r["Active_Flag"] == "FALSE" for r in rows))
+    # The pilot rows ARE active and verified -- they still refuse, because
+    # Site_URL is bound at import and blank in source.
+    ok &= line("no site URL in source",
+               "every row, pilot and production",
+               all(r["Site_URL"] == "" for r in load_destinations()))
+    ok &= line("path built from the URL segment",
+               "never the display name",
+               all(r["Library_Url_Segment"].strip() for r in load_destinations()))
 
     # A fallback must never reach another portfolio's root.
     contained = True
     for r_ in rows:
         d = bind(r_)
         rr = resolve_destination_folder(
-            d, PERIOD, site(f"{d['Library_Name']}/{d['Root_Folder']}", None))
+            d, PERIOD, site(f"{d['Library_Url_Segment']}/{d['Root_Folder']}", None))
         for other in rows:
             if other["Destination_ID"] != r_["Destination_ID"]:
                 contained &= other["Root_Folder"] not in rr.path

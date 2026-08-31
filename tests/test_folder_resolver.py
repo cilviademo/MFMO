@@ -48,7 +48,8 @@ def destination(**over):
         "Portfolio_ID": "PORTFOLIO 2",
         "Document_Domain": "EOM",
         "Site_URL": "https://example.invalid/sites/p2",
-        "Library_Name": "Shared Documents",
+        "Library_Name": "Documents",
+        "Library_Url_Segment": "Shared Documents",
         "Root_Folder": "Legacy_Portfolio 2/5. Monthly Data Call",
         "Folder_Template": "{FiscalYearShort}/{MonthFolder}",
         "Create_Missing_Folders": False,
@@ -213,13 +214,20 @@ class FailClosed(unittest.TestCase):
             check_destination(destination(Site_URL=""))
         self.assertEqual(c.exception.code, "CONFIGURATION_REQUIRED")
 
-    def test_the_seeded_rows_all_fail_closed(self):
+    def test_every_seeded_row_fails_closed_until_its_url_is_bound(self):
+        # Eight rows: four PILOT and four PRODUCTION. The pilot four are
+        # active and verified, so they clear two of the three gates -- and
+        # still refuse, because Site_URL is bound at import and blank here.
         rows = read_destinations()
-        self.assertEqual(len(rows), 4)
+        self.assertEqual(len(rows), 8)
         for row in rows:
             row["Active_Flag"] = row["Active_Flag"] == "TRUE"
-            with self.assertRaises(DestinationNotUsable):
+            with self.assertRaises(DestinationNotUsable) as ctx:
                 check_destination(row)
+            expected = ("CONFIGURATION_REQUIRED" if row["Active_Flag"]
+                        else "DESTINATION_NOT_CONFIGURED")
+            self.assertEqual(ctx.exception.code, expected,
+                             row["Destination_ID"])
 
 
 class SeededDestinations(unittest.TestCase):
@@ -236,16 +244,66 @@ class SeededDestinations(unittest.TestCase):
             self.assertEqual(row["Create_Missing_Folders"], "FALSE")
             self.assertEqual(row["Fallback_Policy"], "FIND_OR_ROOT")
 
-    def test_the_four_root_folders_are_all_different(self):
+    def production(self):
+        return [r for r in self.rows if r["Destination_ID"].startswith("PORT")]
+
+    def pilot(self):
+        return [r for r in self.rows if r["Destination_ID"].startswith("PILOT")]
+
+    def test_there_are_four_of_each(self):
+        self.assertEqual(len(self.production()), 4)
+        self.assertEqual(len(self.pilot()), 4)
+
+    def test_the_four_production_root_folders_are_all_different(self):
         # If they were derivable, the column would not need to exist.
-        roots = [r["Root_Folder"] for r in self.rows]
+        roots = [r["Root_Folder"] for r in self.production()]
         self.assertEqual(len(set(roots)), 4)
+
+    def test_the_four_pilot_root_folders_are_all_different(self):
+        # The pilot rows share one site and split by root folder, so routing
+        # still exercises four destinations rather than a simplified single
+        # one. If they collapsed to one folder the pilot would prove nothing
+        # about the thing most likely to break.
+        roots = [r["Root_Folder"] for r in self.pilot()]
+        self.assertEqual(len(set(roots)), 4)
+
+    def test_every_portfolio_has_exactly_one_active_destination(self):
+        # Two active rows for one portfolio is an ambiguous route.
+        active = [r for r in self.rows if r["Active_Flag"] == "TRUE"]
+        seen = [r["Portfolio_ID"] for r in active]
+        self.assertEqual(len(seen), len(set(seen)), "ambiguous routing")
+        self.assertEqual(len(seen), 4)
+
+    def test_the_pilot_rows_are_the_active_ones(self):
+        for r in self.pilot():
+            self.assertEqual(r["Active_Flag"], "TRUE", r["Destination_ID"])
+        for r in self.production():
+            self.assertEqual(r["Active_Flag"], "FALSE", r["Destination_ID"])
 
     def test_portfolio_two_keeps_its_odd_slug_on_the_record(self):
         # Three work and one 404s is the worst failure shape available, so the
         # irregularity is written down where somebody debugging will find it.
-        p2 = next(r for r in self.rows if r["Portfolio_ID"] == "PORTFOLIO 2")
+        p2 = next(r for r in self.production()
+                  if r["Portfolio_ID"] == "PORTFOLIO 2")
         self.assertIn("Legacy_Portfolio2", p2["Site_Note"])
+
+    def test_the_library_url_segment_is_recorded_separately(self):
+        # A library displayed as "Documents" is "Shared Documents" in the URL.
+        # Building a path from the display name 404s on a library that plainly
+        # exists, which reads as a permissions problem.
+        for r in self.rows:
+            self.assertTrue(r["Library_Url_Segment"].strip(),
+                            r["Destination_ID"])
+        pilot = self.pilot()[0]
+        self.assertNotEqual(pilot["Library_Name"], pilot["Library_Url_Segment"],
+                            "the pilot site is the case this column exists for")
+
+    def test_no_site_url_is_committed_even_for_the_pilot(self):
+        # The pilot site IS known. It still does not go in source: this file is
+        # committed and seeded, and a .mil site URL in a tracked file is a
+        # destination leak. It is bound at import from MF_PilotSite_SiteURL.
+        for r in self.rows:
+            self.assertEqual(r["Site_URL"], "", r["Destination_ID"])
 
     def test_the_sort_prefixes_survive(self):
         by_id = {r["Destination_ID"]: r for r in self.rows}
@@ -356,6 +414,38 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class ThePathUsesTheUrlSegment(unittest.TestCase):
+    """A library displayed as "Documents" is "Shared Documents" in the URL.
+
+    Building the path from the display name produces a URL that 404s on a
+    library that plainly exists, and it gets debugged as a permissions problem.
+    The pilot site is exactly this case.
+    """
+
+    def test_the_resolved_path_uses_the_segment_not_the_display_name(self):
+        d = destination(Library_Name="Documents",
+                        Library_Url_Segment="Shared Documents")
+        root = f"Shared Documents/{d['Root_Folder']}"
+        children = tree({root: ["FY26"], f"{root}/FY26": ["Aug 26"]})
+        r = resolve_destination_folder(d, "2026-08", children)
+        self.assertTrue(r.path.startswith("Shared Documents/"))
+        self.assertFalse(r.path.startswith("Documents/"))
+
+    def test_a_blank_segment_is_refused_rather_than_substituted(self):
+        with self.assertRaises(DestinationNotUsable) as ctx:
+            resolve_destination_folder(
+                destination(Library_Url_Segment=""), "2026-08", tree({}))
+        self.assertEqual(ctx.exception.code, "CONFIGURATION_REQUIRED")
+        self.assertIn("not interchangeable", ctx.exception.detail)
+
+    def test_the_fallback_also_uses_the_segment(self):
+        d = destination(Library_Name="Documents",
+                        Library_Url_Segment="Shared Documents")
+        r = resolve_destination_folder(d, "2026-08", tree({}))
+        self.assertTrue(r.needs_filing)
+        self.assertTrue(r.path.startswith("Shared Documents/"))
+
+
 class TheFallbackCeiling(unittest.TestCase):
     """A fallback that reaches a site root, a library root or another portfolio
     is a stop condition.
@@ -378,10 +468,10 @@ class TheFallbackCeiling(unittest.TestCase):
     def test_the_fallback_never_rises_above_the_approved_root(self):
         r = resolve_destination_folder(destination(), "2026-08",
                                        self.nothing_matches())
-        self.assertTrue(r.path.startswith(destination()["Library_Name"]))
+        self.assertTrue(r.path.startswith(destination()["Library_Url_Segment"]))
         self.assertIn(destination()["Root_Folder"].split("/")[-1], r.path)
         # Not the library root, not the site root.
-        self.assertNotEqual(r.path, destination()["Library_Name"])
+        self.assertNotEqual(r.path, destination()["Library_Url_Segment"])
         self.assertGreaterEqual(len(r.path.split("/")), 3)
 
     def test_a_blank_root_folder_is_refused_rather_than_widened(self):
@@ -400,7 +490,8 @@ class TheFallbackCeiling(unittest.TestCase):
             rows = list(csv.DictReader(fh))
         for row in rows:
             live = destination(Root_Folder=row["Root_Folder"],
-                               Library_Name=row["Library_Name"])
+                               Library_Name=row["Library_Name"],
+                               Library_Url_Segment=row["Library_Url_Segment"])
             r = resolve_destination_folder(live, "2026-08", self.nothing_matches())
             self.assertIn(row["Root_Folder"], r.path)
             for other in rows:

@@ -71,6 +71,58 @@ def _null_if_blank(v):
     return v or None
 
 
+class PeriodOutsideBackfillWindow(Exception):
+    """EOM-01 was asked to generate outside the configured window.
+
+    A config key nothing reads is a decision that was never applied.
+    BackfillFromPeriod and BackfillToPeriod bound what EOM-01 may create, and
+    they are enforced here rather than trusted: the pilot window is 2026-08 to
+    2026-09, which is 737 rows instead of 3,618, and a stray --period 2025-10
+    would quietly create the other 2,881.
+
+    Widening the window later is a one-cell edit, and generation is idempotent,
+    so re-running against a wider range fills in the earlier periods without
+    disturbing anything already there.
+    """
+
+
+def period_window(app_config):
+    """(from, to) as YYYY-MM, or (None, None) when unbounded."""
+    cfg = {r["Config_Key"]: (r["Config_Value"] or "").strip()
+           for r in app_config if r.get("Active_Flag") == "TRUE"}
+    return cfg.get("BackfillFromPeriod") or None, cfg.get("BackfillToPeriod") or None
+
+
+def periods_in_window(lo, hi):
+    """Every YYYY-MM from lo to hi inclusive."""
+    if not lo or not hi:
+        return []
+    out, y, m = [], *(int(x) for x in lo.split("-"))
+    while f"{y:04d}-{m:02d}" <= hi:
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m == 13:
+            y, m = y + 1, 1
+        if len(out) > 240:
+            raise ValueError(f"window {lo}..{hi} is implausibly wide")
+    return out
+
+
+def check_window(period, lo, hi):
+    if lo and period < lo:
+        raise PeriodOutsideBackfillWindow(
+            f"{period} is before BackfillFromPeriod {lo}. EOM-01 will not "
+            f"generate it.\n"
+            f"  The pilot window is {lo}..{hi}. Widening it is a one-cell edit "
+            f"in configuration/app-config.csv, and generation is idempotent, so "
+            f"a later run against a wider range fills in the earlier periods "
+            f"without disturbing what already exists.")
+    if hi and period > hi:
+        raise PeriodOutsideBackfillWindow(
+            f"{period} is after BackfillToPeriod {hi}. Advance the window "
+            f"deliberately rather than generating past it.")
+
+
 def onboard(installations, pilot):
     """Apply the pilot onboarding list to a freshly generated registry.
 
@@ -407,6 +459,8 @@ def main(argv=None):
     p.add_argument("--config-dir", default="configuration")
     p.add_argument("--period", default=None, help="YYYY-MM; defaults to last month")
     p.add_argument("--today", default=None, help="ISO date; defaults to today")
+    p.add_argument("--backfill", action="store_true",
+                   help="generate every period in the configured window")
     p.add_argument("--json", action="store_true")
     args = p.parse_args(argv)
 
@@ -418,21 +472,51 @@ def main(argv=None):
         period = (first - _dt.timedelta(days=1)).strftime("%Y-%m")
 
     d = args.config_dir
-    rows, stats = generate(
-        load_csv(os.path.join(d, "requirements.csv")),
-        onboard(load_csv(os.path.join(d, "installations.csv")),
-                load_csv(os.path.join(d, "pilot-onboarding.csv"))),
-        load_csv(os.path.join(d, "facilities.csv")),
-        period,
-        today=today,
-        non_duty_days=load_csv(os.path.join(d, "non-duty-days.sample.csv")),
-    )
+    app_config = load_csv(os.path.join(d, "app-config.csv"))
+    lo, hi = period_window(app_config)
+
+    if args.backfill:
+        targets = periods_in_window(lo, hi)
+        if not targets:
+            raise SystemExit("--backfill needs BackfillFromPeriod and "
+                             "BackfillToPeriod in app-config.csv")
+    else:
+        check_window(period, lo, hi)
+        targets = [period]
+
+    reqs = load_csv(os.path.join(d, "requirements.csv"))
+    insts = onboard(load_csv(os.path.join(d, "installations.csv")),
+                    load_csv(os.path.join(d, "pilot-onboarding.csv")))
+    facs = load_csv(os.path.join(d, "facilities.csv"))
+    ndd = load_csv(os.path.join(d, "non-duty-days.sample.csv"))
+
+    # Across a window, EVERY period generates into the SAME dict, so a
+    # collision between two periods would be visible rather than silent.
+    # EOM_Item_ID carries the period, so there should never be one.
+    rows, stats, per_period = {}, None, []
+    for target in targets:
+        r, st = generate(reqs, insts, facs, target, existing=dict(rows),
+                         today=today, non_duty_days=ndd)
+        before = len(rows)
+        rows.update(r)
+        per_period.append((target, len(rows) - before))
+        if stats is None:
+            stats = st
+        else:
+            stats["created"] += st["created"]
 
     if args.json:
         print(json.dumps(list(rows.values()), indent=2, default=str))
         return 0
 
-    print(f"period {period}  (as of {today})")
+    if len(targets) > 1:
+        print(f"backfill window {targets[0]}..{targets[-1]}  "
+              f"({len(targets)} periods, as of {today})")
+        for t, n in per_period:
+            print(f"  {t}  {n:>5} rows")
+        print(f"  {'TOTAL':7}{len(rows):>6} rows")
+    else:
+        print(f"period {period}  (as of {today})")
     print(f"created {stats['created']}, retained {stats['retained']}")
     print(f"installations onboarded: "
           f"{len(load_csv(os.path.join(d, 'installations.csv'))) - len(stats['installations_not_onboarded'])}"

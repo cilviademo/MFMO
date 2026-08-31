@@ -221,7 +221,18 @@ def resolve_destination_folder(destination, period, list_children):
     """
     check_destination(destination)
 
-    root = join_path(destination["Library_Name"], destination["Root_Folder"])
+    # THE URL SEGMENT, NEVER THE DISPLAY NAME. A library displayed as
+    # "Documents" is "Shared Documents" in the URL, because the display name was
+    # changed after creation and the segment never follows. Building the path
+    # from Library_Name produces a URL that 404s on a library that plainly
+    # exists -- which reads as a permissions problem and is debugged as one.
+    segment = str(destination.get("Library_Url_Segment") or "").strip()
+    if not segment:
+        raise DestinationNotUsable(
+            "CONFIGURATION_REQUIRED",
+            "Library_Url_Segment is blank. The display name is not "
+            "interchangeable with it and must not be substituted.")
+    root = join_path(segment, destination["Root_Folder"])
     fallback = destination.get("Fallback_Policy", "FIND_OR_ROOT")
 
     fy_name = match_fiscal_year_folder(list_children(root), period)
