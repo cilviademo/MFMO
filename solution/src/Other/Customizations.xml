@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Connection references and environment variables.
+
+  These are the only environment-specific values in the repository, and they
+  carry no value here. Both are supplied at import time by
+  solution/deployment-settings.json, which is not committed.
+
+  The SharePoint lists themselves are NOT solution components: they are
+  provisioned by provisioning/Provision-MFOpsLists.ps1 from the schema, which
+  is the single source of truth. Carrying list definitions in two places is
+  how they drift.
+-->
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Entities />
+  <Roles />
+  <Workflows />
+  <FieldSecurityProfiles />
+  <Templates />
+  <EntityMaps />
+  <EntityRelationships />
+  <OrganizationSettings />
+  <optionsets />
+  <CustomControls />
+
+  <connectionreferences>
+    <connectionreference connectionreferencelogicalname="mfo_sharepointonline">
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_sharepointonline</connectorid>
+      <connectionreferencedisplayname>Mission Feeding SharePoint</connectionreferencedisplayname>
+      <description>Reads and writes every MF_ list and the evidence library. Required; capability gates 1 and 2.</description>
+      <iscustomizable>1</iscustomizable>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="mfo_office365users">
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_office365users</connectorid>
+      <connectionreferencedisplayname>Mission Feeding Entra identity</connectionreferencedisplayname>
+      <description>Resolves the signed-in identity. There is no sign-in screen: CAC resolves identity before the app loads. Capability gate 5.</description>
+      <iscustomizable>1</iscustomizable>
+    </connectionreference>
+    <connectionreference connectionreferencelogicalname="mfo_office365">
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_office365</connectorid>
+      <connectionreferencedisplayname>Mission Feeding Outlook</connectionreferencedisplayname>
+      <description>EOM-04 notifications only, behind EnableNotifications which ships False. Leave the connection id empty if capability gate 7 is not green; the flow logs what it would have sent instead.</description>
+      <iscustomizable>1</iscustomizable>
+    </connectionreference>
+  </connectionreferences>
+
+  <environmentvariables>
+    <environmentvariabledefinition schemaname="mfo_SiteUrl">
+      <displayname>Mission Feeding site URL</displayname>
+      <description>Set at import. No URL is hard-coded anywhere in the app, the flows or the scripts.</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfo_EvidenceLibraryPath">
+      <displayname>Evidence library path</displayname>
+      <description>Server-relative path of the evidence document library. EOM-02 binds to it at library level, not folder level.</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+  </environmentvariables>
+
+  <Languages>
+    <Language>1033</Language>
+  </Languages>
+</ImportExportXml>

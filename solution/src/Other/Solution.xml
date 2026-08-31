@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MissionFeedingOperations solution envelope.
+
+  The app is canvas-app/src/*.pa.yaml and the flows are
+  flows/*/definition.json. This file declares what the package contains and
+  at what version; it is not where behaviour lives.
+
+  Version must match MF_App_Config.AppVersion and the git tag.
+-->
+<ImportExportXml version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive">
+  <SolutionManifest>
+    <UniqueName>MissionFeedingOperations</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="Mission Feeding Operations" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="End of month and end of year document requirement, evidence, versioning, QC and common operational picture for mission feeding facilities. Release 1." languagecode="1033" />
+    </Descriptions>
+    <Version>1.0.0</Version>
+    <Managed>0</Managed>
+    <Publisher>
+      <UniqueName>MissionFeeding</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="Mission Feeding" languagecode="1033" />
+      </LocalizedNames>
+      <CustomizationPrefix>mfo</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>21400</CustomizationOptionValuePrefix>
+    </Publisher>
+    <RootComponents>
+      <!-- Canvas app -->
+      <RootComponent type="300" schemaName="mfo_missionfeedingoperations" behavior="0" />
+      <!-- Flows -->
+      <RootComponent type="29" schemaName="mfo_EOM01GenerateExpectedItems" behavior="0" />
+      <RootComponent type="29" schemaName="mfo_EOM02FileIntake" behavior="0" />
+      <RootComponent type="29" schemaName="mfo_EOM02ClassifyUnmatched" behavior="0" />
+      <RootComponent type="29" schemaName="mfo_EOM03StatusFact" behavior="0" />
+      <RootComponent type="29" schemaName="mfo_EOM04QCDecision" behavior="0" />
+      <RootComponent type="29" schemaName="mfo_EOM05AppUpload" behavior="0" />
+      <!-- Connection references. Ids are supplied at import time by the
+           deployment settings file and are never edited in place. -->
+      <RootComponent type="10108" schemaName="mfo_sharepointonline" behavior="0" />
+      <RootComponent type="10108" schemaName="mfo_office365users" behavior="0" />
+      <RootComponent type="10108" schemaName="mfo_office365" behavior="0" />
+      <!-- Environment variables. Values are supplied at import time; no site
+           URL or library path is baked into the package. -->
+      <RootComponent type="380" schemaName="mfo_SiteUrl" behavior="0" />
+      <RootComponent type="380" schemaName="mfo_EvidenceLibraryPath" behavior="0" />
+    </RootComponents>
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>

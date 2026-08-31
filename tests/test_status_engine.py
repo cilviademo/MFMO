@@ -230,6 +230,30 @@ class TestTransliterationsAgree(unittest.TestCase):
             for field in ("Status_Semantic", "Final_Status", "Action_Owner_Role", "Action_Required"):
                 self.assertIn(field, text, f"{os.path.basename(path)} writes Status_Code without {field}")
 
+    def test_the_prototype_engine_matches_the_reference(self):
+        # docs/mf-operations-prototype.html implements the engine live rather
+        # than mocking it up. A prototype that has drifted from the reference
+        # is a prototype that settles the wrong argument.
+        html = read("docs", "mf-operations-prototype.html")
+        for code, (status, label, owner, required) in CODES.items():
+            row = re.search(r"^  %s:\s*\{(.*?)\},\s*$" % re.escape(code), html, re.M)
+            self.assertIsNotNone(row, f"{code} missing from the prototype")
+            row = row.group(1)
+            self.assertIn(f'status: "{status}"', row, code)
+            self.assertIn(f'owner: "{owner}"', row, code)
+            self.assertIn(f"required: {'true' if required else 'false'}", row, code)
+            # The label may carry a typographic dash the plain-text sources do
+            # not; compare on the part before any dash.
+            head = label.split(" - ")[0]
+            self.assertIn(head, row, code)
+
+    def test_the_prototype_declares_the_same_denominator_set(self):
+        html = read("docs", "mf-operations-prototype.html")
+        m = re.search(r"OUT_OF_DENOMINATOR\s*=\s*\[(.*?)\]", html, re.S)
+        self.assertIsNotNone(m)
+        self.assertEqual(set(re.findall(r'"([A-Z_]+)"', m.group(1))),
+                         set(OUT_OF_DENOMINATOR_CODES))
+
     def test_fact_flow_copies_rather_than_recomputes(self):
         text = read("flows", "EOM03-StatusFact", "definition.json")
         # The two rollup flags are computed; everything else is copied.

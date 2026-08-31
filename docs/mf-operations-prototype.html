@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission Feeding Operations — prototype v2</title>
+<!--
+  Mission Feeding Operations — interaction prototype, v2.
+
+  This is not a mockup. The status engine below is a transliteration of
+  scripts/status_engine.py, in the same order, and the page evaluates every
+  row live. Change the date or the QC state and watch the row change: what
+  you see is what the app will do.
+
+  It exists to settle three arguments before anyone writes Power Fx:
+    1. Five visual states, not four. Blue is "not due yet"; Gray is
+       "not applicable, waived, superseded, or provisional".
+    2. An UNVERIFIED requirement never goes Red. It goes Gray and the action
+       belongs to the programme.
+    3. A rollup over colour is wrong. [ACCEPTED, NOT_DUE, NOT_DUE] is 100%
+       complete, not 33%.
+
+  No framework, no network, no build step. Open it in a browser.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --text: #242424;
+    --text-2: #616161;
+    --surface: #ffffff;
+    --surface-2: #faf9f8;
+    --border: #d1d1d1;
+    --focus: #0f6cbd;
+    --blue: #0f548c;   --blue-bg: #eff6fc;
+    --amber: #8a5300;  --amber-bg: #fff9f0;
+    --red: #a4262c;    --red-bg: #fdf3f4;
+    --green: #0e700e;  --green-bg: #f1faf1;
+    --gray: #424242;   --gray-bg: #f5f5f5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+  h2 { font-size: 15px; margin: 28px 0 8px; font-weight: 600; }
+  .sub { color: var(--text-2); font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px; margin-bottom: 20px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--text-2); }
+  input, select, button {
+    font: inherit; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--text);
+  }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .card {
+    flex: 1 1 200px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px; padding: 16px;
+  }
+  .card .label { font-size: 12px; color: var(--text-2); }
+  .card .value { font-size: 28px; font-weight: 700; }
+  .card .detail { font-size: 12px; color: var(--text-2); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--surface); }
+  .scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; color: var(--text-2); font-weight: 600; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .req { font-weight: 600; }
+  .meta { font-size: 12px; color: var(--text-2); }
+
+  /* The chip. Text, icon shape and colour — three redundant channels.
+     There is no variant of this that drops the label. */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 8px; border-radius: 4px;
+    border: 1px solid currentColor; font-size: 12px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .chip .glyph { font-size: 13px; line-height: 1; }
+  .chip.Blue  { color: var(--blue);  background: var(--blue-bg); }
+  .chip.Amber { color: var(--amber); background: var(--amber-bg); }
+  .chip.Red   { color: var(--red);   background: var(--red-bg); }
+  .chip.Green { color: var(--green); background: var(--green-bg); }
+  .chip.Gray  { color: var(--gray);  background: var(--gray-bg); }
+
+  .note {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--amber); border-radius: 4px;
+    padding: 12px 16px; margin: 12px 0; font-size: 13px;
+  }
+  .note strong { color: var(--amber); }
+  code { background: var(--gray-bg); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .greyscale { filter: grayscale(1); }
+  footer { color: var(--text-2); font-size: 12px; padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Mission Feeding Operations — prototype v2</h1>
+  <div class="sub">
+    Live status engine. Same ordering as <code>scripts/status_engine.py</code>.
+    Change anything below and every row re-evaluates.
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="field">
+      <label for="asOf">Today is</label>
+      <input type="date" id="asOf" value="2026-11-10">
+    </div>
+    <div class="field">
+      <label for="window">Due-soon window (days)</label>
+      <input type="number" id="window" value="7" min="0" max="60" style="width:90px">
+    </div>
+    <div class="field">
+      <label for="verified">Requirement catalogue</label>
+      <select id="verified">
+        <option value="none">All 12 UNVERIFIED (today's reality)</option>
+        <option value="all">All VERIFIED (what changes)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="grey">
+        <input type="checkbox" id="grey"> Greyscale
+      </label>
+      <span class="meta">Every state stays distinguishable</span>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="note" id="rollupNote"></div>
+
+  <h2>Facility checklist — Liberty DFAC 1, FY26-P11</h2>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Requirement</th><th>Scope</th><th>Suspense</th>
+          <th>Status</th><th>Action owner</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <h2>All eleven codes</h2>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Code</th><th>Chip</th><th>Owner</th><th>Action?</th><th>Complete</th><th>In denominator</th></tr>
+      </thead>
+      <tbody id="catalogue"></tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Blue is not Gray.</strong> Four states would force <em>not due
+    yet</em> and <em>not applicable</em> into the same bucket. One is an
+    obligation that has not arrived; the other is an obligation that does not
+    exist. A manager plans around the first and ignores the second.
+  </div>
+</main>
+
+<footer>
+  Reference: <code>docs/status-calculation.md</code> ·
+  <code>scripts/status_engine.py</code> ·
+  <code>canvas-app/formulas/StatusEngine.fx</code>. If this page and those
+  three ever disagree, the Python is right and the other two are broken.
+</footer>
+
+<script>
+"use strict";
+
+// ---------------------------------------------------------------------------
+// The engine. Transliterated from scripts/status_engine.py. Same order.
+// ---------------------------------------------------------------------------
+const CODES = {
+  NOT_APPLICABLE:      { status: "Gray",  label: "Not applicable",                          owner: "None",     required: false, glyph: "ⓘ" },
+  WAIVED:              { status: "Gray",  label: "Waived",                                  owner: "None",     required: false, glyph: "ⓘ" },
+  SUPERSEDED:          { status: "Gray",  label: "Superseded",                              owner: "None",     required: false, glyph: "ⓘ" },
+  ACCEPTED:            { status: "Green", label: "Accepted",                                owner: "None",     required: false, glyph: "✓" },
+  RETURNED:            { status: "Amber", label: "Returned for correction",                 owner: "Facility", required: true,  glyph: "↺" },
+  IN_REVIEW:           { status: "Amber", label: "In review",                               owner: "Reviewer", required: true,  glyph: "◉" },
+  SUBMITTED:           { status: "Amber", label: "Submitted – awaiting review",        owner: "Reviewer", required: true,  glyph: "↑" },
+  OVERDUE:             { status: "Red",   label: "Overdue",                                 owner: "Facility", required: true,  glyph: "⚠" },
+  PROVISIONAL_OVERDUE: { status: "Gray",  label: "Past suspense – requirement unverified", owner: "Program", required: true, glyph: "ⓘ" },
+  DUE_SOON:            { status: "Amber", label: "Due soon",                                owner: "Facility", required: true,  glyph: "◴" },
+  NOT_DUE:             { status: "Blue",  label: "Not due yet",                             owner: "Facility", required: false, glyph: "◴" },
+};
+
+const OUT_OF_DENOMINATOR = ["NOT_DUE", "WAIVED", "NOT_APPLICABLE", "SUPERSEDED"];
+
+function isComplete(code)      { return code === "ACCEPTED"; }
+function isInDenominator(code) { return !OUT_OF_DENOMINATOR.includes(code); }
+
+function daysBetween(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+// One evaluation. Ordered, total, first match wins.
+function evaluate(o) {
+  const asOf = o.asOf, suspense = o.suspenseDate;
+
+  // 1. The obligation does not exist for this row.
+  if (o.appliesToFacility === false || o.requirementIsActive === false ||
+      o.verification === "RETIRED") return present("NOT_APPLICABLE");
+  // 2. Released.
+  if (o.waived) return present("WAIVED");
+  // 3. Replaced.
+  if (o.superseded) return present("SUPERSEDED");
+
+  // 4-7. The CURRENT-VERSION submission's QC state is the item's state.
+  if (o.hasCurrentSubmission && o.qcStatus) {
+    if (o.qcStatus === "ACCEPTED")  return present("ACCEPTED");
+    if (o.qcStatus === "RETURNED")  return present("RETURNED");
+    if (o.qcStatus === "IN_REVIEW") return present("IN_REVIEW");
+    if (o.qcStatus === "PENDING")   return present("SUBMITTED");
+  }
+
+  // 8. Nothing submitted. Time decides; verification decides the colour.
+  if (!suspense) return present("NOT_DUE");
+  if (asOf > suspense) {
+    // An UNVERIFIED requirement NEVER drives Red.
+    return present(o.verification === "VERIFIED" ? "OVERDUE" : "PROVISIONAL_OVERDUE");
+  }
+  if (daysBetween(asOf, suspense) <= o.dueSoonWindowDays) return present("DUE_SOON");
+  return present("NOT_DUE");
+}
+
+function present(code) {
+  const c = CODES[code];
+  return { code, status: c.status, label: c.label,
+           actionOwner: c.owner, actionRequired: c.required, glyph: c.glyph };
+}
+
+// Rollup over semantic status, never over colour.
+function rollup(results) {
+  const den = results.filter(r => isInDenominator(r.code));
+  const num = den.filter(r => isComplete(r.code));
+  return {
+    total: results.length,
+    denominator: den.length,
+    complete: num.length,
+    actionRequired: results.filter(r => r.actionRequired).length,
+    ratio: den.length ? num.length / den.length : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The seed. Twelve requirements, three inactive, all UNVERIFIED.
+// ---------------------------------------------------------------------------
+const REQUIREMENTS = [
+  { id: "REQ-001", name: "Headcount and Meal Count Reconciliation",   scope: "Facility",     suspense: "2026-09-10", state: {} },
+  { id: "REQ-002", name: "Subsistence Inventory Report",              scope: "Facility",     suspense: "2026-09-10", state: { hasCurrentSubmission: true, qcStatus: "ACCEPTED" } },
+  { id: "REQ-003", name: "Cash Collection and Meal Card Deposits",    scope: "Facility",     suspense: "2026-11-07", state: { hasCurrentSubmission: true, qcStatus: "PENDING" } },
+  { id: "REQ-004", name: "Food Cost Performance Summary",             scope: "Facility",     suspense: "2026-11-21", state: {} },
+  { id: "REQ-005", name: "Food Safety and Sanitation Inspection Log", scope: "Facility",     suspense: "2026-11-14", state: {} },
+  { id: "REQ-006", name: "Equipment Status and Deadline Report",      scope: "Facility",     suspense: "2026-11-14", state: { requirementIsActive: false } },
+  { id: "REQ-007", name: "Labor Hours and Staffing Report",           scope: "Facility",     suspense: "2026-11-12", state: { hasCurrentSubmission: true, qcStatus: "RETURNED" } },
+  { id: "REQ-008", name: "Contractor Invoice and CLIN Reconciliation",scope: "Contract",     suspense: "2026-11-30", state: {} },
+  { id: "REQ-009", name: "Installation Consolidated EOM Certification",scope: "Installation",suspense: "2026-11-30", state: { hasCurrentSubmission: true, qcStatus: "IN_REVIEW" } },
+  { id: "REQ-011", name: "End of Year Subsistence Closeout",          scope: "Installation", suspense: "2026-11-14", state: { waived: true } },
+  { id: "REQ-012", name: "Food 2.0 Menu and Nutrition Attestation",   scope: "Facility",     suspense: "2026-11-14", state: { appliesToFacility: false } },
+];
+
+const ACTION_BY_CODE = {
+  ACCEPTED: "View", SUBMITTED: "Review", IN_REVIEW: "Review",
+  RETURNED: "Resubmit", PROVISIONAL_OVERDUE: "Verify requirement",
+  NOT_APPLICABLE: "View", WAIVED: "View", SUPERSEDED: "View",
+};
+
+const $ = id => document.getElementById(id);
+
+function render() {
+  const asOf = new Date($("asOf").value + "T00:00:00");
+  const win = parseInt($("window").value, 10) || 0;
+  const verification = $("verified").value === "all" ? "VERIFIED" : "UNVERIFIED";
+  document.body.classList.toggle("greyscale", $("grey").checked);
+
+  const evaluated = REQUIREMENTS.map(r => {
+    const res = evaluate(Object.assign({
+      asOf,
+      suspenseDate: new Date(r.suspense + "T00:00:00"),
+      verification,
+      requirementIsActive: true,
+      appliesToFacility: true,
+      dueSoonWindowDays: win,
+    }, r.state));
+    return { req: r, res };
+  });
+
+  // Rows
+  $("rows").innerHTML = evaluated.map(({ req, res }) => `
+    <tr>
+      <td class="req">${req.name}<div class="meta">${req.id}</div></td>
+      <td class="meta">${req.scope}${req.scope !== "Facility" ? '<div class="meta">Facility_ID is null</div>' : ""}</td>
+      <td class="meta">${req.suspense}</td>
+      <td>${chip(res, req.suspense)}</td>
+      <td class="meta">${res.actionOwner}</td>
+      <td class="meta">${ACTION_BY_CODE[res.code] || "Submit"}</td>
+    </tr>`).join("");
+
+  // Cards
+  const r = rollup(evaluated.map(e => e.res));
+  const naiveColour = evaluated.filter(e => e.res.status === "Green").length / evaluated.length;
+  $("cards").innerHTML = `
+    ${card("Complete", r.denominator === 0 ? "Nothing due" : Math.round(r.ratio * 100) + "%",
+           r.denominator === 0 ? "No obligations are due" : `${r.complete} of ${r.denominator} accepted`)}
+    ${card("Waiting on someone", String(r.actionRequired), `of ${r.total} rows`)}
+    ${card("A colour rollup would say", Math.round(naiveColour * 100) + "%",
+           "green rows / all rows — wrong")}
+    ${card("Genuinely overdue", String(evaluated.filter(e => e.res.code === "OVERDUE").length),
+           "VERIFIED requirements only")}`;
+
+  const provisional = evaluated.filter(e => e.res.code === "PROVISIONAL_OVERDUE").length;
+  $("rollupNote").innerHTML = provisional
+    ? `<strong>${provisional} row${provisional === 1 ? " is" : "s are"} past suspense against an unverified requirement.</strong>
+       They are Gray, not Red, and the action owner is the <em>Program</em> — the next step is to
+       verify the requirement, not to chase the facility. Switch the catalogue to VERIFIED above
+       to see what changes.`
+    : `<strong>No provisional rows past suspense.</strong> With the catalogue verified, a missed
+       suspense turns Red and the action lands on the facility. That is why verifying a
+       requirement is a deliberate act with a citation behind it.`;
+
+  // Catalogue
+  $("catalogue").innerHTML = Object.keys(CODES).map(code => {
+    const p = present(code);
+    return `<tr>
+      <td><code>${code}</code></td>
+      <td>${chip(p, null)}</td>
+      <td class="meta">${p.actionOwner}</td>
+      <td class="meta">${p.actionRequired ? "yes" : "no"}</td>
+      <td class="meta">${isComplete(code) ? "yes" : "no"}</td>
+      <td class="meta">${isInDenominator(code) ? "yes" : "no"}</td>
+    </tr>`;
+  }).join("");
+}
+
+function chip(res, suspense) {
+  // Text and icon and colour. Always. The accessible name is the whole
+  // sentence, not the chip text.
+  const label = `Status: ${res.label}. ` +
+    (res.actionOwner === "None" ? "No action required." : `Action owner: ${res.actionOwner}.`) +
+    (suspense ? ` Suspense date ${suspense}.` : "");
+  return `<span class="chip ${res.status}" role="img" aria-label="${label}">
+            <span class="glyph" aria-hidden="true">${res.glyph}</span>${res.label}
+          </span>`;
+}
+
+function card(label, value, detail) {
+  return `<div class="card"><div class="label">${label}</div>
+          <div class="value">${value}</div>
+          <div class="detail">${detail}</div></div>`;
+}
+
+["asOf", "window", "verified", "grey"].forEach(id =>
+  $(id).addEventListener("input", render));
+render();
+</script>
+</body>
+</html>
