@@ -13,7 +13,7 @@ resources must already exist before any of this runs.
 
 ```
 branch    claude/mission-feeding-eom-build-98fbsi
-commit    aed4b11251af13d935e2b10d49e41c571a691fe1
+commit    a200a3dc9f6ebdd107530b979dfdf9c7fa51e36e
 tag       v1.0.0
 tree      clean
 ```
