@@ -13,7 +13,7 @@ resources must already exist before any of this runs.
 
 ```
 branch    claude/mission-feeding-eom-build-98fbsi
-commit    9797589702cbb02bcc9a83ae70424e42dc0b0502
+commit    aed4b11251af13d935e2b10d49e41c571a691fe1
 tag       v1.0.0
 tree      clean
 ```
@@ -39,11 +39,17 @@ Checked by the release gate. Any drift blocks the build.
 
 ```
 dist/MissionFeedingOperations_1.0.0/MissionFeedingOperations_1.0.0.zip
-SHA-256  a15755728c5e366b0276ddd7ba4cb99edd166fb13a09d20dde1235d6377454e3
+SHA-256  a79d208c4100d3c9c7644688d048912c115db628541e6171d9b3a473c6c6078e
 ```
 
-Packed from the tagged commit with `git archive`, not from the working tree.
-Version, commit and checksum describe the same build.
+Packed from the tagged commit by `scripts/build_release.sh`, not from the
+working tree. The build is **reproducible** — timestamps are normalised, so the
+same tag always yields the same checksum. Version, commit and checksum describe
+the same build.
+
+```
+bash scripts/build_release.sh v1.0.0
+```
 
 **It contains the solution envelope only** — `Solution.xml` and
 `Customizations.xml`. There is no `.msapp` and no flow `definition.json`,
