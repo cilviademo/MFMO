@@ -13,10 +13,18 @@ resources must already exist before any of this runs.
 
 ```
 branch    claude/mission-feeding-eom-build-98fbsi
-commit    a200a3dc9f6ebdd107530b979dfdf9c7fa51e36e
+commit    91c18d2e9891c4a073d76f41409bf092fcb34870
 tag       v1.0.0
 tree      clean
 ```
+
+**The tag exists locally but is not on the remote.** `git push origin v1.0.0`
+is refused with HTTP 403 — this session's credentials allow pushing the
+designated branch and not creating tags. The branch is pushed and
+`origin/claude/mission-feeding-eom-build-98fbsi` matches local `HEAD` exactly,
+so the tagged commit is on the remote; only the tag *ref* is missing. Recreate
+it with `git tag -a v1.0.0 <commit>` from a session that can, or from the
+GitHub releases UI. The artifact is reproducible from the commit either way.
 
 **This was not committed to `main`.** The session's standing instruction is to
 develop and push only on `claude/mission-feeding-eom-build-98fbsi` and never to
