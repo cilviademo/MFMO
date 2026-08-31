@@ -1,0 +1,155 @@
+Facility_ID,Installation_ID,Facility_Name,Designation,Unit,Facility_Type,Operating_Model,Program_Type,Contract_Type,Primary_PV,POS_Terminals_Raw,POC_Display_Name,In_R1_Scope,Source_Row,Source_System,Facility_DODAAC,Contract_ID,Active_Flag
+ALTUS_AFB|HANGAR_97,ALTUS_AFB,Hangar 97,,97 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,US Foods,,Mr. Marlin Carter,FALSE,2,Mission Feeding QRG,,,TRUE
+ANDERSEN_AB|DFAC,ANDERSEN_AB,DFAC,,36 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Pacific Unlimited,,TSgt Amy Sherwood,TRUE,3,Mission Feeding QRG,,,TRUE
+ANDERSEN_AB|SILVER_FLAG,ANDERSEN_AB,Silver Flag,SILVER FLAG,36 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Pacific Unlimited,,TSgt Amy Sherwood,TRUE,6,Mission Feeding QRG,,,TRUE
+AVIANO_AB|DFAC,AVIANO_AB,DFAC,,31 FSS,,Legacy/APF,Legacy - LN,Full Service,Ebrex,Offline (2),TSgt Brent Smith,TRUE,9,Mission Feeding QRG,,,TRUE
+BARKSDALE_AFB|RED_RIVER_INN,BARKSDALE_AFB,Red River Inn,,2 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Merchants,,Mr. Marlin Carter,FALSE,10,Mission Feeding QRG,,,TRUE
+BEALE_AFB|CONTRAILS_DFAC,BEALE_AFB,Contrails DFAC,,9 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Randy Spaulding,FALSE,11,Mission Feeding QRG,,,TRUE
+BEALE_AFB|DRAGONS_LAIR,BEALE_AFB,Dragons Lair,,9 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Randy Spaulding,FALSE,12,Mission Feeding QRG,,,TRUE
+BUECHEL_AB|ODIN_INN,BUECHEL_AB,Odin Inn,,702 MUNS,,Legacy/APF,Legacy - LN - No ESM - No Dorms,Local National Support,TWI,1,TSgt Brent Smith,TRUE,13,Mission Feeding QRG,,,TRUE
+CANNON_AFB|HIGH_PLAINS_CAF,CANNON_AFB,High Plains Café,,27 SOFSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Labatt,,Ms. Stephanie Contreras,FALSE,14,Mission Feeding QRG,,,TRUE
+CANNON_AFB|PECOS_TRAIL_DFAC,CANNON_AFB,Pecos Trail DFAC,,27 SOFSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Labatt,,Ms. Stephanie Contreras,FALSE,16,Mission Feeding QRG,,,TRUE
+JB_CHARLESTON|GAYLOR_DFAC,JB_CHARLESTON,Gaylor DFAC,,628 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Tyrone Merriweather,FALSE,18,Mission Feeding QRG,,,TRUE
+CLEAR_SFS|DFAC,CLEAR_SFS,DFAC,,13 FSS,,Legacy/APF,Legacy - BOS - No ESM,Full Food Service,US Foods,,TSgt Amy Sherwood,TRUE,19,Mission Feeding QRG,,,TRUE
+CREECH_AFB|DFAC,CREECH_AFB,DFAC,,432 FSS,,Legacy/APF,Legacy - BOS - No ESM,Full Food Service,US Foods,Hunters – 4,TSgt Annette Hartman,TRUE,20,Mission Feeding QRG,,,TRUE
+DAVIS_MONTHAN_AFB|DFAC,DAVIS_MONTHAN_AFB,DFAC,AFSOUTH,355 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,US Foods,,Mr. Adam Aguilar,FALSE,21,Mission Feeding QRG,,,TRUE
+DOVER_AFB|PATTERSON_DFAC,DOVER_AFB,Patterson DFAC,,436 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Ms. Stephanie Thomas,FALSE,22,Mission Feeding QRG,,,TRUE
+DOVER_AFB|HEAVY_LIFTERS_KIOSK,DOVER_AFB,Heavy Lifters KIOSK,,436 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Ms. Stephanie Thomas,FALSE,23,Mission Feeding QRG,,,TRUE
+DYESS_AFB|LONGHORN_DFAC,DYESS_AFB,Longhorn DFAC,,7 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Labatt,,Mr. Marlin Carter,FALSE,24,Mission Feeding QRG,,,TRUE
+EDWARDS_AFB|DFAC,EDWARDS_AFB,DFAC,,412 FSS,,Legacy/APF,Legacy - SB,Full Food Service,US Foods,Joshua Tree – N/A,TSgt Annette Hartman,TRUE,25,Mission Feeding QRG,,,TRUE
+EGLIN_AFB|LIGHTNING,EGLIN_AFB,Lightning,,96 FSS,,Legacy/APF,Legacy - RSA,Mess Attendant,US Foods,Lightning – 3,TSgt Dante Tillman,TRUE,26,Mission Feeding QRG,,,TRUE
+EGLIN_AFB|BREEZE_DFAC,EGLIN_AFB,Breeze DFAC,,96 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Ms. Stephanie Thomas,FALSE,27,Mission Feeding QRG,,,TRUE
+EGLIN_AFB|DUKE_FIELD,EGLIN_AFB,Duke Field,,96 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Ms. Stephanie Thomas,FALSE,28,Mission Feeding QRG,,,TRUE
+EIELSON_AFB|DFAC,EIELSON_AFB,DFAC,,354 FSS,,Legacy/APF,Food 2.0 - In Development,Mess Attendant,US Foods,6,TSgt Amy Sherwood,TRUE,29,Mission Feeding QRG,,,TRUE
+ELLSWORTH_AFB|RAIDER_CAF,ELLSWORTH_AFB,Raider Café,,28 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Ms. Treva Sahadat,FALSE,31,Mission Feeding QRG,,,TRUE
+JB_ELMENDORF|IDITAROD_DFAC,JB_ELMENDORF,Iditarod DFAC,,673 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Randy Spaulding,FALSE,32,Mission Feeding QRG,,,TRUE
+FAIRCHILD_AFB|ROSS_DFAC,FAIRCHILD_AFB,Ross DFAC,,92 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Mr. Adam Aguilar,FALSE,33,Mission Feeding QRG,,,TRUE
+FAIRCHILD_AFB|WARRIOR_DFAC,FAIRCHILD_AFB,Warrior DFAC,,92 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Mr. Adam Aguilar,FALSE,37,Mission Feeding QRG,,,TRUE
+FE_WARREN_AFB|CHADWELL_DFAC,FE_WARREN_AFB,Chadwell DFAC,,90 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Shamrock,,Mr. Greg Featherstone,FALSE,41,Mission Feeding QRG,,,TRUE
+FE_WARREN_AFB|MAFFO,FE_WARREN_AFB,MAFFO,MAFFO,90 FSS,,MAFFO/MAF,,Sodexo,Shamrock,,TSgt Marc Miller-Nelson,FALSE,43,Mission Feeding QRG,,,TRUE
+FT_GREGG_ADAMS|SCHOOLHOUSE,FT_GREGG_ADAMS,Schoolhouse,,345 TRS,,Legacy/APF,,,US Foods,,TSgt Dante Tillman,TRUE,45,Mission Feeding QRG,,,TRUE
+FT_MEADE|SIX_HATS,FT_MEADE,Six Hats,,707 FSS,,Legacy/APF,Legacy - AB1 (No NAFs),Full Food Service,US Foods,Six Hats – 3 (1 inop),MSgt Chermara Walley,TRUE,46,Mission Feeding QRG,,,TRUE
+GHEDI_AB|DFAC,GHEDI_AB,DFAC,,704 MUNS,,Legacy/APF,Legacy - LN - No ESM - No Dorms,Local National Support,Ebrex,1,MSgt Chermara Walley,TRUE,47,Mission Feeding QRG,,,TRUE
+GOODFELLOW_AFB|CRESSMAN_DFAC,GOODFELLOW_AFB,Cressman DFAC,,17 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Labatt,,Ms. Stephanie Contreras,FALSE,48,Mission Feeding QRG,,,TRUE
+GOODFELLOW_AFB|WESTERN_WINDS_DFAC,GOODFELLOW_AFB,Western Winds DFAC,,17 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Labatt,,Ms. Stephanie Contreras,FALSE,50,Mission Feeding QRG,,,TRUE
+GRAND_FORKS_AFB|AIREY_DFAC,GRAND_FORKS_AFB,Airey DFAC,,319 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,US Foods,,Ms. Treva Sahadat,FALSE,52,Mission Feeding QRG,,,TRUE
+JBP_HICKAM|HALE_AINA,JBP_HICKAM,Hale Aina,,647 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Y. Hata & Company,2 (1 inop),MSgt Kellie Jones,TRUE,53,Mission Feeding QRG,,,TRUE
+HILL_AFB|HILL_CREST,HILL_AFB,Hill Crest,,75 FSS,,Legacy/APF,Legacy - BOS,Full Food Service,Sysco,Hillcrest – 4,TSgt Emilee Hinson,TRUE,54,Mission Feeding QRG,,,TRUE
+HOLLOMAN_AFB|SHIFTING_SANDS,HOLLOMAN_AFB,Shifting Sands,,49 FSS,,Food 2.0,Food 2.0 - In Development,Sodexo,Labatt,,Ms. Stephanie Contreras,FALSE,55,Mission Feeding QRG,,,TRUE
+HURLBURT_FIELD|RIPTIDE,HURLBURT_FIELD,Riptide,,1 SOFSS,,Legacy/APF,Legacy - SB (NonFood 2.0 Test),Mess Attendant,Sysco,Reef – 2 Riptide – 2,TSgt Brent Smith,TRUE,56,Mission Feeding QRG,,,TRUE
+INCIRLIK_AB|SULTAN_S_INN,INCIRLIK_AB,Sultan's Inn,,39 FSS,,Legacy/APF,Legacy - BOS (NonFood 2.0 Test),Full Food Service,Ebrex,3 (1 inop),TSgt Brent Smith,TRUE,58,Mission Feeding QRG,,,TRUE
+JBSA_LACKLAND|LIVE_OAK,JBSA_LACKLAND,Live Oak,,502 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Labatte,Live Oak-4,TSgt Aqueriya Stroud,TRUE,61,Mission Feeding QRG,,,TRUE
+JBSA_LACKLAND|AMIGO,JBSA_LACKLAND,Amigo,,502 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Labatte,Amigo-4,TSgt Aqueriya Stroud,TRUE,62,Mission Feeding QRG,,,TRUE
+JBSA_LACKLAND|SWT,JBSA_LACKLAND,SWT,,502 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Labatte,SWT-2,TSgt Aqueriya Stroud,TRUE,63,Mission Feeding QRG,,,TRUE
+JBSA_LACKLAND|CHAPMAN,JBSA_LACKLAND,Chapman,,502 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Labatte,Chapman-4,TSgt Aqueriya Stroud,TRUE,64,Mission Feeding QRG,,,TRUE
+JBSA_LACKLAND|DEFENDER,JBSA_LACKLAND,Defender,,502 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Labatte,Defender-2,TSgt Aqueriya Stroud,TRUE,65,Mission Feeding QRG,,,TRUE
+JBSA_LACKLAND|FLIGHT_KITCHEN_FK,JBSA_LACKLAND,Flight Kitchen (FK),,502 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Labatte,,TSgt Aqueriya Stroud,TRUE,66,Mission Feeding QRG,,,TRUE
+JBSA_RANDOLPH|RENDEZVOUS_DFAC,JBSA_RANDOLPH,Rendezvous DFAC,,802 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Labatte,,Ms. Stephanie Contreras,FALSE,73,Mission Feeding QRG,,,TRUE
+KADENA_AB|MARSHALL,KADENA_AB,Marshall,,18 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,SFI,2,MSgt Kellie Jones,TRUE,74,Mission Feeding QRG,,,TRUE
+KADENA_AB|JOHNSON,KADENA_AB,Johnson,,18 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,SFI,2,MSgt Kellie Jones,TRUE,75,Mission Feeding QRG,,,TRUE
+KEESLER_AFB|AZALEA,KEESLER_AFB,Azalea,,81 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Merchants,"Live Oak–2, Magnolia–4, Azalea-5",TSgt Brent Smith,TRUE,76,Mission Feeding QRG,,,TRUE
+KEESLER_AFB|LIVE_OAK,KEESLER_AFB,Live Oak,,81 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Merchants,"Live Oak–2, Magnolia–4, Azalea-5",TSgt Brent Smith,TRUE,80,Mission Feeding QRG,,,TRUE
+KEESLER_AFB|MAGNOLIA,KEESLER_AFB,Magnolia,,81 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Merchants,"Live Oak–2, Magnolia–4, Azalea-5",TSgt Brent Smith,TRUE,84,Mission Feeding QRG,,,TRUE
+KIRTLAND_AFB|THUNDERBIRD,KIRTLAND_AFB,Thunderbird,,377 FSS,,Legacy/APF,Legacy - SB,Full Food Service,Labatte,Thunderbird – 3,TSgt Aqueriya Stroud,TRUE,88,Mission Feeding QRG,,,TRUE
+KLEINE_BROGEL_AB|LIMBURG,KLEINE_BROGEL_AB,Limburg,,701 MUNS,,Legacy/APF,Legacy - LN - No ESM - No Dorms,Local National Support,TWI,2 (1 inop),TSgt Dante Tillman,TRUE,89,Mission Feeding QRG,,,TRUE
+KUNSAN_AB|O_MALLEY,KUNSAN_AB,O'Malley,,8 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,USFI,7,MSgt Kellie Jones,TRUE,90,Mission Feeding QRG,,,TRUE
+KUNSAN_AB|D_PAD,KUNSAN_AB,D-Pad,,8 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,USFI,7,MSgt Kellie Jones,TRUE,92,Mission Feeding QRG,,,TRUE
+JB_LANGLEY|CROSSBOW,JB_LANGLEY,Crossbow,,633 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,US Foods,Crossbow – 4 Raptor – 4,TSgt Dante Tillman,TRUE,94,Mission Feeding QRG,,,TRUE
+JB_LANGLEY|RAPTOR_FK,JB_LANGLEY,Raptor FK,,633 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,US Foods,Crossbow – 4 Raptor – 4,TSgt Dante Tillman,TRUE,97,Mission Feeding QRG,,,TRUE
+LITTLE_ROCK_AFB|HERCULES_DFAC,LITTLE_ROCK_AFB,Hercules DFAC,,19 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Mr. Marlin Carter,FALSE,100,Mission Feeding QRG,,,TRUE
+LITTLE_ROCK_AFB|HUNGRY_HERC_P_O_D,LITTLE_ROCK_AFB,Hungry Herc P.O.D.,,19 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Mr. Marlin Carter,FALSE,101,Mission Feeding QRG,,,TRUE
+LUKE_AFB|TBD,LUKE_AFB,TBD,,56 FSS,,Food 2.0,Food 2.0 - In Development,TBD,US Foods,TBD,Mr. Adam Aguilar,FALSE,102,Mission Feeding QRG,,,TRUE
+MACDILL_AFB|DINER_S_REEF,MACDILL_AFB,Diner's Reef,,6 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Ms. Stephanie Thomas,FALSE,104,Mission Feeding QRG,,,TRUE
+MALMSTROM_AFB|ELKHORN_DFAC,MALMSTROM_AFB,Elkhorn DFAC,,341 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Mr. Greg Featherstone,FALSE,105,Mission Feeding QRG,,,TRUE
+MALMSTROM_AFB|MAFFO,MALMSTROM_AFB,MAFFO,MAFFO,341 FSS,,MAFFO/MAF,,Aramark,Sysco,,TSgt Marc Miller-Nelson,FALSE,107,Mission Feeding QRG,,,TRUE
+MAXWELL_AFB|OTS,MAXWELL_AFB,OTS,,42 FSS,,Legacy/APF,Legacy - RSA (NonFood 2.0 Test),Full Food Service,US Foods,"River Front–5, OTS–4...",MSgt Chermara Walley,TRUE,109,Mission Feeding QRG,,,TRUE
+MAXWELL_AFB|RIVER_FRONT,MAXWELL_AFB,River Front,,42 FSS,,Legacy/APF,Legacy - RSA (NonFood 2.0 Test),Full Food Service,US Foods,"River Front–5, OTS–4...",MSgt Chermara Walley,TRUE,112,Mission Feeding QRG,,,TRUE
+JBL_MCCHORD|OLYMPIC,JBL_MCCHORD,Olympic,,627 FSS,,Legacy/APF,Legacy - SB,Sysco,Olympic – 4,0,TSgt Amy Sherwood,TRUE,115,Mission Feeding QRG,,,TRUE
+MCCONNELL_AFB|CHISHOLM_DFAC,MCCONNELL_AFB,Chisholm DFAC,,22 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Ms. Treva Sahadat,FALSE,116,Mission Feeding QRG,,,TRUE
+JB_MCGUIRE|HALVORSEN_HALL_DFAC,JB_MCGUIRE,Halvorsen Hall DFAC,,87 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Renzi FoodService,,Mr. Tyrone Merriweather,FALSE,117,Mission Feeding QRG,,,TRUE
+JB_MCGUIRE|EXTENDED_EATERY,JB_MCGUIRE,Extended Eatery,,87 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Renzi FoodService,,Mr. Tyrone Merriweather,FALSE,118,Mission Feeding QRG,,,TRUE
+MILDENHALL_AB|GATEWAY,MILDENHALL_AB,Gateway,,100 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,TWI,1 (3 inop),TSgt Brent Smith,TRUE,119,Mission Feeding QRG,,,TRUE
+MINOT_AFB|DAKOTA_INN_DFAC,MINOT_AFB,Dakota Inn DFAC,,5 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Greg Featherstone,FALSE,120,Mission Feeding QRG,,,TRUE
+MINOT_AFB|MAFFO,MINOT_AFB,MAFFO,MAFFO,5 FSS,,MAFFO/MAF,,Sodexo,US Foods,,TSgt Marc Miller-Nelson,FALSE,122,Mission Feeding QRG,,,TRUE
+MISAWA_AB|FALCON_FEEDER,MISAWA_AB,Falcon Feeder,,35 FSS,,Legacy/APF,Legacy - LN (NonFood 2.0 Test),Mess Attendant,Coastal Pacific,3 (1 inop),MSgt Kellie Jones,TRUE,124,Mission Feeding QRG,,,TRUE
+MISAWA_AB|GRISSOM,MISAWA_AB,Grissom,,35 FSS,,Legacy/APF,Legacy - LN (NonFood 2.0 Test),Mess Attendant,Coastal Pacific,3 (1 inop),MSgt Kellie Jones,TRUE,126,Mission Feeding QRG,,,TRUE
+MOODY_AFB|GEORGIA_PINES,MOODY_AFB,Georgia Pines,,23 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Reinhardt,Georgia Pines – 2,MSgt Chermara Walley,TRUE,128,Mission Feeding QRG,,,TRUE
+MORON_AB|EL_COMEDOR,MORON_AB,El Comedor,,496 FSS,,Legacy/APF,Legacy - BOS - No ESM,Full Food Service,Ebrex,,MSgt Chermara Walley,TRUE,129,Mission Feeding QRG,,,TRUE
+MOUNTAIN_HOME_AFB|WAGON_WHEEL,MOUNTAIN_HOME_AFB,Wagon Wheel,,366 FSS,,Legacy/APF,Legacy - SB (NonFood 2.0 Test),Mess Attendant,Sysco,,TSgt Emilee Hinson,TRUE,130,Mission Feeding QRG,,,TRUE
+NELLIS_AFB|CROSSWINDS_INN,NELLIS_AFB,Crosswinds Inn,,99 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Adam Aguilar,FALSE,131,Mission Feeding QRG,,,TRUE
+NELLIS_AFB|TOUCH_GO,NELLIS_AFB,Touch & Go,,99 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Adam Aguilar,FALSE,135,Mission Feeding QRG,,,TRUE
+OFFUTT_AFB|KING_DINING_FACILITY,OFFUTT_AFB,King Dining Facility,,55 FSS,,Food 2.0,Food 2.0 - In Development,,US Foods,,Mr. Greg Featherstone,FALSE,139,Mission Feeding QRG,,,TRUE
+OFFUTT_AFB|CAMPISI_ALERT_FACILITY,OFFUTT_AFB,Campisi Alert Facility,,55 FSS,,Food 2.0,Food 2.0 - In Development,,US Foods,,Mr. Greg Featherstone,FALSE,140,Mission Feeding QRG,,,TRUE
+OSAN_AB|GINKGO_TREE,OSAN_AB,Ginkgo Tree,,51 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,USFI,8 (1 inop),TSgt Annette Hartman,TRUE,141,Mission Feeding QRG,,,TRUE
+OSAN_AB|PACIFIC_HOUSE,OSAN_AB,Pacific House,,51 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,USFI,8 (1 inop),TSgt Annette Hartman,TRUE,144,Mission Feeding QRG,,,TRUE
+PATRICK_SFB|RIVERSIDE_DFAC,PATRICK_SFB,Riverside DFAC,,45 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,Sysco,,Ms. Stephanie Thomas,FALSE,147,Mission Feeding QRG,,,TRUE
+RAF_LAKENHEATH|KNIGHTS_TABLE,RAF_LAKENHEATH,Knights Table,,48 FSS,,Legacy/APF,Legacy - LN,Local National Support,TWI,3,TSgt Dante Tillman,TRUE,148,Mission Feeding QRG,,,TRUE
+RAMSTEIN_AB|RHEINLAND_INN,RAMSTEIN_AB,Rheinland Inn,,N/A,,Legacy/APF,Legacy - LN,Mess Attendant,TWI,8,MSgt Chermara Walley,TRUE,151,Mission Feeding QRG,,,TRUE
+RAMSTEIN_AB|LINDBERGHOF,RAMSTEIN_AB,Lindberghof,,N/A,,Legacy/APF,Legacy - LN,Mess Attendant,TWI,8,MSgt Chermara Walley,TRUE,155,Mission Feeding QRG,,,TRUE
+RAMSTEIN_AB|JAWBONE_FK,RAMSTEIN_AB,Jawbone FK,,N/A,,Legacy/APF,Legacy - LN,Mess Attendant,TWI,8,MSgt Chermara Walley,TRUE,159,Mission Feeding QRG,,,TRUE
+RAMSTEIN_AB|SILVER_FLAG,RAMSTEIN_AB,Silver Flag,SILVER FLAG,N/A,,Legacy/APF,Legacy - LN,Local National Support,TWI,Silver Flag – N/A,MSgt Chermara Walley,TRUE,163,Mission Feeding QRG,,,TRUE
+ROBINS_AFB|WYNN,ROBINS_AFB,Wynn,,78 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Reinhardt,Wynn – 4 FK – 1,TSgt Brent Smith,TRUE,167,Mission Feeding QRG,,,TRUE
+SCHRIEVER_SFB|SATELLITE_DISH,SCHRIEVER_SFB,Satellite Dish,,50 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Shamrock,Satellite Dish – 4,TSgt Emilee Hinson,TRUE,168,Mission Feeding QRG,,,TRUE
+SCOTT_AFB|NIGHTINGALE_INN,SCOTT_AFB,Nightingale Inn,,375 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Greg Featherstone,FALSE,170,Mission Feeding QRG,,,TRUE
+SEYMOUR_AFB|SOUTHERN_EAGLE_DFAC,SEYMOUR_AFB,Southern Eagle DFAC,,4 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Sysco,,Mr. Tyrone Merriweather,FALSE,171,Mission Feeding QRG,,,TRUE
+SEYMOUR_AFB|AFTERBURNER,SEYMOUR_AFB,Afterburner,,4 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,Sysco,,Mr. Tyrone Merriweather,FALSE,172,Mission Feeding QRG,,,TRUE
+SHAW_AFB|CMSGT_WILLIAMS_DFAC,SHAW_AFB,CMSgt Williams DFAC,,20 FSS,,Food 2.0,Food 2.0 - In Development,,US Foods,,Mr. Tyrone Merriweather,FALSE,173,Mission Feeding QRG,,,TRUE
+SHEPPARD_AFB|MESQUITE,SHEPPARD_AFB,Mesquite,,82 FSS,,Legacy/APF,Food 2.0 - In Development,Full Food Service,US Foods,"Mesquite–8, Sage-8",TSgt Aqueriya Stroud,TRUE,174,Mission Feeding QRG,,,TRUE
+SHEPPARD_AFB|SAGEBRUSH,SHEPPARD_AFB,Sagebrush,,82 FSS,,Legacy/APF,Food 2.0 - In Development,Full Food Service,US Foods,"Mesquite–8, Sage-8",TSgt Aqueriya Stroud,TRUE,179,Mission Feeding QRG,,,TRUE
+SHEPPARD_AFB|TUMBLEWEED,SHEPPARD_AFB,Tumbleweed,,82 FSS,,Legacy/APF,Food 2.0 - In Development,Full Food Service,US Foods,"Mesquite–8, Sage-8",TSgt Aqueriya Stroud,TRUE,184,Mission Feeding QRG,,,TRUE
+SPANGDAHLEM_AB|MOSEL_INN,SPANGDAHLEM_AB,Mosel Inn,,52 FSS,,Legacy/APF,Legacy - LN,Local National Support,TWI,3,TSgt Dante Tillman,TRUE,189,Mission Feeding QRG,,,TRUE
+SPANGDAHLEM_AB|FK,SPANGDAHLEM_AB,FK,,52 FSS,,Legacy/APF,Legacy - LN,Local National Support,TWI,3,TSgt Dante Tillman,TRUE,191,Mission Feeding QRG,,,TRUE
+TINKER_AFB|VANWEY,TINKER_AFB,Vanwey,,72 FSS,,Legacy/APF,Food 2.0 - In Development,Full Food Service,US Foods,Vanwey 3 (inop),TSgt Aqueriya Stroud,TRUE,193,Mission Feeding QRG,,,TRUE
+TRAVIS_AFB|SIERRA_INN_DFAC,TRAVIS_AFB,Sierra Inn DFAC,,60 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,US Foods,,Mr. Randy Spaulding,FALSE,194,Mission Feeding QRG,,,TRUE
+TRAVIS_AFB|KNUCKLBUSTER,TRAVIS_AFB,Knucklbuster,,60 FSS,,Food 2.0,Food 2.0 - AB1,Aramark,US Foods,,Mr. Randy Spaulding,FALSE,196,Mission Feeding QRG,,,TRUE
+TYNDALL_AFB|BERG_LILES,TYNDALL_AFB,Berg Liles,,325 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Sysco,Berg-Liles – 2,MSgt Chermara Walley,TRUE,198,Mission Feeding QRG,,,TRUE
+TYNDALL_AFB|RAPTOR_QUICK_TURN,TYNDALL_AFB,Raptor Quick Turn,,325 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Sysco,,MSgt Chermara Walley,TRUE,200,Mission Feeding QRG,,,TRUE
+TYNDALL_AFB|SILVER_FLAG,TYNDALL_AFB,Silver Flag,SILVER FLAG,325 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,Sysco,Silver Flag – N/A,MSgt Chermara Walley,TRUE,202,Mission Feeding QRG,,,TRUE
+USAF_ACADEMY|HIGH_COUNTRY_INN,USAF_ACADEMY,High Country Inn,,10 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Shamrock,High Country – 4,TSgt Emilee Hinson,TRUE,204,Mission Feeding QRG,,,TRUE
+VANDENBERG|BEACHCOMBERS_DFAC,VANDENBERG,Beachcombers DFAC,,30 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Randy Spaulding,FALSE,205,Mission Feeding QRG,,,TRUE
+VANDENBERG|BREAKERS_DFAC,VANDENBERG,Breakers DFAC,,30 FSS,,Food 2.0,Food 2.0 - AB1,Sodexo,US Foods,,Mr. Randy Spaulding,FALSE,207,Mission Feeding QRG,,,TRUE
+VOLKEL_AB|EAGLE_S_PERCH,VOLKEL_AB,Eagle's Perch,,86 FSS,,Legacy/APF,Legacy - LN - No ESM - No Dorms,Local National Support,TWI,3,MSgt Chermara Walley,TRUE,209,Mission Feeding QRG,,,TRUE
+WHITEMAN_AFB|OZARK_INN,WHITEMAN_AFB,Ozark Inn,,509 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,US Foods,DFAC – 3 FK-1,TSgt Marc Miller-Nelson,TRUE,210,Mission Feeding QRG,,,TRUE
+WHITEMAN_AFB|TOUCH_GO,WHITEMAN_AFB,Touch & Go,,509 FSS,,Legacy/APF,Legacy - SB,Mess Attendant,US Foods,DFAC – 3 FK-1,TSgt Marc Miller-Nelson,TRUE,212,Mission Feeding QRG,,,TRUE
+WRIGHT_PATTERSON_AFB|PITSENBARGER,WRIGHT_PATTERSON_AFB,Pitsenbarger,,88 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Sysco,Pitsenbarger – 2 HPW-1,TSgt Emilee Hinson,TRUE,214,Mission Feeding QRG,,,TRUE
+WRIGHT_PATTERSON_AFB|HPW_DINING_FACILITY,WRIGHT_PATTERSON_AFB,HPW Dining Facility,,88 FSS,,Legacy/APF,Legacy - RSA,Full Food Service,Sysco,Pitsenbarger – 2 HPW-1,TSgt Emilee Hinson,TRUE,217,Mission Feeding QRG,,,TRUE
+YOKOTA_AB|SAMURAI_CAF,YOKOTA_AB,Samurai Café,,374 FSS,,Legacy/APF,Legacy - LN,Mess Attendant,Coastal Pacific,3,TSgt Annette Hartman,TRUE,220,Mission Feeding QRG,,,TRUE
+AL_DHAFRA_AB_ADAB|CHAPMAN_COMMUNITY_CENTER,AL_DHAFRA_AB_ADAB,Chapman Community Center,COCOM HQ,N/A,,AOR/CDS,,,Valiant,,MSgt Rodney Worthen,FALSE,221,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|INDY,AL_UDEID_AB_AUAB,Indy,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,222,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|BPC_CAC,AL_UDEID_AB_AUAB,BPC CAC,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,223,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|FALCON,AL_UDEID_AB_AUAB,Falcon,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,224,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|FOX_SPORTS,AL_UDEID_AB_AUAB,Fox Sports,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,225,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|KASBAH,AL_UDEID_AB_AUAB,Kasbah,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,226,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|PEARL,AL_UDEID_AB_AUAB,Pearl,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,227,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|QUICK_TURN_COLD_GRAB_N_GO,AL_UDEID_AB_AUAB,Quick Turn Cold Grab n Go,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,228,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|RATIONS,AL_UDEID_AB_AUAB,Rations,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,229,Mission Feeding QRG,,,TRUE
+AL_UDEID_AB_AUAB|THE_KITCHEN_HOT_GRAB_N_GO,AL_UDEID_AB_AUAB,The Kitchen Hot Grab n Go,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,230,Mission Feeding QRG,,,TRUE
+ALI_AL_SALEM_AB_AASAB|DROP_ZONE,ALI_AL_SALEM_AB_AASAB,Drop Zone,COCOM HQ,N/A,,AOR/CDS,,,Global Food,,MSgt Rodney Worthen,FALSE,231,Mission Feeding QRG,,,TRUE
+CAMP_SIMBA|N_A,CAMP_SIMBA,N/A,COCOM HQ,N/A,,AOR/CDS,,,Valiant,,MSgt Rodney Worthen,FALSE,232,Mission Feeding QRG,,,TRUE
+MUWAFFAQ_SALTI_AB_MSAB|KSPAN,MUWAFFAQ_SALTI_AB_MSAB,KSPAN,COCOM HQ,N/A,,AOR/CDS,,,,,MSgt Rodney Worthen,FALSE,233,Mission Feeding QRG,,,TRUE
+MUWAFFAQ_SALTI_AB_MSAB|RTV,MUWAFFAQ_SALTI_AB_MSAB,RTV,COCOM HQ,N/A,,AOR/CDS,,,,,MSgt Rodney Worthen,FALSE,234,Mission Feeding QRG,,,TRUE
+PRINCE_SULTAN_AB_PSAB|N_A,PRINCE_SULTAN_AB_PSAB,N/A,COCOM HQ,N/A,,AOR/CDS,,,OFI(Ocean Fair),,MSgt Rodney Worthen,FALSE,235,Mission Feeding QRG,,,TRUE
+AL_JABER_AB|DFAC,AL_JABER_AB,DFAC,COCOM HQ,N/A,,AOR/CDS,,,Global Food,,MSgt Rodney Worthen,FALSE,236,Mission Feeding QRG,,,TRUE
+AL_JABER_AB|DFAC_02,AL_JABER_AB,DFAC,COCOM HQ,N/A,,AOR/CDS,,,Global Food,,MSgt Rodney Worthen,FALSE,237,Mission Feeding QRG,,,TRUE
+AB101_NIAMEY|DFAC,AB101_NIAMEY,DFAC,COCOM HQ,N/A,,AOR/CDS,,,,,MSgt Rodney Worthen,FALSE,239,Mission Feeding QRG,,,TRUE
+AB201_AGADEZ|DFAC,AB201_AGADEZ,DFAC,COCOM HQ,N/A,,AOR/CDS,,,TWI,,MSgt Rodney Worthen,FALSE,241,Mission Feeding QRG,,,TRUE
+ARNOLD_AFB|NO_DFAC,ARNOLD_AFB,NO DFAC,,N/A,,,,,,,,FALSE,243,Mission Feeding QRG,,,TRUE
+BOLLING_AFB|NO_DFAC,BOLLING_AFB,NO DFAC,,N/A,,,,,,,,FALSE,244,Mission Feeding QRG,,,TRUE
+BUCKLEY_SFB|NO_DFAC,BUCKLEY_SFB,NO DFAC,,N/A,,,,,,,,FALSE,245,Mission Feeding QRG,,,TRUE
+CAPE_CANAVERAL_SFS|NO_DFAC,CAPE_CANAVERAL_SFS,NO DFAC,,N/A,,,,,,,,FALSE,246,Mission Feeding QRG,,,TRUE
+CAPE_COD_SFS|NO_DFAC,CAPE_COD_SFS,NO DFAC,,N/A,,,,,,,,FALSE,247,Mission Feeding QRG,,,TRUE
+CAVALIER_SFS|NO_DFAC,CAVALIER_SFS,NO DFAC,,N/A,,,,,,,,FALSE,248,Mission Feeding QRG,,,TRUE
+CHEYENNE_MOUNTAIN_SFB|NO_DFAC,CHEYENNE_MOUNTAIN_SFB,NO DFAC,,N/A,,,,,,,,FALSE,249,Mission Feeding QRG,,,TRUE
+COLUMBUS_AFB|NO_DFAC,COLUMBUS_AFB,NO DFAC,,N/A,,,,,,,,FALSE,250,Mission Feeding QRG,,,TRUE
+EARECKSON_AFS|NO_DFAC,EARECKSON_AFS,NO DFAC,,N/A,,,,,,,,FALSE,251,Mission Feeding QRG,,,TRUE
+HANSCOM_AFB|NO_DFAC,HANSCOM_AFB,NO DFAC,,N/A,,,,,,,,FALSE,252,Mission Feeding QRG,,,TRUE
+IZMIR_AB|NO_DFAC,IZMIR_AB,NO DFAC,,N/A,,,,,,,,FALSE,253,Mission Feeding QRG,,,TRUE
+LAJES_FIELD|NO_DFAC,LAJES_FIELD,NO DFAC,,N/A,,,,,,,,FALSE,254,Mission Feeding QRG,,,TRUE
+LAUGHLIN_AFB|NO_DFAC,LAUGHLIN_AFB,NO DFAC,,N/A,,,,,,,,FALSE,255,Mission Feeding QRG,,,TRUE
+LOS_ANGELES_AFB|NO_DFAC,LOS_ANGELES_AFB,NO DFAC,,N/A,,,,,,,,FALSE,256,Mission Feeding QRG,,,TRUE
+NEW_BOSTON_SFS|NO_DFAC,NEW_BOSTON_SFS,NO DFAC,,N/A,,,,,,,,FALSE,257,Mission Feeding QRG,,,TRUE
+RAF_FYLINGDALES_SFS|NO_DFAC,RAF_FYLINGDALES_SFS,NO DFAC,,N/A,,,,,,,,FALSE,258,Mission Feeding QRG,,,TRUE
+RAF_MOLESWORTH|NO_DFAC,RAF_MOLESWORTH,NO DFAC,,N/A,,,,,,,,FALSE,259,Mission Feeding QRG,,,TRUE
+VANCE_AFB|NO_DFAC,VANCE_AFB,NO DFAC,,N/A,,,,,,,,FALSE,260,Mission Feeding QRG,,,TRUE
+PITUFFIK_SB|NO_DFAC,PITUFFIK_SB,NO DFAC,,N/A,,,,,,,,FALSE,261,Mission Feeding QRG,,,TRUE
+JBAB_ANACOSTIA|NO_DFAC,JBAB_ANACOSTIA,NO DFAC,,N/A,,,,,,,,FALSE,262,Mission Feeding QRG,,,TRUE

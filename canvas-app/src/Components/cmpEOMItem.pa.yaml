@@ -139,12 +139,19 @@ ComponentDefinitions:
                       Control: Text
                       Variant: Body
                       Properties:
-                        Text: =Text(cmpEOMItem.Item.Due_Date, "d mmm")
+                        # "Due 5 Sep (Mon 8 Sep)" where the suspense moved off a
+                        # weekend or holiday. Burying that adjustment in a formula
+                        # produces a monthly argument.
+                        Text: =MF_DueDatePhrase(cmpEOMItem.Item.Nominal_Due_Date, cmpEOMItem.Item.Effective_Due_Date)
                         Color: =clrText
                         # Not "5 days late" in red — the chip already says
                         # overdue, and repeating it in colour alone would fail
                         # gate A4.
-                        AccessibleLabel: ="Due " & Text(cmpEOMItem.Item.Due_Date, "d mmmm yyyy")
+                        AccessibleLabel: |
+                          ="Due " & Text(cmpEOMItem.Item.Nominal_Due_Date, "d mmmm yyyy") &
+                           If(cmpEOMItem.Item.Due_Date_Adjusted,
+                              ", moved to " & Text(cmpEOMItem.Item.Effective_Due_Date, "dddd d mmmm") &
+                              " because the suspense fell on a non-duty day", "")
                         TabIndex: =-1
                   - lblCorrectionDue:
                       Control: Text
@@ -161,7 +168,8 @@ ComponentDefinitions:
                 ComponentName: cmpStatusBadge
                 Properties:
                   FinalStatus: =cmpEOMItem.Item.Final_Status
-                  DueDate: =cmpEOMItem.Item.Due_Date
+                  NominalDueDate: =cmpEOMItem.Item.Nominal_Due_Date
+                  EffectiveDueDate: =cmpEOMItem.Item.Effective_Due_Date
                   LayoutMinWidth: =170
                   FillPortions: =2
 
@@ -177,8 +185,9 @@ ComponentDefinitions:
                         cmpEOMItem.Item.Final_Status,
                         "ACCEPTED",            "View",
                         "RECEIVED_PENDING_QC", If(gblCanQC, "Review", "View"),
-                        "CORRECTION_REQUIRED", "Resubmit",
+                        "RETURNED",            "Resubmit",
                         "NOT_SATISFIED",       "Resubmit",
+                        "LATE",                "Submit",
                         "PENDING_VALIDATION",  If(gblCanEditReqs, "Verify requirement", "Submit"),
                         "NOT_APPLICABLE",      "View",
                         "Submit"

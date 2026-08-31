@@ -199,8 +199,8 @@ Screens:
                               Text: |
                                 =locSelectedItem.Requirement_Scope & " - " & locSelectedItem.Reporting_Period &
                                  " - Required: " & If(locSelectedItem.Required_Flag, "Yes", "No") &
-                                 " - Due " & Text(locSelectedItem.Due_Date, "d mmm yyyy") &
-                                 " - Received " & Text(locSelectedItem.Received_DateTime, "d mmm yyyy")
+                                 " - Due " & Text(locSelectedItem.Nominal_Due_Date, "d mmm yyyy") &
+                                 " - Received " & Text(locSelectedItem.Initial_Submitted_DateTime, "d mmm yyyy")
                               Color: =clrTextSecondary
                               AutoHeight: =true
                               TabIndex: =-1
@@ -209,7 +209,7 @@ Screens:
                             ComponentName: cmpStatusBadge
                             Properties:
                               FinalStatus: =locSelectedItem.Final_Status
-                              DueDate: =locSelectedItem.Due_Date
+                              DueDate: =locSelectedItem.Nominal_Due_Date
 
                         - btnOpenDocument:
                             Control: Button
@@ -269,7 +269,13 @@ Screens:
                         - rdoVerdict:
                             Control: Radio
                             Properties:
-                              Items: =["Accept", "Correction Required", "Wrong Document", "Not Applicable"]
+                              # Seven verdicts. They behave like ticket tags: the
+                              # engine collapses the four returning ones into
+                              # RETURNED, and the base reads the specific reason.
+                              Items: |
+                                =["Accept", "Correction Required", "Incomplete",
+                                  "Wrong Document", "Wrong Reporting Period",
+                                  "Wrong Facility", "Not Applicable"]
                               OnChange: =Set(locQCVerdict, Self.Selected.Value); Set(locQCError, "")
                               AccessibleLabel: ="Review decision. Required."
                               DisplayMode: =MF_WriteMode
@@ -281,7 +287,10 @@ Screens:
                             Properties:
                               # Progressive disclosure: only the verdicts that
                               # need a comment ask for one.
-                              Visible: =locQCVerdict in ["Correction Required", "Wrong Document"]
+                              Visible: |
+                                =locQCVerdict in ["Correction Required", "Incomplete",
+                                                  "Wrong Document", "Wrong Reporting Period",
+                                                  "Wrong Facility"]
                               Default: =locQCComment
                               OnChange: =Set(locQCComment, Self.Value)
                               HintText: ="What needs correcting, and how"
@@ -321,7 +330,9 @@ Screens:
                               TabIndex: =0
                               OnSelect: |
                                 =If(
-                                    locQCVerdict in ["Correction Required", "Wrong Document"]
+                                    locQCVerdict in ["Correction Required", "Incomplete",
+                                                     "Wrong Document", "Wrong Reporting Period",
+                                                     "Wrong Facility"]
                                         && IsBlank(Trim(locQCComment)),
                                         Set(locQCError, "Add a comment explaining what needs correcting."),
                                     locQCVerdict = "Correction Required" && IsBlank(locCorrectionDue),
@@ -341,7 +352,8 @@ Screens:
                                             {
                                                 s: MF_EvaluateStatus(
                                                        Today(),
-                                                       item.Due_Date,
+                                                       item.Effective_Due_Date,
+                                                       item.Effective_Final_Call_Date,
                                                        item.Required_Flag,
                                                        item.Waived_Flag,
                                                        item.Authority_Status,
@@ -397,8 +409,15 @@ Screens:
                             Properties:
                               # Explain the behaviour, because it surprises
                               # reviewers who expect Wrong Document to be Red.
-                              Text: ="Wrong Document means the requirement is still unmet. Before the suspense date the item shows Not satisfied; after it, Overdue. It does not stay red forever."
+                              Text: |
+                                ="Accept means you opened the file and verified it is the right document, complete and correct. This is substantive review, not presence checking." &
+                                 If(locQCVerdict = "Wrong Document",
+                                    Char(10) & "Wrong Document means the requirement is still unmet. Before the final call the item shows Not satisfied; after it, Overdue. It does not stay red forever.",
+                                    "") &
+                                 If(locQCVerdict in ["Correction Required", "Incomplete", "Wrong Reporting Period", "Wrong Facility"],
+                                    Char(10) & "The base sees this specific reason, not a generic 'returned'.",
+                                    "")
                               Color: =clrTextSecondary
-                              Visible: =locQCVerdict = "Wrong Document"
+                              Visible: =!IsBlank(locQCVerdict)
                               AutoHeight: =true
                               TabIndex: =-1

@@ -55,7 +55,9 @@ ScreenOrder:
   - scrInstallation
   - scrReview
   - scrUnmatched
+  - scrCalendar
   - scrActivity
+  - scrAccessRequest
   - scrAdminRequirements
   - scrMaintenance
   - scrNoAccess
@@ -80,6 +82,10 @@ DataSources:
   - 'MF Feature Flags'
   - 'MF App Event Log'
   - 'MF EOM Status'
+  - 'MF Non Duty Day'
+  - 'MF Calendar Event'
+  - 'MF Access Request'
+  - 'MF Notification Rule'
   - EOM05_AppUpload          # Power Automate — the front door
   - Office365Users           # Entra identity. CAC resolves it before the app loads.
 

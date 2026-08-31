@@ -51,8 +51,8 @@ import json
 import sys
 from dataclasses import dataclass, asdict
 
-SCHEMA_VERSION = "3.0"
-EXPECTED_LIST_COUNT = 12
+SCHEMA_VERSION = "4.0"
+EXPECTED_LIST_COUNT = 16
 MAX_INDEXES_PER_LIST = 20
 MAX_INTERNAL_NAME = 32
 
@@ -130,6 +130,63 @@ def c(name, ctype, req=False, indexed=False, choices=None, note=""):
 OPERATING_MODEL = ("Legacy/APF", "Food 2.0", "MAFFO/MAF", "AOR/CDS")
 APPLICABLE_MODEL = OPERATING_MODEL + ("All",)
 
+# R1 is Legacy-only. Food 2.0 installations reorganise into Portfolios 1-4 in
+# October, so nothing encodes the current Aramark/Sodexo vendor split.
+COMPONENT = ("Active", "ANG", "AFRC")
+
+# The Mission Feeding QRG names operating models differently from the
+# requirement catalogue. Left unmapped, Applicable_Model "Legacy/APF" would
+# never match Operating_Model "Legacy" and EOM-01 would generate ZERO facility
+# rows — silently, because a facility that generates nothing looks exactly like
+# a facility with nothing due. The registry is normalised on import.
+QRG_OPERATING_MODEL_MAP = {
+    "Legacy": "Legacy/APF",
+    "MAFFO": "MAFFO/MAF",
+    "Deployed / Field Feeding": "AOR/CDS",
+    "Food 2.0": "Food 2.0",
+}
+
+
+def normalize_operating_model(value):
+    """Map a QRG operating-model string onto the canonical vocabulary.
+
+    Returns None for a blank, which is legitimate: twenty registry rows are
+    NO_DFAC placeholders recording that a base has no feeding facility at all.
+    That record is worth keeping — it stops someone asking where Arnold's 1119
+    is — but it has no operating model and generates nothing.
+    """
+    value = (value or "").strip()
+    if not value:
+        return None
+    if value in OPERATING_MODEL:
+        return value
+    try:
+        return QRG_OPERATING_MODEL_MAP[value]
+    except KeyError:
+        raise ValueError(
+            f"unmapped operating model {value!r}. Add it to "
+            "QRG_OPERATING_MODEL_MAP deliberately — do not let it fall through, "
+            "because an unmatched model generates no requirements and reads as "
+            "compliant."
+        )
+
+# ANG DFAC managers provide the EOY inventory last page to NGB/A1X, not to
+# AFSVC/VMF. Without this the EOY requirement routes ANG submissions to the
+# wrong organisation and nobody notices until someone asks where they went.
+ROUTING_ORG = ("AFSVC/VMF", "NGB/A1X", "AFRC/A1S", "Installation")
+
+# Calendar is the baseline. The source says "within 5 days" and does not say
+# duty days, business days or workdays; do not infer duty days without a
+# citation.
+DUE_BASIS = ("CALENDAR", "DUTY_DAY")
+
+NON_DUTY_DAY_POLICY = ("NEXT_DUTY_DAY", "PREVIOUS_DUTY_DAY", "NO_ADJUSTMENT")
+
+# Authority answers "does this requirement exist". Scope answers "at what grain
+# is it filed". They are separate claims: marking a scope guess VERIFIED
+# because the document is verified turns a proposal into policy by accident.
+SCOPE_CONFIDENCE = ("High", "Medium", "Low", "Proposed")
+
 FACILITY_TYPE = ("Main DFAC", "Flight Kitchen", "Kiosk", "Satellite", "MAF",
                  "Contract Cafe")
 
@@ -139,25 +196,46 @@ FREQUENCY = ("Monthly", "Quarterly", "Semiannual", "Annual", "Conditional")
 
 # UNVERIFIED requirements generate items but never drive Red. All twelve
 # seeded requirements are UNVERIFIED today, so that is the default path.
-AUTHORITY_STATUS = ("Verified", "UNVERIFIED", "Management decision")
+AUTHORITY_STATUS = ("VERIFIED", "MANAGEMENT_RULE", "PROPOSED", "UNVERIFIED",
+                    "RETIRED_OR_NOT_APPLICABLE")
 
-# The eight semantic statuses. Final_Status.
+# The nine semantic statuses. Final_Status.
+#
+# LATE and RETURNED are both produced by the decision order in
+# docs/status-calculation.md. The v11 schema omitted them from the choice list
+# while its own decision table produced them, which would have made the flow
+# write a value the column rejects. See handoffs/RECONCILIATION.md C11.
 FINAL_STATUS = (
     "NOT_APPLICABLE",
     "NOT_DUE",
     "PENDING_VALIDATION",
+    "LATE",
     "OVERDUE",
+    "RETURNED",
     "NOT_SATISFIED",
-    "CORRECTION_REQUIRED",
     "RECEIVED_PENDING_QC",
     "ACCEPTED",
 )
 
-# The five visual codes. Status_Code. Blue (4) separates "not due yet" and
-# "informational" from "not applicable" (0) — four states displayed an
-# installation whose requirements had simply not come due as Not Applicable.
-STATUS_CODE_VALUES = (0, 1, 2, 3, 4)
-STATUS_CODE_NAMES = {0: "Gray", 1: "Red", 2: "Amber", 3: "Green", 4: "Blue"}
+# The SIX visual codes. Status_Code.
+#
+# Colour carries OWNERSHIP and time risk, not severity:
+#
+#   Blue   4  not due, window open        nobody yet
+#   Amber  5  past first suspense         the base, with runway
+#   Red    1  past final call, or returned the base, out of runway
+#   Yellow 2  received, awaiting review   AFSVC
+#   Green  3  accepted                    nobody
+#   Gray   0  not applicable              nobody
+#
+# The amber/yellow split is the point. Amber means TIME RISK; yellow means
+# SOMEBODY ELSE HAS IT. Collapsing them tells a DFAC manager that a document
+# they filed on time and one they never sent are the same kind of problem.
+#
+# Six is the ceiling. A seventh state would stop being scannable.
+STATUS_CODE_VALUES = (0, 1, 2, 3, 4, 5)
+STATUS_CODE_NAMES = {0: "Gray", 1: "Red", 2: "Yellow", 3: "Green",
+                     4: "Blue", 5: "Amber"}
 
 ACTION_OWNER = ("Facility", "Reviewer", "Admin", "None")
 
@@ -165,8 +243,17 @@ ACTION_OWNER = ("Facility", "Reviewer", "Admin", "None")
 PACKAGE_STATE = ("ACTION_REQUIRED", "IN_REVIEW", "COMPLETE", "IN_PROGRESS",
                  "NOT_APPLICABLE")
 
-QC_STATUS = ("Pending Review", "Accepted", "Correction Required",
-             "Wrong Document", "Not Applicable")
+# Seven verdicts plus Recalled. They behave like ticket tags: the status engine
+# collapses the four returning verdicts into one RETURNED state, but the
+# submitter needs the specific reason to know what to fix, and that reason
+# lives here on the submission.
+QC_STATUS = ("Pending Review", "Accepted", "Correction Required", "Incomplete",
+             "Wrong Document", "Wrong Reporting Period", "Wrong Facility",
+             "Recalled", "Not Applicable")
+
+# The four that mean "it came back". Rule 6 of the decision order.
+QC_RETURNING = ("Correction Required", "Incomplete",
+                "Wrong Reporting Period", "Wrong Facility")
 
 INTAKE_METHOD = ("App upload", "Folder drop", "Manual classification")
 
@@ -182,10 +269,31 @@ RESOLUTION_STATUS = ("Needs Classification", "Classified",
 
 SCOPE_TYPE = ("Enterprise", "Portfolio", "Installation", "Facility")
 
-ROLE = ("DFAC Manager", "Accountant", "MFM", "Portfolio Manager",
-        "AFSVC Leadership", "Admin")
+# Two roles, not six. Nobody is provisioned for their own base: CAC identifies
+# the user, the GAL gives their installation, and anyone at that installation
+# can view and edit its EOM submissions regardless of unit. BASE_USER is
+# automatic; PORTFOLIO_MANAGER is granted, and only by a holder of
+# Can_Grant_Access at Enterprise scope, which stops the role self-propagating.
+ROLE = ("BASE_USER", "PORTFOLIO_MANAGER")
 
-FLAG_ROLE = ROLE + ("Developer",)
+FLAG_ROLE = ROLE + ("DEVELOPER",)
+
+GRANT_TYPE = ("GAL derived", "Requested", "Manual")
+
+GRANT_SCOPE = ("None", "Portfolio", "Enterprise")
+
+ACCESS_REQUEST_STATUS = ("Pending", "Approved", "Denied", "Expired")
+
+CALENDAR_EVENT_TYPE = ("Suspense", "Correction due", "Assessment", "Data call",
+                       "Reminder")
+
+NOTIFICATION_TRIGGER = ("SubmissionCreated", "StatusChanged", "DueSoon",
+                        "FirstSuspensePassed", "FinalSuspensePassed",
+                        "CorrectionSuspensePassed", "PendingReviewAging",
+                        "AccessRequested")
+
+NOTIFICATION_RECIPIENT = ("Submitter", "Portfolio org box", "Installation POC",
+                          "Reviewer", "Portfolio Manager", "AFSVC")
 
 CONFIG_TYPE = ("String", "Boolean", "Number", "Date")
 
@@ -215,16 +323,44 @@ MF_Installation = ListDef(
     name="MF_Installation",
     title="MF Installation",
     grain="One row per installation",
-    volume_estimate=89,
+    volume_estimate=103,
     unique_key=("Installation_ID",),
+    note="With MF_Facility this is the authoritative EOM operational registry "
+         "until an enterprise source supersedes it. CrunchTime, Aloha Enterprise "
+         "and Teams all differ and none tracks what EOM needs, so it is built "
+         "here by hand and signed off per base.",
     columns=(
         c("Installation_ID", "Text", req=True, indexed=True,
           note="Canonical key. Must match the COP MF_Installation.Installation_ID."),
         c("Installation_Name", "Text", req=True),
+        c("Source_Installation_String", "Text",
+          note="The base's name exactly as it appeared in the source QRG. Kept so a "
+               "registry correction can be traced back rather than argued about."),
+        c("Location", "Text", note="State or country, from the QRG."),
         c("Portfolio_ID", "Text", req=True, indexed=True),
         c("MAJCOM", "Text"),
-        c("EOM_Folder_URL", "URL",
-          note="Teams/SharePoint FY folder root for this installation"),
+        c("Component", "Choice", req=True, choices=COMPONENT,
+          note="Active, ANG or AFRC. ANG routes EOY inventory to NGB/A1X, not "
+               "AFSVC/VMF — see MF_EOM_Requirement.Routing_Org."),
+        c("EOM_Folder_URL", "URL", note="Teams/SharePoint folder root for this installation"),
+        c("Generation_Enabled", "Boolean", req=True, indexed=True,
+          note="THE onboarding gate. EOM-01 generates only where this is TRUE. A base "
+               "with it FALSE reads as 'not yet onboarded', never as compliant. Flip it "
+               "after the facilities and operating models are populated and validated."),
+        c("Registry_Validated_By", "Text", note="Who signed off this base's registry entry."),
+        c("Registry_Validated_Date", "DateTime"),
+        c("Source_System", "Text", note="Where the row came from. 'Mission Feeding QRG' for the initial load."),
+        c("Needs_Review_Flag", "Boolean",
+          note="Set by the QRG import where the source row was ambiguous. See "
+               "configuration/qrg-data-quality.csv."),
+        c("DODAAC", "Text"),
+        c("DODAAD", "Text"),
+        c("Org_Box_Email", "Text",
+          note="Portfolio or installation org box. Notification target — a person's "
+               "mailbox is never a notification target."),
+        c("Official_POC_UPN", "Text",
+          note="Resolved identity. The QRG POC column is a DISPLAY NAME and is never "
+               "an identity; see security/security-manifest.yaml."),
         c("Active_Flag", "Boolean", req=True, indexed=True),
     ),
 )
@@ -233,21 +369,43 @@ MF_Facility = ListDef(
     name="MF_Facility",
     title="MF Facility",
     grain="One row per feeding facility",
-    volume_estimate=500,
+    volume_estimate=154,
     unique_key=("Facility_ID",),
     note="Operating_Model is HERE, not on the installation. One base can run a "
-         "legacy DFAC and a Food 2.0 cafe simultaneously; the requirement set is "
-         "driven by the facility's model.",
+         "legacy DFAC and a Food 2.0 cafe simultaneously, and the requirement set "
+         "follows the facility. Multi-facility installations are normal: the SAIIT "
+         "guidance describes transfers between a second DFAC and a flight kitchen "
+         "at the same base, and the 1119 initialises ONE facility and one month.",
     columns=(
         c("Facility_ID", "Text", req=True, indexed=True,
-          note="Unique enterprise-wide, not per installation"),
+          note="Unique enterprise-wide, not per installation. INSTALLATION|FACILITY."),
         c("Installation_ID", "Text", req=True, indexed=True),
         c("Facility_Name", "Text", req=True),
-        c("Facility_Type", "Choice", req=True, choices=FACILITY_TYPE),
-        c("Operating_Model", "Choice", req=True, choices=OPERATING_MODEL, indexed=True,
-          note="Drives which requirements apply to THIS facility"),
-        c("Contract_ID", "Text",
-          note="Nullable. Set where the facility is covered by a contract."),
+        c("Designation", "Text", note="Local designation where the QRG carried one."),
+        c("Unit", "Text", note="Owning unit, e.g. 97 FSS."),
+        c("Facility_Type", "Choice", choices=FACILITY_TYPE,
+          note="Nullable: the QRG does not carry it for every row, and guessing a "
+               "type would silently change which requirements generate."),
+        c("Operating_Model", "Choice", choices=OPERATING_MODEL, indexed=True,
+          note="Drives which requirements apply to THIS facility. NULLABLE: the "
+               "twenty NO_DFAC registry rows record that a base has no feeding "
+               "facility, and they legitimately have no model. A facility with no "
+               "model generates nothing and is surfaced by the health check, never "
+               "read as compliant."),
+        c("Program_Type", "Text", note="QRG programme string, e.g. 'Legacy - SB'."),
+        c("Contract_Type", "Text", note="Mess Attendant, Aramark, Sodexo, and so on."),
+        c("Primary_PV", "Text", note="Prime vendor."),
+        c("POS_Terminals_Raw", "Text", note="As recorded in the QRG. Unparsed."),
+        c("POC_Display_Name", "Text",
+          note="DISPLAY NAME from the QRG. Never an identity and never used for "
+               "authorization — see security/security-manifest.yaml."),
+        c("In_R1_Scope", "Boolean", indexed=True,
+          note="R1 is Legacy-only. Food 2.0 and MAFFO facilities are carried in the "
+               "registry but out of scope until their handbooks land."),
+        c("Source_Row", "Number", note="Row number in the source QRG, for traceability."),
+        c("Source_System", "Text"),
+        c("Facility_DODAAC", "Text"),
+        c("Contract_ID", "Text", note="Nullable. Set where the facility is covered by a contract."),
         c("Active_Flag", "Boolean", req=True, indexed=True),
     ),
 )
@@ -260,34 +418,67 @@ MF_EOM_Requirement = ListDef(
     unique_key=("Requirement_ID",),
     note="THE requirement engine. The app queries this; it contains no "
          "'if Legacy then require 1119' logic. Changing a requirement next year "
-         "is a list edit, not an app rebuild. The drop boxes on the installation "
-         "screen ARE this list, filtered.",
+         "is a list edit, not an app rebuild.",
     columns=(
         c("Requirement_ID", "Text", req=True, indexed=True),
         c("Document_Code", "Text", req=True,
-          note="1119, 1119-1, SIK, SF1080, DAF79, 1038, SAIIT, CONTRACTOR-INV"),
+          note="1119, 1119-1, SF1080, SAIIT, GPC, 1038, EOY-MFR, EOY-INV"),
         c("Document_Name", "Text", req=True),
         c("Applicable_Model", "Choice", req=True, choices=APPLICABLE_MODEL,
           note="'All' applies regardless of facility model"),
         c("Requirement_Scope", "Choice", req=True, choices=REQUIREMENT_SCOPE,
-          note="Determines the grain of the generated EOM_Item. Portfolio reserved, "
-               "not implemented."),
+          note="Determines the grain of the generated EOM_Item. Portfolio reserved."),
+        # Authority and scope are SEPARATE claims. The procedures deck confirms
+        # which documents are in the package; it says nothing about the grain
+        # each is filed at.
+        c("Scope_Confidence", "Choice", req=True, choices=SCOPE_CONFIDENCE,
+          note="How sure we are of the GRAIN, which is a different question from "
+               "whether the requirement exists. Marking a scope guess VERIFIED "
+               "because the document is verified turns a proposal into policy by "
+               "accident."),
+        c("Scope_Basis", "Note",
+          note="Why that grain. A reason, not a hunch."),
         c("Applicable_Facility_Types", "Text",
-          note="Semicolon list. Blank = all types. Kiosks rarely file a 1119."),
-        c("Frequency", "Choice", req=True, choices=FREQUENCY),
+          note="Semicolon list. Blank = all types."),
+        c("Applicable_Period_Month", "Number",
+          note="For Annual requirements: the fiscal month the obligation lands in. "
+               "9 for EOY. Null for Monthly and Quarterly."),
+        c("Routing_Org", "Choice", choices=ROUTING_ORG,
+          note="Where the submission goes. ANG routes EOY inventory to NGB/A1X "
+               "per DAFMAN 34-131 7.14.5, not to AFSVC/VMF."),
+        c("Frequency", "Choice", req=True, choices=FREQUENCY, indexed=True,
+          note="Conditional requirements are NEVER auto-generated. The 1119-1 is "
+               "field feeding: auto-generating it would put a permanent red row on "
+               "every DFAC that ran no field feeding exercise, which is exactly the "
+               "kind of false overdue that teaches people to ignore the dashboard."),
         c("Required_Flag", "Boolean", req=True),
-        c("Due_Day", "Number",
-          note="Day of the month following the reporting period. Configurable — "
-               "changing 10 to 15 never touches the app."),
-        c("Due_Offset_Months", "Number",
-          note="Usually 1. Set higher for lagging requirements."),
+        # Two suspenses. Between them an item is LATE, not overdue — and that
+        # middle window is the only week in the cycle where a reminder still
+        # changes the outcome.
+        c("Due_Day", "Number", req=True,
+          note="First suspense: day of the month following the reporting period. "
+               "5 for the Legacy package."),
+        c("Due_Basis", "Choice", req=True, choices=DUE_BASIS,
+          note="CALENDAR is the baseline. The source says 'within 5 days' and does "
+               "not say duty days; do not infer duty days without a citation."),
+        c("Final_Due_Day", "Number",
+          note="Final call. 10 for the Legacy package — a MANAGEMENT_RULE from the "
+               "programme, not from the source deck."),
+        c("Final_Due_Basis", "Choice", choices=DUE_BASIS),
+        c("NonDutyDay_Policy", "Choice", choices=NON_DUTY_DAY_POLICY,
+          note="Resolved against MF_Non_Duty_Day. Defaults to NEXT_DUTY_DAY. A "
+               "nominal suspense landing on a Saturday cannot be the date someone "
+               "is held to, and burying that in a formula produces a monthly argument."),
         c("QC_Required", "Boolean", req=True),
         c("Accepted_File_Types", "Text", note="Advisory only in MVP. xlsx;pdf"),
         c("Authority_Reference", "Text",
-          note="UNVERIFIED means do not enforce. The app still shows the box; the "
-               "requirement cannot drive an adverse status until validated."),
+          note="The citation. AFSVC EOM/EOY procedures, DAFMAN 34-131 ch 7.14, "
+               "DFAC Manager Handbook 1.7.5, Storeroom Handbook 5.3.4."),
         c("Authority_Status", "Choice", req=True, choices=AUTHORITY_STATUS, indexed=True,
-          note="UNVERIFIED requirements generate items but never drive Red"),
+          note="Does this requirement EXIST. UNVERIFIED requirements generate items "
+               "but never drive an adverse status. RETIRED_OR_NOT_APPLICABLE keeps a "
+               "retired requirement on the record so later guidance can reactivate "
+               "it without a schema change."),
         c("Sort_Order", "Number"),
         c("Active_Flag", "Boolean", req=True, indexed=True),
     ),
@@ -306,15 +497,14 @@ MF_EOM_Item = ListDef(
     unique_key=("EOM_Item_ID",),
     note="Generated by EOM-01. Created once and never duplicated. Corrections "
          "attach as new MF_EOM_Submission versions pointing at the same item. "
-         "Facility_ID is NULL for Installation and Contract scope. This is the "
-         "list that crosses the delegation ceiling first, so every column a "
-         "production query touches is indexed and Reporting_Period is always "
-         "the first filter.",
+         "The checklist exists before any file arrives, which is the only way to "
+         "distinguish 'nothing was submitted' from 'the system has no record'. "
+         "Facility_ID is NULL for Installation and Contract scope.",
     columns=(
         c("EOM_Item_ID", "Text", req=True, indexed=True),
         c("EOM_Item_Key", "Text", req=True, indexed=True,
-          note="Human-readable compound key: LACKLAND|BLDG1234|2026-10|1119. Drives "
-               "duplicate prevention and flow idempotency."),
+          note="Human-readable compound key. Drives duplicate prevention and flow "
+               "idempotency."),
         c("Portfolio_ID", "Text", req=True, indexed=True,
           note="Denormalized. The portfolio filter is the first server-side filter "
                "on every query, so it must be on the row."),
@@ -326,45 +516,72 @@ MF_EOM_Item = ListDef(
         c("Reporting_Period", "Text", req=True, indexed=True, note="YYYY-MM"),
         c("Requirement_ID", "Text", req=True, indexed=True),
         c("Requirement_Scope", "Choice", req=True, choices=REQUIREMENT_SCOPE,
-          note="Denormalized from the requirement so the app filters without a join. "
-               "Also how the app asks 'is this a facility row' — IsBlank(Facility_ID) "
-               "does not delegate."),
-        # C4. Decision rule 2 reads this. A join does not delegate, so without it
-        # the app cannot evaluate its own second rule.
+          note="Denormalized so the app filters without a join. Also how the app "
+               "asks 'is this a facility row' — IsBlank(Facility_ID) does not "
+               "delegate."),
         c("Authority_Status", "Choice", req=True, choices=AUTHORITY_STATUS, indexed=True,
-          note="Denormalized at generation. Rule 2 of the status engine reads it, and "
-               "a lookup to MF_EOM_Requirement would not delegate."),
+          note="Denormalized at generation. Rule 2 of the status engine reads it, "
+               "and a lookup to MF_EOM_Requirement would not delegate."),
         c("Required_Flag", "Boolean", req=True),
-        c("Due_Date", "DateTime", req=True, indexed=True),
+
+        # ---- four dates -------------------------------------------------
+        # Status evaluation ALWAYS uses the effective dates. Reporting uses the
+        # nominal ones, so "the 5th" stays the 5th in a leadership brief while
+        # the base is held to the date they can actually meet.
+        c("Nominal_Due_Date", "DateTime", req=True,
+          note="The policy date. The 5th stays the 5th."),
+        c("Effective_Due_Date", "DateTime", req=True, indexed=True,
+          note="After NonDutyDay_Policy. What a person actually owes, and what the "
+               "status engine evaluates against."),
+        c("Nominal_Final_Call_Date", "DateTime",
+          note="The policy final call. The 10th."),
+        c("Effective_Final_Call_Date", "DateTime", indexed=True,
+          note="After NonDutyDay_Policy."),
+        c("Due_Date_Adjusted", "Boolean", req=True,
+          note="TRUE where nominal and effective differ. The package screen shows "
+               "both: 'Due 5 Sep (Mon 8 Sep)'."),
+
+        # ---- on-time is two questions ------------------------------------
+        # Uploaded 4 Sep, returned 9 Sep, corrected and accepted 12 Sep: the base
+        # submitted on time and AFSVC did not have usable evidence on time. Both
+        # are true, and they are shown to different audiences.
+        c("Initial_Submitted_DateTime", "DateTime",
+          note="When the FIRST version arrived. Never overwritten by a resubmission."),
+        c("Initial_Submission_On_Time", "Boolean",
+          note="First version by Effective_Due_Date. This is what the base is told."),
+        c("Acceptable_Evidence_DateTime", "DateTime",
+          note="When an accepted version first existed. Renamed from the v11 "
+               "Current_Acceptable_Evidence_DateTime, which was 35 characters and "
+               "over SharePoint's 32-character internal name limit."),
+        c("Final_Evidence_On_Time", "Boolean",
+          note="Accepted evidence by Effective_Final_Call_Date. This is what "
+               "leadership is told."),
+
         c("Current_Submission_ID", "Text",
           note="Points at the Is_Current submission. Null until the first upload."),
         c("Received_Flag", "Boolean", req=True),
-        # C5. V3's own DAX referenced MF_EOM_Item[Received_Date], which did not exist.
-        c("Received_DateTime", "DateTime",
-          note="Upload timestamp of the current submission. Null until received."),
+
+        # ---- status, written together by ONE evaluation -------------------
         c("Final_Status", "Choice", req=True, choices=FINAL_STATUS, indexed=True,
           note="SEMANTIC status. Calculated by EOM-03 and by the app's QC action, "
-               "never user-selectable. Independent of Status_Code — one evaluation "
-               "writes both; neither is derived from the other."),
+               "never user-selectable. Independent of Status_Code."),
         c("Status_Code", "Number", req=True, indexed=True,
-          note="VISUAL code only. 0 Gray not-applicable, 1 Red overdue, 2 Amber "
-               "needs attention, 3 Green accepted, 4 Blue not-due/informational. "
-               "Five states, not four: collapsing 'not applicable' and 'not due yet' "
-               "into Gray made an installation whose requirements had simply not "
-               "come due read as Not Applicable. Stored so Filter() delegates."),
+          note="VISUAL code. 0 Gray n/a, 1 Red base out of runway, 2 Yellow AFSVC "
+               "owns it, 3 Green accepted, 4 Blue not due, 5 Amber base with "
+               "runway. Colour carries OWNERSHIP, not severity. Stored so "
+               "Filter() delegates."),
         c("Action_Owner", "Choice", req=True, choices=ACTION_OWNER,
-          note="Status_Code alone cannot answer 'is this mine'. Amber covers both "
-               "correction needed (facility) and awaiting review (AFSVC). Home "
-               "filters on this, not on colour."),
+          note="Status_Code alone cannot answer 'is this mine'. Home filters on "
+               "this, not on colour."),
         c("Action_Required", "Boolean", req=True, indexed=True),
-        # C6. EOM-03's spec sets these rather than leaving them to DAX.
+
         c("Days_Late", "Number",
-          note="Set by EOM-03, not computed in DAX. Null until received or overdue."),
-        c("On_Time_Flag", "Boolean", note="Received on or before Due_Date."),
-        # C7. MASTER's stale-reconciliation health check has nothing to check
-        # without this.
+          note="Magnitude against Effective_Final_Call_Date. Set by EOM-03, not "
+               "computed in DAX. Amber and Red share an owner; this carries the "
+               "difference in degree."),
         c("Last_Reconciled_DateTime", "DateTime",
-          note="Stamped by EOM-03. System Health flags items not reconciled recently."),
+          note="Stamped by EOM-03. System Health flags items not reconciled "
+               "recently — stale reconciliation looks exactly like a quiet month."),
         c("Exception_Flag", "Boolean", req=True,
           note="Set when the item needs human attention beyond normal QC"),
         c("Correction_Due", "DateTime", note="Set when QC returns a correction"),
@@ -405,6 +622,10 @@ MF_EOM_Submission = ListDef(
           note="'Declared at upload' is the production baseline. Filename is NEVER "
                "a method, at any tier."),
         c("Classification_Status", "Choice", choices=CLASSIFICATION_STATUS, indexed=True),
+        c("Portfolio_ID", "Text", indexed=True,
+          note="The folder path gives portfolio and month; the uploader's GAL gives "
+               "the installation; the app declaration gives facility and document "
+               "type. Nothing is inferred from a filename."),
         c("Classification_Confidence", "Choice", choices=CLASSIFICATION_CONFIDENCE,
           note="'Declared' = the app captured it at upload. That is the whole point "
                "of making the app the front door."),
@@ -420,7 +641,11 @@ MF_EOM_Submission = ListDef(
         c("Is_Current", "Boolean", req=True, indexed=True),
         c("Superseded_By", "Text",
           note="Submission_ID of the version that replaced this one"),
-        c("QC_Status", "Choice", req=True, choices=QC_STATUS, indexed=True),
+        c("QC_Status", "Choice", req=True, choices=QC_STATUS, indexed=True,
+          note="Seven verdicts plus Recalled. The status engine collapses the four "
+               "returning verdicts into RETURNED, but the base reads the specific "
+               "reason here and in the notification. Recalled is the submitter "
+               "withdrawing before review, not a rejection."),
         c("QC_By", "User"),
         c("QC_DateTime", "DateTime"),
         c("QC_Comment", "Note",
@@ -462,9 +687,14 @@ MF_Security_Mapping = ListDef(
     grain="One row per user per granted scope",
     volume_estimate=5000,
     unique_key=("Security_ID",),
-    note="ONE mapping for both Power Apps filtering and Power BI RLS. Do not "
-         "maintain two permission models. Also drives dropdown defaulting: a DFAC "
-         "manager with one facility row sees no dropdowns at all, just an upload box.",
+    note="ONE mapping for both Power Apps filtering and Power BI RLS. Nobody is "
+         "provisioned for their own base: CAC identifies the user, the GAL gives "
+         "their installation, and anyone at that installation may view and edit "
+         "its EOM submissions regardless of unit. Installation is the unit of "
+         "access.\n\n"
+         "WARNING: this list drives APP filtering. Power Apps Visible and Filter() "
+         "are NOT an access-control boundary — see docs/security-open-issue.md. "
+         "The data layer must enforce the same scope independently.",
     columns=(
         c("Security_ID", "Text", req=True, indexed=True),
         c("UPN", "Text", req=True, indexed=True),
@@ -472,17 +702,39 @@ MF_Security_Mapping = ListDef(
         c("Portfolio_ID", "Text", indexed=True),
         c("Installation_ID", "Text", indexed=True),
         c("Facility_ID", "Text", indexed=True),
-        c("Role", "Choice", req=True, choices=ROLE),
-        c("Can_QC", "Boolean", req=True, note="Portfolio Manager and Admin only"),
+        c("Role", "Choice", req=True, choices=ROLE,
+          note="BASE_USER is automatic from CAC and the GAL. PORTFOLIO_MANAGER is "
+               "granted. Two roles, not six — users can hold two in their heads."),
+        c("Job_Title", "Text", note="From the GAL. Display only, never authorization."),
+        c("Can_QC", "Boolean", req=True,
+          note="Defaults on for PORTFOLIO_MANAGER: reviewing is the core of the role."),
         c("Can_Submit_On_Behalf", "Boolean", req=True,
-          note="MFM, Portfolio Manager, Admin"),
-        c("Can_Edit_Requirements", "Boolean", req=True, note="Admin only"),
+          note="Records the true origin of an emailed document instead of "
+               "misattributing it to AFSVC."),
+        c("Can_Edit_Requirements", "Boolean", req=True,
+          note="Defaults OFF. Reviewing a 1119 and changing what a 1119 IS are "
+               "different jobs; configuration is policy."),
+        c("Can_Grant_Access", "Boolean", req=True,
+          note="Defaults OFF, and settable only by an Enterprise-scope holder. "
+               "Stops the role self-propagating — without this, one grant makes "
+               "the population monotonically increasing."),
+        c("Grant_Scope", "Choice", req=True, choices=GRANT_SCOPE,
+          note="Portfolio = own portfolio only. Enterprise = anywhere, and that is "
+               "two or three people, not a default. Limits blast radius."),
+        c("Grant_Type", "Choice", req=True, choices=GRANT_TYPE,
+          note="GAL derived, Requested or Manual. Distinguishes what identity gave "
+               "someone from what a human granted them."),
+        c("Granted_By", "Text"),
+        c("Granted_Date", "DateTime"),
+        c("Expires_Date", "DateTime", indexed=True,
+          note="REQUESTED ACCESS EXPIRES. Sixty days by default. Someone who PCS'd "
+               "but still owes their losing base a package needs a handover window, "
+               "not permanent rights to a base they left."),
         c("Developer_Flag", "Boolean", req=True,
-          note="Sees feature-flagged and diagnostic surfaces. Required because a DAF "
-               "tenant may allow only ONE environment — unreleased work has to "
-               "coexist with production safely."),
-        c("Tester_Flag", "Boolean", req=True, note="Sees Enabled_Testers features only"),
-        c("Active_Flag", "Boolean", req=True, indexed=True),
+          note="Never granted by a role. Unlocks the diagnostic surface."),
+        c("Tester_Flag", "Boolean", req=True),
+        c("Active_Flag", "Boolean", req=True, indexed=True,
+          note="Revocation without deletion, so the audit trail survives."),
     ),
 )
 
@@ -613,10 +865,29 @@ MF_EOM_Status = ListDef(
         c("Requirement_Scope", "Text", req=True),
         c("Authority_Status", "Text", req=True,
           note="Carried through so the COP can dim provisional requirements too"),
+        c("Scope_Confidence", "Text",
+          note="A Proposed grain should be visibly provisional in the COP as well "
+               "as in the app."),
+        c("Routing_Org", "Text",
+          note="ANG EOY submissions route to NGB/A1X. A COP that cannot show "
+               "routing cannot answer 'where did they go'."),
+        c("Component", "Text", note="Active, ANG or AFRC."),
         c("Required_Flag", "Boolean", req=True),
-        c("Due_Date", "DateTime", req=True),
+        c("Nominal_Due_Date", "DateTime", req=True,
+          note="Leadership reporting uses the nominal dates, so 'the 5th' stays "
+               "the 5th in a brief."),
+        c("Effective_Due_Date", "DateTime", req=True,
+          note="What the status was evaluated against."),
+        c("Nominal_Final_Call_Date", "DateTime"),
+        c("Effective_Final_Call_Date", "DateTime"),
+        c("Due_Date_Adjusted", "Boolean"),
         c("Received_Flag", "Boolean", req=True),
-        c("Received_DateTime", "DateTime"),
+        c("Initial_Submitted_DateTime", "DateTime"),
+        c("Initial_Submission_On_Time", "Boolean",
+          note="What the base is told."),
+        c("Final_Evidence_On_Time", "Boolean",
+          note="What leadership is told. Never show these two as bare booleans; "
+               "translate them into a sentence."),
         c("Version_No", "Number"),
         c("QC_Status", "Text"),
         # C8. V3 carried Final_Status AND a duplicate Status_Semantic. Two columns
@@ -625,7 +896,9 @@ MF_EOM_Status = ListDef(
           note="The semantic string, copied verbatim from the item. This is the ONLY "
                "semantic column: Power BI labels with it and never re-derives it."),
         c("Status_Code", "Number", req=True, indexed=True,
-          note="0 Gray 1 Red 2 Amber 3 Green 4 Blue. Copied verbatim from the item."),
+          note="0 Gray, 1 Red, 2 Yellow, 3 Green, 4 Blue, 5 Amber. Copied verbatim "
+               "from the item. Power BI conditionally formats the whole COP matrix "
+               "off this column and reproduces none of the logic."),
         c("Action_Owner", "Text", req=True),
         c("Action_Required", "Boolean", req=True),
         c("Package_State", "Text", req=True, choices=(),
@@ -633,10 +906,124 @@ MF_EOM_Status = ListDef(
                "IN_PROGRESS | NOT_APPLICABLE. Computed over semantic statuses, never "
                "over colour codes — a colour rollup calls [ACCEPTED, NOT_DUE, NOT_DUE] "
                "Complete when it is IN_PROGRESS."),
-        c("Days_Late", "Number"),
-        c("On_Time_Flag", "Boolean"),
+        c("Days_Late", "Number", note="Magnitude. Amber and Red share an owner."),
         c("Current_File_URL", "URL"),
         c("Generated_DateTime", "DateTime", req=True),
+    ),
+)
+
+
+
+# ==========================================================================
+# Scheduling, access and notification
+# ==========================================================================
+
+MF_Non_Duty_Day = ListDef(
+    name="MF_Non_Duty_Day",
+    title="MF Non Duty Day",
+    grain="One row per non-duty date",
+    volume_estimate=2000,
+    unique_key=("Non_Duty_ID",),
+    note="Federal holidays and wing down days. Resolves Nominal to Effective "
+         "dates under NonDutyDay_Policy. A nominal suspense landing on a Saturday "
+         "cannot be the date someone is held to, and a weekend suspense with no "
+         "rule produces a monthly argument.",
+    columns=(
+        c("Non_Duty_ID", "Text", req=True, indexed=True),
+        c("Date", "DateTime", req=True, indexed=True),
+        c("Name", "Text", req=True, note="Independence Day, wing down day, and so on."),
+        c("Scope_Type", "Choice", req=True, choices=("Enterprise", "Portfolio", "Installation"),
+          note="A federal holiday is Enterprise. A wing down day is one installation."),
+        c("Scope_ID", "Text", indexed=True, note="Null when Scope_Type is Enterprise."),
+        c("Active_Flag", "Boolean", req=True, indexed=True),
+    ),
+)
+
+MF_Calendar_Event = ListDef(
+    name="MF_Calendar_Event",
+    title="MF Calendar Event",
+    grain="One row per authored calendar entry",
+    volume_estimate=20000,
+    unique_key=("Event_ID",),
+    note="Authored events only. Every expected item is ALREADY a dated event and "
+         "is projected onto the calendar from MF_EOM_Item — duplicating them here "
+         "would create two sources of truth for the same suspense. This list "
+         "carries what the checklist cannot: assessments, data calls, reminders.",
+    columns=(
+        c("Event_ID", "Text", req=True, indexed=True),
+        c("Event_Type", "Choice", req=True, choices=CALENDAR_EVENT_TYPE),
+        c("Title", "Text", req=True),
+        c("Event_Date", "DateTime", req=True, indexed=True),
+        c("End_Date", "DateTime"),
+        c("All_Day", "Boolean", req=True),
+        c("Scope_Type", "Choice", req=True, choices=SCOPE_TYPE),
+        c("Scope_ID", "Text", indexed=True),
+        c("Linked_Item_ID", "Text",
+          note="EOM_Item_ID where the event annotates a real obligation."),
+        c("Status_Code", "Number", req=True,
+          note="Copied from the linked item where there is one, so the calendar "
+               "colours with the same six states as everything else."),
+        c("Created_By", "User", req=True),
+        c("Created_DateTime", "DateTime", req=True),
+        c("Active_Flag", "Boolean", req=True, indexed=True),
+    ),
+)
+
+MF_Access_Request = ListDef(
+    name="MF_Access_Request",
+    title="MF Access Request",
+    grain="One row per request for access to an installation the requester is not posted to",
+    volume_estimate=5000,
+    unique_key=("Request_ID",),
+    note="Modelled on how Teams handles a request to join. Someone who PCS'd but "
+         "still owes their losing base a package requests that installation, with "
+         "a justification and an expiry. The exception path to the GAL-derived "
+         "model, not a parallel provisioning system.",
+    columns=(
+        c("Request_ID", "Text", req=True, indexed=True),
+        c("Requester_UPN", "Text", req=True, indexed=True,
+          note="Resolved identity, never a typed name."),
+        c("Requester_Name", "Text", req=True, note="Display only."),
+        c("Home_Installation", "Text", note="From the GAL. What identity already says."),
+        c("Requested_Installation_ID", "Text", req=True, indexed=True),
+        c("Justification", "Note", req=True,
+          note="Required. A request with no reason cannot be judged."),
+        c("Requested_Until", "DateTime",
+          note="Sixty days by default. A handover window, not permanent rights."),
+        c("Status", "Choice", req=True, choices=ACCESS_REQUEST_STATUS, indexed=True),
+        c("Decided_By", "Text", note="Must hold Can_Grant_Access."),
+        c("Decided_Date", "DateTime"),
+        c("Decision_Comment", "Note"),
+    ),
+)
+
+MF_Notification_Rule = ListDef(
+    name="MF_Notification_Rule",
+    title="MF Notification Rule",
+    grain="One row per notification trigger",
+    volume_estimate=100,
+    unique_key=("Rule_ID",),
+    note="Notifications are a LIST, not code. Every rule has an Enabled toggle and "
+         "a Digest flag, and the toggles are on an admin screen rather than inside "
+         "a flow. Two rules ship enabled; everything else is tuned once the queue "
+         "behaves.",
+    columns=(
+        c("Rule_ID", "Text", req=True, indexed=True),
+        c("Trigger_Event", "Choice", req=True, choices=NOTIFICATION_TRIGGER, indexed=True),
+        c("Recipient_Type", "Choice", req=True, choices=NOTIFICATION_RECIPIENT,
+          note="An org box, a role or the submitter. A named person's mailbox is "
+               "never a rule target."),
+        c("Recipient_Address", "Text",
+          note="Resolved from MF_Installation.Org_Box_Email where the type is an "
+               "org box."),
+        c("Enabled", "Boolean", req=True, indexed=True),
+        c("Digest", "Boolean", req=True,
+          note="ON by default for anything recurring. One message per recipient per "
+               "run listing everything they owe. Per-item mail across 103 "
+               "installations is how a notification system gets muted in week one."),
+        c("Cadence_Days", "Number", note="Null means once."),
+        c("Subject_Template", "Text"),
+        c("Notes", "Note"),
     ),
 )
 
@@ -654,6 +1041,10 @@ LISTS = (
     MF_Feature_Flags,
     MF_App_Event_Log,
     MF_EOM_Status,
+    MF_Non_Duty_Day,
+    MF_Calendar_Event,
+    MF_Access_Request,
+    MF_Notification_Rule,
 )
 
 LISTS_BY_NAME = {l.name: l for l in LISTS}
@@ -681,7 +1072,8 @@ def validate():
     # MF_EOM_Item crosses the delegation ceiling in the first year.
     for required in ("Reporting_Period", "Portfolio_ID", "Installation_ID",
                      "Facility_ID", "Status_Code", "Final_Status",
-                     "Authority_Status", "Action_Required", "Due_Date"):
+                     "Authority_Status", "Action_Required",
+                     "Effective_Due_Date", "Effective_Final_Call_Date"):
         col = by_name.get(required)
         if col is None:
             errs.append(f"MF_EOM_Item is missing {required}")
@@ -700,6 +1092,34 @@ def validate():
         errs.append("MF_EOM_Item.Final_Status must be the semantic Choice column")
     if by_name["Status_Code"].type != "Number":
         errs.append("MF_EOM_Item.Status_Code must be the numeric visual code")
+
+    # Status evaluation uses EFFECTIVE dates; reporting uses NOMINAL ones.
+    # Losing either pair collapses the distinction and produces a monthly
+    # argument about weekend suspenses.
+    for pair in (("Nominal_Due_Date", "Effective_Due_Date"),
+                 ("Nominal_Final_Call_Date", "Effective_Final_Call_Date")):
+        for col in pair:
+            if col not in by_name:
+                errs.append(f"MF_EOM_Item is missing {col}; the nominal/effective "
+                            "pair is what keeps 'the 5th' the 5th in a brief while "
+                            "the base is held to a date they can meet")
+
+    # LATE and RETURNED are produced by the decision order. A choice column that
+    # rejects them would make the flow fail on a state the engine can reach.
+    for produced in ("LATE", "RETURNED"):
+        if produced not in by_name["Final_Status"].choices:
+            errs.append(f"MF_EOM_Item.Final_Status cannot store {produced}, which "
+                        "the decision order in docs/status-calculation.md produces")
+
+    # Amber. Six states, not five.
+    if 5 not in STATUS_CODE_VALUES:
+        errs.append("Status_Code 5 (Amber) is missing: without it, a base past the "
+                    "first suspense and one past the final call look identical")
+
+    # On-time is two questions, shown to two audiences.
+    for col in ("Initial_Submission_On_Time", "Final_Evidence_On_Time"):
+        if col not in by_name:
+            errs.append(f"MF_EOM_Item is missing {col}")
 
     # The fact carries exactly one semantic column.
     fact_cols = {c.name for c in LISTS_BY_NAME["MF_EOM_Status"].columns}

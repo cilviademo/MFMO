@@ -6,7 +6,136 @@ retired column is marked unused, never deleted.
 
 ---
 
-## [0.6.0] — Reconciled build. Source complete, not yet built in a tenant.
+## [0.7.0] — v7-v11 integration. The programme's answers, and the AFSVC deck.
+
+Integrates four later solution snapshots, the programme's answers to twenty
+questions, and the AFSVC End of Month/Year Procedures deck. The domain model
+changes substantially; `docs/handoffs/RECONCILIATION.md` records every decision
+and `docs/build-notes.md` carries the programme's own rulings.
+
+**No Power Platform environment has been touched.** `dist/` holds no ZIP.
+
+### Six visual states, and colour now means ownership
+
+```
+Blue   4  not due, window open           nobody yet
+Amber  5  past the first suspense        the base, with runway
+Red    1  past the final call, returned  the base, out of runway
+Yellow 2  received, awaiting review      AFSVC
+Green  3  accepted                       nobody
+Gray   0  not applicable                 nobody
+```
+
+Amber means *time risk*; yellow means *somebody else has it*. Collapsing them
+tells a DFAC manager that a document they filed on time and one they never sent
+are the same kind of problem.
+
+### Two suspense dates, four date columns
+
+First suspense 5 days after month end, final call the 10th, `LATE` between —
+the only week in the cycle where a reminder still changes the outcome. The 5th
+is `VERIFIED` from the procedure language; the 10th is a `MANAGEMENT_RULE` from
+the programme, and the model records the difference.
+
+Every item carries `Nominal_*` and `Effective_*` pairs resolved against the new
+`MF_Non_Duty_Day` list. **Status evaluates against effective; reporting uses
+nominal**, so "the 5th" stays the 5th in a brief while the base is held to a
+date they can meet.
+
+### On-time is two questions
+
+`Initial_Submission_On_Time` and `Final_Evidence_On_Time`. Uploaded 4 Sep,
+returned 9 Sep, accepted 12 Sep is *submitted on time* **and** *evidence late*.
+Both stored, shown to different audiences, never rendered as two bare booleans.
+
+### Installation is the unit of access
+
+CAC identifies the user, the GAL gives their installation, and anyone there may
+view and edit its submissions regardless of unit. Two roles, not six. This
+**dissolves the facility rollup leak** recorded against V3 — facility is no
+longer the access boundary.
+
+`MF_Access_Request` is the exception path for someone who PCS'd and still owes
+their losing base a package. **Requested access expires**, sixty days by
+default, and `MF_LiveScope` honours the expiry in the app rather than waiting
+for a cleanup job.
+
+### Seven QC verdicts plus Recalled
+
+Four collapse into one `RETURNED` status; the specific reason stays on the
+submission, because the engine does not need four states to say "it came back"
+and the submitter needs four reasons to know what to fix. A recall reverts the
+item to its date-based state.
+
+Accept means the reviewer **opened the file**. Bulk accept is therefore an
+explicit multi-select, never a select-all button.
+
+### The real catalogue and the real registry
+
+Thirteen requirements — 1119, SF 1080, SAIIT, GPC, 1119-1, 1038, and two EOY
+documents. **Eleven moved to `VERIFIED` with citations**, so rule 2 of the
+status engine now applies to almost nothing and a missed 1119 turns red.
+
+`Authority_Status` and `Scope_Confidence` are separate claims: the deck
+confirms *which* documents are in the package, not *at what grain* each is
+filed. Four grains remain `Proposed`.
+
+The 1119-1 is **field feeding** and is `Conditional` — never auto-generated,
+because a permanent red row on every DFAC that ran none is the false overdue
+that teaches people to ignore the dashboard.
+
+103 installations and 154 facilities from the Mission Feeding QRG, with five
+pilot bases onboarded. `Generation_Enabled` is the onboarding gate: a base with
+it FALSE reads as *not yet asked*, never as compliant.
+
+### Security is evidenced
+
+`security/` carries the manifest, connector allowlist and role matrix;
+`scripts/prerelease_scan.py` is wired into `tests/run_tests.sh` as a release
+gate. It now supports an **auditable inline exception** so a document that
+names a prohibited string in order to prohibit it does not require skipping the
+whole file — every exception is reported on every run.
+
+`ROLLBACK.md` written, including the part that gets missed: a solution import
+does not revert SharePoint columns, data, or status values already written.
+
+### Corrections applied to v11
+
+v11's artifacts disagree with each other in the same way V3's did — the
+decision table is current, the code is stale. Ten further corrections, C11–C20,
+each held by a test. The three that would have been silent failures:
+
+- **C16** — the registry says `Legacy`, the requirements say `Legacy/APF`.
+  Unmapped, EOM-01 would have generated **zero** facility rows and every base
+  would have read as having nothing due.
+- **C17** — requirements filter on `Facility_Type`, which the QRG never
+  populates. Excluding on it drops every facility from every type-scoped
+  requirement. Unknown now matches and is reported: a false expected row is
+  visible, a missing one is not.
+- **C11** — `Final_Status` could not store `LATE` or `RETURNED`, both of which
+  v11's own decision order produces.
+
+### Known gaps
+
+- **The data layer does not enforce installation scope.** `security-open-issue.md`
+  is the most important open item here: Power Apps `Visible` and `Filter()` are
+  not an access boundary, and an ISSM will find it. Not a reason to delay the
+  build; a deployment dependency to raise with the SharePoint administrator now.
+- Four requirement grains remain `Proposed`. **Confirm before the first
+  generation run** — changing scope after items exist means regenerating a
+  period.
+- Whether the 1119-1 is conditional is an open ruling, not a silent decision.
+- EOY is **partially** defined: the documents and citations are settled; the
+  row grain, QC checklist and closeout rules are not.
+- The PowerShell is reviewed, not executed. Every tenant-side acceptance test
+  is outstanding. No release ZIP, and none can honestly be produced without an
+  environment.
+
+**134 local tests pass.**
+
+---
+
+## [0.6.0] — Reconciled build against the V3 artifacts.
 
 Rebases this repository onto the **V3 artifacts** and reconciles the two
 handoffs against each other. `docs/handoffs/RECONCILIATION.md` is the decision
@@ -136,8 +265,8 @@ JSON, or a missing reconciliation correction. **99 tests pass.**
 
 ---
 
-## [0.5.0] and earlier — V3 and before
+## [0.5.0] and earlier — V3 through v11
 
-Preserved unmodified in `reference/v3/`. Scaffold, requirement engine, facility
-security, document ingestion and the QC workflow, per the release ladder in
-`docs/government-environment-mode.md`.
+Preserved unmodified in `reference/v3/` and `reference/v11/`. Scaffold,
+requirement engine, facility security, document ingestion and the QC workflow,
+per the release ladder in `docs/government-environment-mode.md`.

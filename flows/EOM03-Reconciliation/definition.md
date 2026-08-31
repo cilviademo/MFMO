@@ -20,9 +20,26 @@ disagree, this flow is wrong, not the document.**
    `Received_Flag` / `Received_DateTime` with it. Repair stale pointers: a
    failed app patch can leave one dangling.
 
-3. **Set `Days_Late` and `On_Time_Flag`** here rather than in DAX, and stamp
-   `Last_Reconciled_DateTime`. System Health flags anything not reconciled
-   within `MF_App_Config.ReconciliationStaleHours`.
+3. **Set the two on-time facts and `Days_Late`** here rather than in DAX, and
+   stamp `Last_Reconciled_DateTime`.
+
+   ```
+   Initial_Submitted_DateTime      first version, never overwritten by a resubmission
+   Initial_Submission_On_Time      by Effective_Due_Date        -> told to the base
+   Acceptable_Evidence_DateTime    when an accepted version first existed
+   Final_Evidence_On_Time          by Effective_Final_Call_Date -> told to leadership
+   ```
+
+   Uploaded 4 Sep, returned 9 Sep, accepted 12 Sep is *submitted on time* AND
+   *final evidence late*. Both are true and both are stored, because they
+   answer different people's questions.
+
+   `Days_Late` measures against the final call. Amber and Red share an owner;
+   this carries the difference in degree.
+
+   System Health flags anything not reconciled within
+   `MF_App_Config.ReconciliationStaleHours` — stale reconciliation looks
+   exactly like a quiet month.
 
 4. **Detect orphan submissions.** Any submission whose `EOM_Item_ID` does not
    resolve gets an audit row and an `MF Unmatched File` entry. Never delete.
@@ -56,7 +73,7 @@ not an edge case. An unconfirmed requirement must not turn a base red.
 ## Package state, over semantic statuses
 
 ```
-any OVERDUE, CORRECTION_REQUIRED or NOT_SATISFIED   ACTION_REQUIRED
+any OVERDUE, RETURNED, NOT_SATISFIED or LATE        ACTION_REQUIRED
 else any RECEIVED_PENDING_QC                        IN_REVIEW
 else every applicable non-provisional item ACCEPTED COMPLETE
 else anything applicable remains                    IN_PROGRESS

@@ -54,9 +54,9 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$script:ExpectedSchemaVersion = '3.0'
-$script:ExpectedListCount     = 12
-$script:ExpectedColumnCount   = 172
+$script:ExpectedSchemaVersion = '4.0'
+$script:ExpectedListCount     = 16
+$script:ExpectedColumnCount   = 263
 
 # PnP's cloud identifier differs from the PAC CLI's.
 $script:PnPEnvironment = switch ($TenantCloud) {

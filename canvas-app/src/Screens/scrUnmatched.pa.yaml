@@ -346,13 +346,15 @@ Screens:
                                                         QC_Status: "Pending Review" });
 
                                                   With(
-                                                      { s: MF_EvaluateStatus(Today(), item.Due_Date,
+                                                      { s: MF_EvaluateStatus(Today(),
+                                                               item.Effective_Due_Date,
+                                                               item.Effective_Final_Call_Date,
                                                                item.Required_Flag, item.Waived_Flag,
                                                                item.Authority_Status, true, "Pending Review") },
                                                       Patch('MF EOM Item', item,
                                                           { Current_Submission_ID: newId,
                                                             Received_Flag: true,
-                                                            Received_DateTime: locUnmatched.Discovered_DateTime,
+                                                            Initial_Submitted_DateTime: locUnmatched.Discovered_DateTime,
                                                             Final_Status: s.status,
                                                             Status_Code: s.code,
                                                             Action_Owner: s.actionOwner,

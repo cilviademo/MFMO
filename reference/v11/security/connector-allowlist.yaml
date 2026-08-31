@@ -1,0 +1,45 @@
+# R1 connector discipline.
+#
+# New connectors are DISABLED BY DEFAULT in GCC High and DoD until an
+# administrator reviews them. Anything outside "allowed" is a tenant ticket
+# before it is a design decision, so R1 assumes the smallest viable set.
+#
+# This file is application governance. It does not replace tenant DLP.
+
+allowed:
+  - id: sharepointonline
+    why: "Lists and the evidence library. The entire data layer."
+    fallback: none
+
+conditional:
+  - id: office365users
+    why: "Resolve display name and manager for the access-request flow."
+    fallback: "UPN text only. Degrade, do not block."
+  - id: office365outlook
+    why: "Submission and correction notifications."
+    fallback: "Notifications disabled. The app remains fully usable."
+  - id: powerbi
+    why: "COP deep link only. No data flows through it."
+    fallback: "Hide the COP button."
+
+prohibited_r1:
+  - id: http
+    why: "Arbitrary egress. The single most common exfiltration path in Power Platform."
+  - id: httpwithentraid
+  - id: customconnector
+    why: "Requires separate approval and creates a supply-chain dependency."
+  - id: aibuilder
+    why: "Availability differs by government cloud. Never a dependency."
+  - id: dropbox
+  - id: googledrive
+  - id: onedriveconsumer
+  - id: any_third_party_saas
+  - id: any_external_ai
+
+rules:
+  - "A conditional connector must degrade gracefully. If Outlook is unapproved,
+     notifications turn off and nothing else breaks."
+  - "No flow may write outside the configured government SharePoint site."
+  - "No connection may authenticate against a tenant other than the deployment tenant."
+  - "Adding a connector requires updating this file, the security manifest, and
+     the DLP conversation with the tenant admin — in that order."

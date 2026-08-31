@@ -35,7 +35,7 @@ pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud <cloud> 
 pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud <cloud>
 ```
 
-Expected: **12 lists, 172 columns**, plus the evidence library with versioning
+Expected: **16 lists, 263 columns**, plus the evidence library with versioning
 on.
 
 **Confirm the indexes were created.** The script verifies them and throws if
@@ -43,6 +43,16 @@ one is missing. This is not a formality: SharePoint refuses to add an index to
 a list that has already crossed the 5,000-item threshold, and `MF_EOM_Item`
 passes it inside the first year. An index missed here cannot be added later —
 the fix is a new list and a migration.
+
+### 2a. Close the data-layer scope gap
+
+**Do this before the pilot, not during the ISSM review.**
+`docs/security-open-issue.md` records that the app's installation scope is
+presentational until the evidence library enforces it independently. Option 1 —
+item-level permissions per installation folder, driven by Entra groups — is the
+recommendation and needs SharePoint administrator support.
+
+The app build does not wait on this. The deployment does.
 
 ### 3. Seed configuration
 
@@ -56,6 +66,18 @@ files are for a test tenant and only load with `-IncludeSampleData`.
 
 Set `PowerBIReportURL`, `SupportContact`, `EOM_Root_Path`, `EvidenceRootPath`
 and `CurrentFiscalYear` to real values. Leave the kill switch off.
+
+### 3a. Build the registry and onboard the pilot
+
+`MF_Installation` and `MF_Facility` are the authoritative EOM operational
+registry — no enterprise source tracks what EOM needs. For each pilot base:
+populate its facilities and operating models, validate them, set
+`Registry_Validated_By` and `Registry_Validated_Date`, then set
+`Generation_Enabled = TRUE`.
+
+**Nothing generates for a base until that flag is set**, and a base with it
+FALSE reads as *not yet onboarded*, never as compliant. Expect the first
+version to be wrong at a handful of bases.
 
 ### 4. Build EOM-01 and run it
 
@@ -71,9 +93,12 @@ Then, **before building any UI**, verify in the tenant:
 - [ ] Re-run it. **Zero rows created**, no `EOM_Item_ID` changed.
 - [ ] A base running both a legacy DFAC and a Food 2.0 cafe shows different
       requirement sets on the two facilities.
-- [ ] Every row is `PENDING_VALIDATION` / `Status_Code 4`, because every
-      requirement is `UNVERIFIED`. Nothing is Red.
-- [ ] Any facility that generated no items is reported.
+- [ ] Only onboarded installations generated anything.
+- [ ] A weekend or holiday suspense produced a different `Effective_Due_Date`
+      from its `Nominal_Due_Date`, with `Due_Date_Adjusted` TRUE.
+- [ ] The 1119-1 generated **nothing** — it is conditional.
+- [ ] The four health reports are distinguishable: awaiting onboarding, no
+      operating model, no confirmed facility type, no applicable requirements.
 
 ### 5. Build the app shell
 
@@ -184,6 +209,10 @@ sufficient.
 | Q2 | A correction return without a suspense date is refused |
 | Q3 | Wrong Document before due shows `NOT_SATISFIED`; after due, `OVERDUE` |
 | Q4 | A provisional requirement past suspense stays Blue, owner Admin — never Red |
+| Q7 | An item between the two suspenses is `LATE` / Amber, not Overdue |
+| Q8 | A `Recalled` submission reverts the item to its date-based state |
+| Q9 | Each of the four returning verdicts yields `RETURNED`, and the base sees the specific reason |
+| Q10 | Both on-time facts are recorded independently on a returned-then-accepted item |
 | Q5 | Marking a requirement Verified lets a past-suspense item go Red on the next run |
 | Q6 | An accepted item stays Green after its due date passes |
 
@@ -222,6 +251,9 @@ it lies without an error.
 | E6 | Turning a feature flag off removes the destination from the nav |
 | E7 | Telemetry writes on app open, upload and QC decision |
 | E8 | `MF_App_Config` unreachable: the app still loads and no optional dependency turns on |
+| E9 | An expired `Expires_Date` removes access without a cleanup job running |
+| E10 | A `PORTFOLIO_MANAGER` without `Can_Grant_Access` cannot grant the role |
+| E11 | `Generation_Enabled` FALSE shows "not yet onboarded", not an empty compliant package |
 
 ### Accessibility
 

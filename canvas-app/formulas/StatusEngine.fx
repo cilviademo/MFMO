@@ -29,32 +29,49 @@ MF_StatusResult := Type({
 });
 
 // -----------------------------------------------------------------------------
-// The five visual codes.
+// The SIX visual codes.
 //
-// Four were not enough. Collapsing "not applicable" and "not due yet" into Gray
-// made an installation whose requirements had simply not come due display as
-// Not applicable. Blue separates "in progress, nothing wrong" from "does not
-// apply".
+// Colour carries OWNERSHIP and time risk, not severity:
+//
+//   Blue   4  not due, window open           nobody yet
+//   Amber  5  past the first suspense        the base, with runway
+//   Red    1  past the final call, returned  the base, out of runway
+//   Yellow 2  received, awaiting review      AFSVC
+//   Green  3  accepted                       nobody
+//   Gray   0  not applicable                 nobody
+//
+// The amber/yellow split is the point. Amber means TIME RISK; yellow means
+// SOMEBODY ELSE HAS IT. Collapsing them tells a DFAC manager that a document
+// they filed on time and one they never sent are the same kind of problem.
+//
+// Six is the ceiling. A seventh would stop being scannable.
 // -----------------------------------------------------------------------------
-MF_CodeNA      = 0;    // Gray
-MF_CodeAction  = 1;    // Red
-MF_CodePending = 2;    // Amber
-MF_CodeDone    = 3;    // Green
-MF_CodeInfo    = 4;    // Blue
+MF_CodeNA     = 0;    // Gray
+MF_CodeRed    = 1;    // Red
+MF_CodeYellow = 2;    // Yellow
+MF_CodeGreen  = 3;    // Green
+MF_CodeBlue   = 4;    // Blue
+MF_CodeAmber  = 5;    // Amber
 
-// The eight semantic statuses. This table IS the mapping; it is not repeated
-// in a Switch() anywhere else in the app.
+// The nine semantic statuses. This table IS the mapping; it is not repeated in
+// a Switch() anywhere else in the app.
 MF_StatusCatalog =
     Table(
-        { status: "NOT_APPLICABLE",      code: 0, label: "Not applicable",    actionOwner: "None",     actionRequired: false, rank: 8 },
-        { status: "NOT_DUE",             code: 4, label: "Not due",           actionOwner: "Facility", actionRequired: false, rank: 6 },
-        { status: "PENDING_VALIDATION",  code: 4, label: "Informational",     actionOwner: "Admin",    actionRequired: false, rank: 7 },
-        { status: "OVERDUE",             code: 1, label: "Overdue",           actionOwner: "Facility", actionRequired: true,  rank: 1 },
-        { status: "NOT_SATISFIED",       code: 2, label: "Not satisfied",     actionOwner: "Facility", actionRequired: true,  rank: 3 },
-        { status: "CORRECTION_REQUIRED", code: 2, label: "Correction needed", actionOwner: "Facility", actionRequired: true,  rank: 2 },
-        { status: "RECEIVED_PENDING_QC", code: 2, label: "Awaiting review",   actionOwner: "Reviewer", actionRequired: true,  rank: 4 },
-        { status: "ACCEPTED",            code: 3, label: "Accepted",          actionOwner: "None",     actionRequired: false, rank: 5 }
+        { status: "NOT_APPLICABLE",      code: 0, label: "Not applicable",  actionOwner: "None",     actionRequired: false, rank: 9 },
+        { status: "NOT_DUE",             code: 4, label: "Not due",         actionOwner: "Facility", actionRequired: false, rank: 7 },
+        { status: "PENDING_VALIDATION",  code: 4, label: "Informational",   actionOwner: "Admin",    actionRequired: false, rank: 8 },
+        { status: "LATE",                code: 5, label: "Late",            actionOwner: "Facility", actionRequired: true,  rank: 4 },
+        { status: "OVERDUE",             code: 1, label: "Overdue",         actionOwner: "Facility", actionRequired: true,  rank: 1 },
+        { status: "RETURNED",            code: 1, label: "Returned",        actionOwner: "Facility", actionRequired: true,  rank: 2 },
+        { status: "NOT_SATISFIED",       code: 1, label: "Not satisfied",   actionOwner: "Facility", actionRequired: true,  rank: 3 },
+        { status: "RECEIVED_PENDING_QC", code: 2, label: "Awaiting review", actionOwner: "Reviewer", actionRequired: true,  rank: 5 },
+        { status: "ACCEPTED",            code: 3, label: "Accepted",        actionOwner: "None",     actionRequired: false, rank: 6 }
     );
+
+// The four verdicts that mean "it came back". The engine collapses them into
+// one RETURNED state; the base reads the specific reason off the submission.
+MF_ReturningVerdicts =
+    ["Correction Required", "Incomplete", "Wrong Reporting Period", "Wrong Facility"];
 
 // Presentation from a stored Final_Status. This is what every gallery, badge and
 // detail pane calls. It is a LOOKUP, not a recomputation: the row already
@@ -84,7 +101,8 @@ MF_Status(FinalStatus: Text): MF_StatusResult =
 // -----------------------------------------------------------------------------
 MF_EvaluateStatus(
     Today: Date,
-    DueDate: Date,
+    EffectiveDueDate: Date,
+    EffectiveFinalCallDate: Date,
     RequiredFlag: Boolean,
     WaivedFlag: Boolean,
     AuthorityStatus: Text,
@@ -92,42 +110,66 @@ MF_EvaluateStatus(
     QCStatus: Text
 ): MF_StatusResult =
     MF_Status(
-        // 1. The obligation does not exist for this row.
+        With(
+            // A requirement with no final call is held to its first suspense.
+            { final: Coalesce(EffectiveFinalCallDate, EffectiveDueDate) },
+
+        // 1. The obligation does not exist for this row this period.
         If( WaivedFlag || !RequiredFlag,
             "NOT_APPLICABLE",
 
-        // 2. A provisional requirement is informational, never adverse. All
-        //    twelve seeded requirements are UNVERIFIED, so this is the default
-        //    path today. The action sits with the Admin — verify the
-        //    requirement — not with the facility.
-        AuthorityStatus = "UNVERIFIED" && !ReceivedFlag,
+        // 2. A provisional requirement is informational, never adverse: the
+        //    base has nothing to do and nothing is wrong. With eleven of
+        //    thirteen requirements now VERIFIED against the AFSVC procedures
+        //    deck this applies to almost nothing — a missed 1119 turns red as
+        //    it should.
+        (AuthorityStatus = "UNVERIFIED" || AuthorityStatus = "PROPOSED") && !ReceivedFlag,
             "PENDING_VALIDATION",
 
-        // 3-7. A current-version submission exists; its QC verdict decides.
+        // 3-4. A verdict that ends the obligation.
         QCStatus = "Accepted",
             "ACCEPTED",
         QCStatus = "Not Applicable",
             "NOT_APPLICABLE",
-        QCStatus = "Correction Required",
-            "CORRECTION_REQUIRED",
 
-        // A wrong document does not stay Red forever. It means the requirement
-        // is still UNMET, and whether that is urgent depends on the suspense
-        // date rather than on the reviewer's verdict.
+        // 5. A recall is the submitter withdrawing BEFORE review, not a
+        //    rejection. The item reverts to its date-based state and the
+        //    withdrawn version stays in history as superseded.
+        QCStatus = "Recalled",
+            MF_DateState(Today, EffectiveDueDate, final),
+
+        // 6. Four verdicts, one status. The reason lives on the submission and
+        //    is what the base reads — the engine does not need four states to
+        //    say "it came back", and the submitter needs four reasons to know
+        //    what to fix.
+        QCStatus in MF_ReturningVerdicts,
+            "RETURNED",
+
+        // 7-8. A wrong document does not stay Red by fiat: the requirement is
+        //      still UNMET, and whether that is urgent depends on the suspense
+        //      date rather than on the reviewer's verdict.
         QCStatus = "Wrong Document",
-            If( Today > DueDate, "OVERDUE", "NOT_SATISFIED" ),
+            If( Today > final, "OVERDUE", "NOT_SATISFIED" ),
 
-        // 8. Received and waiting on a reviewer.
+        // 9. Received and waiting on a reviewer. YELLOW: AFSVC owns it.
         ReceivedFlag,
             "RECEIVED_PENDING_QC",
 
-        // 9-10. Nothing received. Time decides.
-        IsBlank(DueDate) || Today <= DueDate,
-            "NOT_DUE",
-
-            "OVERDUE"
-        )
+        // 10-12. Nothing received. Time decides, and the two suspenses split it.
+            MF_DateState(Today, EffectiveDueDate, final)
+        ))
     );
+
+// Rules 10-12. The week between the two dates is the only one in the cycle
+// where a reminder still changes the outcome, so it gets its own state.
+//
+// ALWAYS evaluated against the EFFECTIVE dates. Reporting uses the nominal
+// ones, so "the 5th" stays the 5th in a leadership brief while the base is
+// held to a date they can actually meet.
+MF_DateState(Today: Date, EffectiveDue: Date, EffectiveFinal: Date): Text =
+    If( IsBlank(EffectiveDue) || Today <= EffectiveDue, "NOT_DUE",
+        IsBlank(EffectiveFinal) || Today <= EffectiveFinal, "LATE",
+        "OVERDUE" );
 
 // -----------------------------------------------------------------------------
 // Package rollup — over SEMANTIC statuses, never over colour codes.
@@ -154,7 +196,7 @@ MF_PackageState(Items: Table): Text =
     With(
         {
             applicable: Filter(Items, Final_Status <> "NOT_APPLICABLE"),
-            adverse:    Filter(Items, Final_Status in ["OVERDUE", "CORRECTION_REQUIRED", "NOT_SATISFIED"]),
+            adverse:    Filter(Items, Final_Status in ["OVERDUE", "RETURNED", "NOT_SATISFIED", "LATE"]),
             inReview:   Filter(Items, Final_Status = "RECEIVED_PENDING_QC")
         },
         If( CountRows(applicable) = 0,           "NOT_APPLICABLE",
@@ -182,32 +224,60 @@ MF_PackageCode(Items: Table): Number =
 // -----------------------------------------------------------------------------
 MF_StatusColor(Code: Number): Color =
     Switch( Code,
-        MF_CodeDone,    clrStatusGreen,
-        MF_CodePending, clrStatusAmber,
-        MF_CodeAction,  clrStatusRed,
-        MF_CodeInfo,    clrStatusBlue,
+        MF_CodeGreen,  clrStatusGreen,
+        MF_CodeYellow, clrStatusYellow,
+        MF_CodeAmber,  clrStatusAmber,
+        MF_CodeRed,    clrStatusRed,
+        MF_CodeBlue,   clrStatusBlue,
         clrStatusGray
     );
 
 MF_StatusBackground(Code: Number): Color =
     Switch( Code,
-        MF_CodeDone,    clrStatusGreenBg,
-        MF_CodePending, clrStatusAmberBg,
-        MF_CodeAction,  clrStatusRedBg,
-        MF_CodeInfo,    clrStatusBlueBg,
+        MF_CodeGreen,  clrStatusGreenBg,
+        MF_CodeYellow, clrStatusYellowBg,
+        MF_CodeAmber,  clrStatusAmberBg,
+        MF_CodeRed,    clrStatusRedBg,
+        MF_CodeBlue,   clrStatusBlueBg,
         clrStatusGrayBg
     );
 
 // The accessible sentence, built in one place. Status is never colour-only:
 // every chip carries its label, and a screen reader gets the whole sentence.
-MF_StatusAccessibleLabel(FinalStatus: Text, DueDate: Date): Text =
+MF_StatusAccessibleLabel(FinalStatus: Text, NominalDue: Date, EffectiveDue: Date): Text =
     With(
         { p: MF_Status(FinalStatus) },
         "Status: " & p.label & ". " &
         If( p.actionOwner = "None",
             "No action required. ",
             "Action owner: " & p.actionOwner & ". " ) &
-        If( IsBlank(DueDate), "", "Due " & Text(DueDate, "d mmmm yyyy") & "." )
+        MF_DueDatePhrase(NominalDue, EffectiveDue)
+    );
+
+// "Due 5 Sep (Mon 8 Sep)". Where the two differ the screen shows BOTH — a
+// nominal suspense landing on a Saturday cannot be the date someone is held
+// to, and burying that adjustment produces a monthly argument.
+MF_DueDatePhrase(NominalDue: Date, EffectiveDue: Date): Text =
+    If( IsBlank(NominalDue),
+        "",
+        "Due " & Text(NominalDue, "d mmm") &
+        If( IsBlank(EffectiveDue) || NominalDue = EffectiveDue,
+            "",
+            " (" & Text(EffectiveDue, "ddd d mmm") & ")" ) );
+
+// On-time is two questions and they are told to different audiences. NEVER
+// render these as two booleans.
+MF_OnTimePhrase(
+    InitialSubmitted: DateTime, InitialOnTime: Boolean,
+    AcceptableEvidence: DateTime, FinalOnTime: Boolean
+): Text =
+    Concatenate(
+        If( IsBlank(InitialSubmitted), "",
+            "Submitted " & Text(InitialSubmitted, "d mmm") & " - " &
+            If(InitialOnTime, "on time", "after suspense") ),
+        If( IsBlank(AcceptableEvidence), "",
+            Char(10) & "Accepted " & Text(AcceptableEvidence, "d mmm") & " - " &
+            If(FinalOnTime, "final evidence on time", "final evidence after suspense") )
     );
 
 // "Is this mine, or am I waiting on someone else?" Status_Code alone cannot

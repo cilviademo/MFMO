@@ -1,19 +1,35 @@
 # EOM-04 — Notifications and Escalation
 
 **Trigger:** Recurrence, daily 07:00 local.
-**Gated by `mfops_MF_NotificationsEnabled`. Ships FALSE. Enable after UAT.**
 
-Decides nothing. Reads what EOM-03 and the app already wrote.
+Decides nothing. Reads what EOM-03 and the app already wrote, and **reads its
+own rules from `MF_Notification_Rule`** — notifications are a list, not code.
+Every rule has an `Enabled` toggle and a `Digest` flag, and the toggles are on
+an admin screen rather than inside this flow.
 
-| Condition | Recipient | Cadence |
+**Two rules ship enabled**, because they are the two that stop somebody
+watching a folder:
+
+| Rule | Trigger | To | Why |
+|---|---|---|---|
+| NR-001 | `SubmissionCreated` | portfolio org box | Reviewers learn something arrived |
+| NR-002 | `StatusChanged` | the submitter | A base learns their document came back |
+
+Everything else ships disabled and is tuned once the queue behaves.
+
+The remaining triggers, all seeded disabled:
+
+| Trigger | Recipient | Note |
 |---|---|---|
-| Due in 3 days, not received | Facility manager | Once |
-| Due today, not received | Facility manager + MFM | Once |
-| `OVERDUE` | Facility manager + MFM | Every 3 days |
-| Overdue > `EscalationDaysOverdue` | Portfolio Manager | Once, then weekly |
-| `CORRECTION_REQUIRED` | Original uploader | Once, then at suspense |
-| Correction suspense passed | Uploader + Portfolio Manager | Once |
-| `RECEIVED_PENDING_QC` > 5 days | Portfolio Manager | Every 3 days |
+| `DueSoon` | Installation POC | |
+| `FirstSuspensePassed` | Installation POC | **The one that matters most** — the only week in the cycle where a reminder still changes the outcome |
+| `FinalSuspensePassed` | Portfolio Manager | Escalation after `EscalationDaysOverdue` |
+| `CorrectionSuspensePassed` | Submitter | |
+| `PendingReviewAging` | Portfolio Manager | Review throughput is a real metric, because Accept means opening the file |
+| `AccessRequested` | a holder of `Can_Grant_Access` | |
+
+An org box or a role is a recipient. **A named person's mailbox is never a rule
+target** — it breaks the moment they PCS.
 
 ## A provisional requirement never generates a nag
 

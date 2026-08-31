@@ -8,12 +8,19 @@ below is wrong, change it here first, then change the code.
 |---|---|---|
 | **MASTER** | The consolidated project handoff. Broadest scope, the full data model, the UX direction, the pilot and acceptance criteria. | `docs/handoffs/MASTER_HANDOFF.md` |
 | **CODEX** | The build handoff written against the V3 repo. Narrower, later, and explicitly corrects two MASTER conclusions. | `docs/handoffs/CODEX_BUILD_HANDOFF.md` |
-| **V3** | The artifacts as actually built. The implemented schema, the prototype, the flow specs. | `reference/v3/` |
+| **V3** | The artifacts as first delivered. | `reference/v3/` |
+| **v7–v11** | Four later solution snapshots, plus the programme's answers to twenty questions and the AFSVC procedures deck. **v11 is the current domain truth.** | `reference/v11/` |
+| **BUILD NOTES** | The programme answers and three addenda that settle the suspense model, the security model, the QC verdicts and the requirement catalogue. | `docs/build-notes.md` |
 
 ## Precedence
 
-**V3 for what exists. CODEX for what to do next. MASTER for everything neither
-covers.**
+**v11 for the domain. CODEX for engineering discipline. MASTER for what
+neither covers. V3 only where nothing later contradicts it.**
+
+v11 and `build-notes.md` are the latest and carry the programme's own rulings,
+so they win on every question of *what the system must do*. CODEX still governs
+*how the repository is built* — one engine, delegable queries, no fabricated
+artifacts — because nothing later revisits those.
 
 MASTER §40 claims to supersede earlier artifacts; CODEX is later still and was
 written with V3 in front of it. Where CODEX explicitly reasons about a MASTER
@@ -182,14 +189,170 @@ V3 artifacts get wrong or leave out.
 | C9 | `MF_EOM_Item.Status_Code` indexed but `Final_Status` not | both indexed | The app filters on the semantic status; MASTER §26 lists `Final_Status` as an index |
 | C10 | Requirement seed has 14 of the 16 declared columns | all 16 | `Due_Offset_Months` and `Accepted_File_Types` were declared and never seeded |
 
+---
+
+# Integration 2 — v7 to v11, 31 Aug 2026
+
+The versioning archive supersedes the V3 rebase in several load-bearing ways.
+Where an earlier entry in this file conflicts with the table below, the table
+below is current.
+
+## What changed, and why
+
+### 1. Six visual states, not five
+
+```
+Blue   4  not due, window open           nobody yet
+Amber  5  past the first suspense        the base, WITH RUNWAY
+Red    1  past the final call, returned  the base, OUT OF RUNWAY
+Yellow 2  received, awaiting review      AFSVC
+Green  3  accepted                       nobody
+Gray   0  not applicable                 nobody
+```
+
+**Colour now carries ownership and time risk, not severity.** For a DFAC
+manager opening the app once a month under time pressure, *which rows are my
+problem* is the first question and this answers it without reading a label.
+
+Amber means time risk; yellow means somebody else has it. Collapsing them tells
+a manager that a document they filed on time and one they never sent are the
+same kind of problem.
+
+### 2. Two suspense dates, and a LATE window
+
+First suspense 5 days after month end, final call the 10th. Between them an
+item is `LATE` (amber), not overdue — **the only week in the cycle where a
+reminder still changes the outcome.**
+
+The two carry different standing and the model records it: the 5th is
+`VERIFIED` from the procedure language, the 10th is a `MANAGEMENT_RULE` from
+the programme. Labelling the 10th as source-verified would be a small lie that
+becomes load-bearing the first time someone challenges it.
+
+### 3. Nominal and effective dates
+
+`CALENDAR` is the baseline — the source says "within 5 days" and does not say
+duty days. But a nominal suspense landing on a Saturday cannot be the date
+someone is held to, so every item carries four dates and `NonDutyDay_Policy`
+resolves them against the new `MF_Non_Duty_Day` list.
+
+**Status evaluates against effective; reporting uses nominal.** Leadership
+still sees "the 5th"; the base sees "Due 5 Sep (Mon 8 Sep)".
+
+### 4. On-time is two questions
+
+`Initial_Submission_On_Time` and `Final_Evidence_On_Time`. Uploaded 4 Sep,
+returned 9 Sep, accepted 12 Sep is *submitted on time* and *evidence late*, and
+both are true. Shown to different audiences, and **never rendered as two bare
+booleans.**
+
+### 5. Installation is the unit of access
+
+Nobody is provisioned for their own base: CAC identifies the user, the GAL
+gives their installation, and anyone there may view and edit its submissions
+regardless of unit. Two roles, not six.
+
+**This dissolves the facility rollup leak** recorded against V3 — facility is
+no longer the access boundary, so a facility-scoped rollup is not something to
+defend. `MF_Access_Request` is the exception path, and **requested access
+expires**.
+
+### 6. Seven QC verdicts plus Recalled
+
+Four of them collapse into one `RETURNED` status. The engine does not need four
+states to say "it came back"; the submitter needs four reasons to know what to
+fix, and those live on the submission.
+
+A **recall** is the submitter withdrawing before review, not a rejection: the
+item reverts to its date-based state.
+
+### 7. The requirement catalogue is real now
+
+1119, SF 1080, SAIIT, GPC bank statement, 1119-1 and 1038 quarterly, plus two
+EOY documents. **Eleven of thirteen moved from `UNVERIFIED` to `VERIFIED` with
+citations**, so rule 2 of the status engine now applies to almost nothing and a
+missed 1119 turns red as it should.
+
+SIK and DAF 79 are retired against the procedures deck and kept as a record of
+the decision. The 1119-1 is **field feeding** and is `Conditional` — never
+auto-generated.
+
+**Authority and scope are separate claims.** `Authority_Status` answers *does
+this requirement exist*; `Scope_Confidence` and `Scope_Basis` answer *at what
+grain is it filed*, and four of the six are still `Proposed`.
+
+### 8. Notifications are a list, not code
+
+`MF_Notification_Rule`, with two rules shipping enabled and digest on by
+default for anything recurring. Per-item mail across 103 installations is how a
+notification system gets muted in week one.
+
+### 9. The onboarding gate
+
+`MF_Installation.Generation_Enabled`. EOM-01 generates only where it is TRUE,
+so a base that is not yet onboarded reads as **not yet asked**, never as
+compliant. The registry is the critical R1 configuration dependency — a
+dependency, not a blocker: five pilot bases are seeded onboarded and everything
+else can be built against them.
+
+### 10. Security is now evidenced
+
+`security/security-manifest.yaml`, `connector-allowlist.yaml`,
+`role-matrix.csv` and `scripts/prerelease_scan.py`, wired into
+`tests/run_tests.sh` as a release gate.
+
+**`docs/security-open-issue.md` is unresolved and is the most important open
+item in the repository:** Power Apps `Visible` and `Filter()` are not an access
+boundary, and the evidence library does not yet enforce installation scope.
+The app's scope claim is presentational until it does.
+
+## Corrections applied to v11
+
+As with V3, v11's own artifacts disagree with each other. The pattern is
+identical: the decision table is current, the code is stale.
+
+| # | v11 as delivered | Corrected to | Why |
+|---|---|---|---|
+| C11 | `Final_Status` choices omit `LATE` and `RETURNED` | both added | v11's own twelve-rule decision order produces both. The flow would have written a value the column rejects. |
+| C12 | `Current_Acceptable_Evidence_DateTime` | `Acceptable_Evidence_DateTime` | 35 characters, over SharePoint's 32-character internal name limit |
+| C13 | `Status_Code` has no value 5 in the schema | six values declared | Without Amber, a base past the first suspense and one past the final call look identical |
+| C14 | Feature-flag `Minimum_Role` still uses the six-role vocabulary | `BASE_USER`, `PORTFOLIO_MANAGER`, `DEVELOPER` | The role model collapsed to two and the flags were not updated |
+| C15 | `status-calculation.md` still carries the four-state Power Fx | removed; the code lives in one place | The same block has contradicted the decision table in the same file across four releases |
+| C16 | Registry `Operating_Model` is `Legacy`; requirements say `Legacy/APF` | normalised on import, with the map in the schema | **Unmapped, nothing would ever match**: EOM-01 would generate zero facility rows and every base would read as having nothing due |
+| C17 | Requirements filter on `Facility_Type`, which the QRG never populates | unknown type MATCHES, and is reported | Excluding on it drops every facility from every type-scoped requirement. A false expected row is visible; a missing one is not. |
+| C18 | `Applicable_Period_Month`, `Routing_Org` and `Accepted_File_Types` declared but never seeded | seeded | The build notes state EOY carries month 9 and that `Routing_Org` exists for ANG; neither reached the data |
+| C19 | `Operating_Model` required, but 20 registry rows are NO_DFAC | nullable, and reported separately | A base with no feeding facility is a record worth keeping, not a validation failure |
+| C20 | `CHANGELOG.md` and `ROLLBACK.md` are empty files | written | The pre-release scan requires both, and a rollback nobody wrote down is not a rollback |
+
 ## Still open
 
 Unchanged from both handoffs, and neither design nor code can close them:
 
-1. Which government cloud — GCC, GCC High or DoD.
-2. Whether PAC CLI is authorized against the tenant.
-3. The authority reference for all twelve requirements. Every one is
-   `UNVERIFIED`, so not one of them can currently drive a Red status. That is
-   the intended behaviour, not a gap in the build.
-4. MASTER §42's remaining seventeen information items, none of which are schema
-   blockers.
+1. **The data layer does not enforce installation scope.** The single most
+   important item — `docs/security-open-issue.md`. An ISSM will find it.
+2. Which government cloud — GCC High or DoD. Commercial is not supported.
+3. Whether PAC CLI is authorized against the tenant.
+4. **Scope confirmation for SF 1080, GPC and 1038**, all still `Proposed`, and
+   confirmation of the three facility-grain proposals. Getting these wrong is
+   not cosmetic: facility scope on a three-DFAC base means three expected rows
+   and three uploads. **Confirm before the first generation run**, because
+   changing scope after items exist means regenerating a period.
+5. **Is the 1119-1 conditional?** Seeded `Conditional` and not auto-generated,
+   because the deck names it "1119-1 (Field feeding)". If it is in fact a
+   monthly companion to the 1119, set `Frequency = Monthly` and
+   `Required_Flag = TRUE`. The note is on the row and the decision has not been
+   made silently.
+6. **Is the 5-day suspense a programme policy or derived from DAFMAN 34-131
+   7.14.4?** If derived, the EOY suspense should key off 30 September rather
+   than month end. Three different five-day clocks exist in the source.
+7. **Are the 5th and the 10th calendar days?** Seeded `CALENDAR` with
+   `NEXT_DUTY_DAY` adjustment, which is the defensible reading, but a weekend
+   suspense with no confirmed rule produces a monthly argument.
+8. The registry itself: facilities and operating models per base, validated,
+   before `Generation_Enabled` is flipped. Five pilot bases are seeded.
+9. EOY is **partially** defined. The two documents and their citations are
+   settled; the expected-row grain, the QC checklist, whether count sheets are
+   retained or submitted, and the closeout rules are not. Do not implement a
+   complete EOY workflow until they are.
+10. MASTER §42's remaining information items, none of which are schema
+    blockers.

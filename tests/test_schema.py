@@ -33,14 +33,15 @@ class TestSchemaItself(unittest.TestCase):
     def test_validates(self):
         self.assertEqual(S.validate(), [])
 
-    def test_twelve_lists(self):
-        self.assertEqual(len(S.LISTS), 12)
+    def test_sixteen_lists(self):
+        self.assertEqual(len(S.LISTS), 16)
         self.assertEqual(
             {l.name for l in S.LISTS},
             {"MF_Installation", "MF_Facility", "MF_EOM_Requirement", "MF_EOM_Item",
              "MF_EOM_Submission", "MF_Unmatched_File", "MF_Security_Mapping",
              "MF_EOM_Audit", "MF_App_Config", "MF_Feature_Flags",
-             "MF_App_Event_Log", "MF_EOM_Status"})
+             "MF_App_Event_Log", "MF_EOM_Status", "MF_Non_Duty_Day",
+             "MF_Calendar_Event", "MF_Access_Request", "MF_Notification_Rule"})
 
     def test_every_list_declares_a_grain_and_a_unique_key(self):
         for l in S.LISTS:
@@ -58,7 +59,8 @@ class TestSchemaItself(unittest.TestCase):
             "MF_EOM_Item": ["Reporting_Period", "Portfolio_ID", "Installation_ID",
                             "Facility_ID", "Requirement_ID", "Final_Status",
                             "Status_Code", "Authority_Status", "Action_Required",
-                            "Due_Date", "EOM_Item_Key"],
+                            "Effective_Due_Date", "Effective_Final_Call_Date",
+                            "EOM_Item_Key"],
             "MF_EOM_Submission": ["EOM_Item_ID", "Is_Current", "QC_Status",
                                   "Uploaded_DateTime", "SharePoint_File_ID"],
             "MF_EOM_Status": ["Reporting_Period", "Portfolio_ID", "Installation_ID",
@@ -66,6 +68,9 @@ class TestSchemaItself(unittest.TestCase):
             "MF_App_Event_Log": ["Event_DateTime", "Event_Type", "Record_ID", "User_UPN"],
             "MF_EOM_Audit": ["Entity_ID", "Action", "Action_DateTime"],
             "MF_Unmatched_File": ["Resolution_Status", "Discovered_DateTime"],
+            "MF_Non_Duty_Day": ["Date", "Scope_ID", "Active_Flag"],
+            "MF_Access_Request": ["Requester_UPN", "Requested_Installation_ID", "Status"],
+            "MF_Calendar_Event": ["Event_Date", "Scope_ID", "Active_Flag"],
         }
         for list_name, columns in required.items():
             indexed = S.LISTS_BY_NAME[list_name].indexed_columns
@@ -110,7 +115,7 @@ class TestSchemaItself(unittest.TestCase):
     def test_json_is_serialisable_for_the_provisioning_script(self):
         d = S.to_dict()
         json.dumps(d)
-        self.assertEqual(d["list_count"], 12)
+        self.assertEqual(d["list_count"], 16)
         self.assertEqual(d["column_count"], S.total_columns())
 
 
@@ -118,10 +123,52 @@ class TestRequirementSeed(unittest.TestCase):
     def setUp(self):
         self.rows = read_csv("requirements.csv")
 
-    def test_twelve_rows_all_unverified_three_inactive(self):
-        self.assertEqual(len(self.rows), 12)
-        self.assertTrue(all(r["Authority_Status"] == "UNVERIFIED" for r in self.rows))
-        self.assertEqual(sum(r["Active_Flag"] == "FALSE" for r in self.rows), 3)
+    def test_thirteen_rows_mostly_verified_five_inactive(self):
+        # The AFSVC procedures deck moved eleven of thirteen from UNVERIFIED to
+        # VERIFIED with citations, so rule 2 of the status engine now applies to
+        # almost nothing and a missed 1119 turns red as it should.
+        self.assertEqual(len(self.rows), 13)
+        verified = [r for r in self.rows if r["Authority_Status"] == "VERIFIED"]
+        self.assertGreaterEqual(len(verified), 9)
+        self.assertEqual(sum(r["Active_Flag"] == "FALSE" for r in self.rows), 5)
+
+    def test_authority_and_scope_are_separate_claims(self):
+        # The deck confirms WHICH documents are in the package. It says nothing
+        # about the GRAIN each is filed at. Marking a scope guess VERIFIED
+        # because the document is verified turns a proposal into policy.
+        for r in self.rows:
+            self.assertIn(r["Scope_Confidence"], S.SCOPE_CONFIDENCE, r["Requirement_ID"])
+            self.assertTrue(r["Scope_Basis"].strip(),
+                            f"{r['Requirement_ID']} states a grain with no reason")
+        proposed = [r for r in self.rows if r["Scope_Confidence"] == "Proposed"]
+        self.assertTrue(proposed, "the seed must still carry unconfirmed grains")
+
+    def test_the_two_suspense_days_are_seeded(self):
+        for r in self.rows:
+            if r["Active_Flag"] != "TRUE":
+                continue
+            self.assertTrue(r["Due_Day"], r["Requirement_ID"])
+            self.assertIn(r["Due_Basis"], S.DUE_BASIS, r["Requirement_ID"])
+            if r["Final_Due_Day"]:
+                self.assertGreaterEqual(int(r["Final_Due_Day"]), int(r["Due_Day"]),
+                                        r["Requirement_ID"])
+            self.assertIn(r["NonDutyDay_Policy"], S.NON_DUTY_DAY_POLICY,
+                          r["Requirement_ID"])
+
+    def test_the_field_feeding_form_is_conditional(self):
+        # The 1119-1 is field feeding, not a 1119 continuation. Auto-generating
+        # it would put a permanent red row on every DFAC that ran none.
+        f = [r for r in self.rows if r["Document_Code"] == "1119-1"]
+        self.assertTrue(f)
+        for r in f:
+            self.assertEqual(r["Frequency"], "Conditional")
+            self.assertEqual(r["Required_Flag"], "FALSE")
+
+    def test_the_eoy_requirements_land_in_september(self):
+        eoy = [r for r in self.rows if r["Frequency"] == "Annual"]
+        self.assertTrue(eoy, "EOY reuses the same engine, not a second app")
+        for r in eoy:
+            self.assertEqual(r["Applicable_Period_Month"], "9", r["Requirement_ID"])
 
     def test_columns_match_the_schema_exactly(self):
         declared = [c.name for c in S.LISTS_BY_NAME["MF_EOM_Requirement"].columns]
@@ -156,7 +203,6 @@ class TestRequirementSeed(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
         for r in self.rows:
             self.assertTrue(1 <= int(r["Due_Day"]) <= 31, r["Requirement_ID"])
-            self.assertGreaterEqual(int(r["Due_Offset_Months"]), 0, r["Requirement_ID"])
 
 
 class TestConfigurationSeeds(unittest.TestCase):
@@ -164,8 +210,10 @@ class TestConfigurationSeeds(unittest.TestCase):
         pairs = {
             "app-config.csv": "MF_App_Config",
             "feature-flags.csv": "MF_Feature_Flags",
-            "installations.sample.csv": "MF_Installation",
-            "facilities.sample.csv": "MF_Facility",
+            "notification-rules.csv": "MF_Notification_Rule",
+            "non-duty-days.sample.csv": "MF_Non_Duty_Day",
+            "installations.csv": "MF_Installation",
+            "facilities.csv": "MF_Facility",
             "security-mapping.sample.csv": "MF_Security_Mapping",
         }
         for filename, list_name in pairs.items():
@@ -189,7 +237,7 @@ class TestConfigurationSeeds(unittest.TestCase):
         self.assertEqual(cfg["EnableDocumentContentAI"], "False")
 
     def test_no_powerbi_url_is_baked_into_the_seed(self):
-        # The gov endpoint differs by cloud. Never hard-code app.powerbi.com.
+        # The government service URL differs by cloud and none may be baked in.
         cfg = {r["Config_Key"]: r["Config_Value"] for r in read_csv("app-config.csv")}
         self.assertEqual(cfg["PowerBIReportURL"], "")
 
@@ -206,25 +254,76 @@ class TestConfigurationSeeds(unittest.TestCase):
         for r in read_csv("feature-flags.csv"):
             self.assertIn(r["Minimum_Role"], S.FLAG_ROLE, r["Feature_Key"])
 
-    def test_the_sample_has_a_base_running_two_operating_models(self):
-        lackland = [f for f in read_csv("facilities.sample.csv")
-                    if f["Installation_ID"] == "INST-LACKLAND" and f["Active_Flag"] == "TRUE"]
-        models = {f["Operating_Model"] for f in lackland}
-        self.assertIn("Legacy/APF", models)
-        self.assertIn("Food 2.0", models)
+    def test_the_registry_has_a_base_running_two_operating_models(self):
+        # Operating_Model lives on the facility precisely because this happens.
+        from collections import defaultdict
+        by_base = defaultdict(set)
+        for f in read_csv("facilities.csv"):
+            if f["Active_Flag"] == "TRUE" and f["Operating_Model"]:
+                by_base[f["Installation_ID"]].add(f["Operating_Model"])
+        mixed = [b for b, m in by_base.items() if len(m) > 1]
+        self.assertTrue(mixed, "no base in the registry runs two operating models")
 
-    def test_the_sample_security_covers_every_scope_type(self):
+    def test_registry_models_are_normalised_to_the_vocabulary(self):
+        # The QRG says "Legacy"; the requirements say "Legacy/APF". Unmapped,
+        # nothing would ever match and every base would read as nothing-due.
+        for f in read_csv("facilities.csv"):
+            model = f["Operating_Model"]
+            if model:
+                self.assertIn(model, S.OPERATING_MODEL, f["Facility_ID"])
+
+    def test_the_onboarding_gate_starts_closed_for_all_but_the_pilot(self):
+        rows = read_csv("installations.csv")
+        enabled = [i for i in rows if i["Generation_Enabled"] == "TRUE"]
+        self.assertTrue(enabled, "a pilot set must be onboarded to exercise EOM-01")
+        self.assertLess(len(enabled), len(rows) // 2,
+                        "onboarding is per base, after the registry is validated")
+        for i in enabled:
+            self.assertTrue(i["Registry_Validated_By"].strip(),
+                            f"{i['Installation_ID']} is enabled with no sign-off")
+            self.assertTrue(i["Registry_Validated_Date"].strip(), i["Installation_ID"])
+
+    def test_two_notification_rules_ship_enabled(self):
+        rows = read_csv("notification-rules.csv")
+        enabled = [r for r in rows if r["Enabled"] == "TRUE"]
+        self.assertEqual(len(enabled), 2)
+        self.assertEqual({r["Trigger_Event"] for r in enabled},
+                         {"SubmissionCreated", "StatusChanged"})
+        # Digest is on by default for anything recurring: per-item mail across
+        # 103 installations is how a notification system gets muted.
+        for r in rows:
+            if r["Cadence_Days"].strip():
+                self.assertEqual(r["Digest"], "TRUE", r["Rule_ID"])
+
+    def test_the_sample_security_covers_the_scope_types_in_use(self):
         rows = read_csv("security-mapping.sample.csv")
-        self.assertEqual({r["Scope_Type"] for r in rows}, set(S.SCOPE_TYPE))
-        # Developer_Flag is never granted by a role, so exactly one seeded row
-        # carries it and it is not the Admin role by itself.
+        self.assertTrue({"Installation", "Portfolio", "Enterprise"}
+                        <= {r["Scope_Type"] for r in rows})
         devs = [r for r in rows if r["Developer_Flag"] == "TRUE"]
-        self.assertEqual(len(devs), 1)
+        self.assertEqual(len(devs), 1, "Developer_Flag is never granted by a role")
 
-    def test_can_qc_is_limited_to_portfolio_manager_and_admin(self):
+    def test_qc_and_granting_are_limited_to_the_granted_role(self):
         for r in read_csv("security-mapping.sample.csv"):
-            if r["Can_QC"] == "TRUE":
-                self.assertIn(r["Role"], ("Portfolio Manager", "Admin"), r["Security_ID"])
+            if r["Can_QC"] == "TRUE" or r["Can_Grant_Access"] == "TRUE":
+                self.assertEqual(r["Role"], "PORTFOLIO_MANAGER", r["Security_ID"])
+
+    def test_granting_is_limited_to_enterprise_scope(self):
+        # Stops the role self-propagating: without this, one grant makes the
+        # population monotonically increasing.
+        for r in read_csv("security-mapping.sample.csv"):
+            if r["Can_Grant_Access"] == "TRUE":
+                self.assertEqual(r["Scope_Type"], "Enterprise", r["Security_ID"])
+                self.assertEqual(r["Grant_Scope"], "Enterprise", r["Security_ID"])
+
+    def test_requested_access_carries_an_expiry(self):
+        # A departing member needs a handover window, not permanent rights to
+        # a base they left.
+        requested = [r for r in read_csv("security-mapping.sample.csv")
+                     if r["Grant_Type"] == "Requested"]
+        self.assertTrue(requested, "the seed must exercise the requested path")
+        for r in requested:
+            self.assertTrue(r["Expires_Date"].strip(),
+                            f"{r['Security_ID']} is requested access with no expiry")
 
     def test_environment_variables_have_a_config_fallback(self):
         # Neither path may be load-bearing alone.
@@ -280,6 +379,8 @@ class TestNoHardCodedEnvironment(unittest.TestCase):
         self.assertIn(f"'{S.SCHEMA_VERSION}'", text)
         self.assertIn(str(S.total_columns()), text,
                       "the provisioning script's expected column count is stale")
+        self.assertIn(str(len(S.LISTS)), text,
+                      "the provisioning script's expected list count is stale")
 
 
 class TestFlowSpecs(unittest.TestCase):
@@ -307,15 +408,28 @@ class TestFlowSpecs(unittest.TestCase):
         self.assertIn("Never invent a requirement", text)
         self.assertIn("There is no branch in this flow that creates an `MF_EOM_Item`", text)
 
-    def test_the_write_flows_check_read_only_server_side(self):
-        for flow in ("EOM04-Notifications", "EOM05-AppUpload"):
-            text = read("flows", flow, "definition.md")
-            self.assertTrue("ReadOnlyMode" in text or "Ships FALSE" in text, flow)
+    def test_the_upload_flow_checks_read_only_server_side(self):
+        # The disabled control is a courtesy; the flow check is the control.
+        text = read("flows", "EOM05-AppUpload", "definition.md")
+        self.assertIn("ReadOnlyMode", text)
+        self.assertIn("READ_ONLY", text)
 
-    def test_notifications_ship_disabled_and_skip_provisional_rows(self):
+    def test_notification_rules_are_data_not_code(self):
         text = read("flows", "EOM04-Notifications", "definition.md")
-        self.assertIn("Ships FALSE", text)
+        self.assertIn("MF_Notification_Rule", text)
+        self.assertIn("not code", text)
+        # A provisional requirement never generates a nag: the action sits with
+        # the programme, and mailing a base about an obligation nobody has
+        # confirmed exists is what the Blue state prevents on screen.
         self.assertIn("PENDING_VALIDATION", text)
+        # Digest, not per-item, for anything recurring.
+        self.assertIn("Digest", text)
+
+    def test_only_two_notification_rules_ship_enabled(self):
+        rows = read_csv("notification-rules.csv")
+        enabled = {r["Trigger_Event"] for r in rows if r["Enabled"] == "TRUE"}
+        self.assertEqual(enabled, {"SubmissionCreated", "StatusChanged"},
+                         "everything else is tuned once the queue behaves")
 
     def test_the_upload_flow_does_not_use_the_attachments_control(self):
         text = read("flows", "EOM05-AppUpload", "definition.md")
@@ -333,7 +447,8 @@ class TestAppSource(unittest.TestCase):
         on_disk = {os.path.basename(p).replace(".pa.yaml", "") for p in self._screens()}
         self.assertEqual(on_disk, {
             "scrHome", "scrUpload", "scrInstallation", "scrReview", "scrUnmatched",
-            "scrActivity", "scrAdminRequirements", "scrMaintenance", "scrNoAccess",
+            "scrActivity", "scrCalendar", "scrAccessRequest",
+            "scrAdminRequirements", "scrMaintenance", "scrNoAccess",
             "scrDiagnostics"})
         # History became Activity.
         self.assertNotIn("scrHistory", on_disk)

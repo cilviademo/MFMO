@@ -1,0 +1,8 @@
+Role,Flag,Default,Who sets it,What it permits,Why it is separate
+BASE_USER,—,Automatic,CAC + GAL,"Submit, resubmit, view own package, view calendar","Nobody is provisioned for their own base. Identity resolves it."
+PORTFOLIO_MANAGER,—,Granted,A holder of Can_Grant_Access,"Everything a base user can, plus review and portfolio visibility","One granted role, not six. Users can hold two roles in their heads."
+PORTFOLIO_MANAGER,Can_QC,TRUE,Grantor,Accept / return / wrong document / not applicable,"Reviewing is the core of the role, so it defaults on."
+PORTFOLIO_MANAGER,Can_Submit_On_Behalf,TRUE,Grantor,Upload a document that arrived by email,"Records the true origin instead of misattributing to AFSVC."
+PORTFOLIO_MANAGER,Can_Edit_Requirements,FALSE,Grantor,"Requirement catalogue, thresholds, suspense days, feature flags","Configuration is policy. Reviewing a 1119 and changing what a 1119 is are different jobs."
+PORTFOLIO_MANAGER,Can_Grant_Access,FALSE,Enterprise-scope holder only,Grant or revoke PORTFOLIO_MANAGER,"Stops the role self-propagating. Without this, one grant makes the population monotonically increasing."
+PORTFOLIO_MANAGER,Grant_Scope,None,Enterprise-scope holder only,"Portfolio = own portfolio only. Enterprise = anywhere.","Limits blast radius. Enterprise scope is two or three people, not a default."

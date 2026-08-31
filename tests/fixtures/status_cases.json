@@ -1,153 +1,521 @@
 {
-  "_comment": "Status engine acceptance cases. Every branch of the decision order in docs/status-calculation.md, in order, plus the traps. today is 2026-09-12 unless a case overrides it.",
-  "today": "2026-09-12",
+  "_comment": "Status engine acceptance cases. Every branch of the twelve-rule decision order in docs/status-calculation.md, in order, plus the traps. Dates: first suspense 2026-09-07 (5 Sep is a Saturday, 7 Sep is Labor Day in the seed, so effective is 8 Sep); final call 2026-09-10.",
+  "effective_due_date": "2026-09-08",
+  "effective_final_call_date": "2026-09-10",
   "cases": [
     {
       "name": "1. waived",
-      "input": { "due_date": "2026-09-10", "waived_flag": true, "authority_status": "Verified" },
-      "expect": { "status": "NOT_APPLICABLE", "code": 0, "actionOwner": "None", "actionRequired": false }
+      "today": "2026-09-15",
+      "input": {
+        "waived_flag": true,
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "NOT_APPLICABLE",
+        "code": 0,
+        "actionOwner": "None",
+        "actionRequired": false
+      }
     },
     {
       "name": "1. not required",
-      "input": { "due_date": "2026-09-10", "required_flag": false, "authority_status": "Verified" },
-      "expect": { "status": "NOT_APPLICABLE", "code": 0 }
+      "today": "2026-09-15",
+      "input": {
+        "required_flag": false,
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "NOT_APPLICABLE",
+        "code": 0
+      }
     },
     {
       "name": "1. waived beats an accepted submission",
-      "input": { "due_date": "2026-09-10", "waived_flag": true, "received_flag": true, "qc_status": "Accepted" },
-      "expect": { "status": "NOT_APPLICABLE", "code": 0 }
+      "today": "2026-09-15",
+      "input": {
+        "waived_flag": true,
+        "received_flag": true,
+        "qc_status": "Accepted"
+      },
+      "expect": {
+        "status": "NOT_APPLICABLE",
+        "code": 0
+      }
     },
     {
-      "name": "2. provisional and nothing received is Blue, owned by Admin, no action",
-      "input": { "due_date": "2026-09-10", "authority_status": "UNVERIFIED" },
-      "expect": { "status": "PENDING_VALIDATION", "code": 4, "actionOwner": "Admin", "actionRequired": false }
+      "name": "2. provisional, nothing received, is Blue and owned by Admin",
+      "today": "2026-09-15",
+      "input": {
+        "authority_status": "UNVERIFIED"
+      },
+      "expect": {
+        "status": "PENDING_VALIDATION",
+        "code": 4,
+        "actionOwner": "Admin",
+        "actionRequired": false
+      }
     },
     {
-      "name": "2. provisional stays Blue however late it gets",
-      "input": { "due_date": "2025-01-01", "authority_status": "UNVERIFIED" },
-      "expect": { "status": "PENDING_VALIDATION", "code": 4 }
+      "name": "2. a PROPOSED scope is also provisional",
+      "today": "2026-09-15",
+      "input": {
+        "authority_status": "PROPOSED"
+      },
+      "expect": {
+        "status": "PENDING_VALIDATION",
+        "code": 4
+      }
     },
     {
-      "name": "2. provisional but received falls through to the QC rules",
-      "input": { "due_date": "2026-09-10", "authority_status": "UNVERIFIED", "received_flag": true, "qc_status": "Pending Review" },
-      "expect": { "status": "RECEIVED_PENDING_QC", "code": 2, "actionOwner": "Reviewer" }
+      "name": "2. provisional stays Blue however late",
+      "today": "2027-06-01",
+      "input": {
+        "authority_status": "UNVERIFIED"
+      },
+      "expect": {
+        "status": "PENDING_VALIDATION",
+        "code": 4
+      }
+    },
+    {
+      "name": "2. provisional but RECEIVED falls through to the QC rules",
+      "today": "2026-09-15",
+      "input": {
+        "authority_status": "UNVERIFIED",
+        "received_flag": true,
+        "qc_status": "Pending Review"
+      },
+      "expect": {
+        "status": "RECEIVED_PENDING_QC",
+        "code": 2,
+        "actionOwner": "Reviewer"
+      }
     },
     {
       "name": "3. accepted",
-      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Accepted" },
-      "expect": { "status": "ACCEPTED", "code": 3, "actionOwner": "None", "actionRequired": false }
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Accepted"
+      },
+      "expect": {
+        "status": "ACCEPTED",
+        "code": 3,
+        "actionOwner": "None",
+        "actionRequired": false
+      }
     },
     {
-      "name": "3. accepted after the due date is still Green",
-      "input": { "due_date": "2026-09-01", "authority_status": "Verified", "received_flag": true, "qc_status": "Accepted" },
-      "expect": { "status": "ACCEPTED", "code": 3 }
+      "name": "3. accepted after the final call is still Green",
+      "today": "2026-09-30",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Accepted"
+      },
+      "expect": {
+        "status": "ACCEPTED",
+        "code": 3
+      }
     },
     {
       "name": "4. QC not applicable",
-      "input": { "due_date": "2026-09-10", "authority_status": "Verified", "received_flag": true, "qc_status": "Not Applicable" },
-      "expect": { "status": "NOT_APPLICABLE", "code": 0, "actionOwner": "None" }
+      "today": "2026-09-15",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Not Applicable"
+      },
+      "expect": {
+        "status": "NOT_APPLICABLE",
+        "code": 0
+      }
     },
     {
-      "name": "5. correction required",
-      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Correction Required" },
-      "expect": { "status": "CORRECTION_REQUIRED", "code": 2, "actionOwner": "Facility", "actionRequired": true }
+      "name": "5. recalled before the first suspense reverts to Not due",
+      "today": "2026-09-03",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Recalled"
+      },
+      "expect": {
+        "status": "NOT_DUE",
+        "code": 4
+      }
     },
     {
-      "name": "5. correction required past due stays Amber with the facility",
-      "input": { "due_date": "2026-09-01", "authority_status": "Verified", "received_flag": true, "qc_status": "Correction Required" },
-      "expect": { "status": "CORRECTION_REQUIRED", "code": 2, "actionOwner": "Facility" }
+      "name": "5. recalled between the two dates reverts to Late",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Recalled"
+      },
+      "expect": {
+        "status": "LATE",
+        "code": 5,
+        "actionOwner": "Facility"
+      }
     },
     {
-      "name": "6. wrong document past due is Red",
-      "input": { "due_date": "2026-09-10", "authority_status": "Verified", "received_flag": true, "qc_status": "Wrong Document" },
-      "expect": { "status": "OVERDUE", "code": 1, "actionOwner": "Facility", "actionRequired": true }
+      "name": "5. recalled after the final call reverts to Overdue",
+      "today": "2026-09-15",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Recalled"
+      },
+      "expect": {
+        "status": "OVERDUE",
+        "code": 1
+      }
     },
     {
-      "name": "7. wrong document before due is Amber, not Red",
-      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Wrong Document" },
-      "expect": { "status": "NOT_SATISFIED", "code": 2, "actionOwner": "Facility", "actionRequired": true }
+      "name": "6. Correction Required collapses to RETURNED",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Correction Required"
+      },
+      "expect": {
+        "status": "RETURNED",
+        "code": 1,
+        "actionOwner": "Facility",
+        "actionRequired": true
+      }
     },
     {
-      "name": "7. wrong document on the due date is not yet overdue",
-      "input": { "due_date": "2026-09-12", "authority_status": "Verified", "received_flag": true, "qc_status": "Wrong Document" },
-      "expect": { "status": "NOT_SATISFIED", "code": 2 }
+      "name": "6. Incomplete collapses to RETURNED",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Incomplete"
+      },
+      "expect": {
+        "status": "RETURNED",
+        "code": 1
+      }
     },
     {
-      "name": "8. received awaiting review",
-      "input": { "due_date": "2026-09-30", "authority_status": "Verified", "received_flag": true, "qc_status": "Pending Review" },
-      "expect": { "status": "RECEIVED_PENDING_QC", "code": 2, "actionOwner": "Reviewer", "actionRequired": true }
+      "name": "6. Wrong Reporting Period collapses to RETURNED",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Wrong Reporting Period"
+      },
+      "expect": {
+        "status": "RETURNED",
+        "code": 1
+      }
     },
     {
-      "name": "8. received late is Amber with the reviewer, never Red",
-      "input": { "due_date": "2026-09-01", "authority_status": "Verified", "received_flag": true, "qc_status": "Pending Review" },
-      "expect": { "status": "RECEIVED_PENDING_QC", "code": 2, "actionOwner": "Reviewer" }
+      "name": "6. Wrong Facility collapses to RETURNED",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Wrong Facility"
+      },
+      "expect": {
+        "status": "RETURNED",
+        "code": 1
+      }
     },
     {
-      "name": "9. verified, nothing received, before due is Blue",
-      "input": { "due_date": "2026-09-30", "authority_status": "Verified" },
-      "expect": { "status": "NOT_DUE", "code": 4, "actionOwner": "Facility", "actionRequired": false }
+      "name": "6. RETURNED before the suspense is still the base's problem",
+      "today": "2026-09-01",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Correction Required"
+      },
+      "expect": {
+        "status": "RETURNED",
+        "code": 1,
+        "actionOwner": "Facility"
+      }
     },
     {
-      "name": "9. on the due date is not yet overdue",
-      "input": { "due_date": "2026-09-12", "authority_status": "Verified" },
-      "expect": { "status": "NOT_DUE", "code": 4 }
+      "name": "7. wrong document past the final call is Overdue",
+      "today": "2026-09-15",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Wrong Document"
+      },
+      "expect": {
+        "status": "OVERDUE",
+        "code": 1
+      }
     },
     {
-      "name": "10. verified, nothing received, past due is Red",
-      "input": { "due_date": "2026-09-11", "authority_status": "Verified" },
-      "expect": { "status": "OVERDUE", "code": 1, "actionOwner": "Facility", "actionRequired": true }
+      "name": "8. wrong document before the final call is Not satisfied",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Wrong Document"
+      },
+      "expect": {
+        "status": "NOT_SATISFIED",
+        "code": 1,
+        "actionOwner": "Facility"
+      }
     },
     {
-      "name": "no due date at all",
-      "input": { "due_date": null, "authority_status": "Verified" },
-      "expect": { "status": "NOT_DUE", "code": 4 }
+      "name": "8. wrong document ON the final call is not yet overdue",
+      "today": "2026-09-10",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Wrong Document"
+      },
+      "expect": {
+        "status": "NOT_SATISFIED",
+        "code": 1
+      }
+    },
+    {
+      "name": "9. received awaiting review is YELLOW and AFSVC's",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Pending Review"
+      },
+      "expect": {
+        "status": "RECEIVED_PENDING_QC",
+        "code": 2,
+        "actionOwner": "Reviewer",
+        "actionRequired": true
+      }
+    },
+    {
+      "name": "9. received late is still YELLOW, never red",
+      "today": "2026-09-30",
+      "input": {
+        "authority_status": "VERIFIED",
+        "received_flag": true,
+        "qc_status": "Pending Review"
+      },
+      "expect": {
+        "status": "RECEIVED_PENDING_QC",
+        "code": 2,
+        "actionOwner": "Reviewer"
+      }
+    },
+    {
+      "name": "10. before the first suspense is Blue",
+      "today": "2026-09-03",
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "NOT_DUE",
+        "code": 4,
+        "actionRequired": false
+      }
+    },
+    {
+      "name": "10. ON the effective first suspense is not yet late",
+      "today": "2026-09-08",
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "NOT_DUE",
+        "code": 4
+      }
+    },
+    {
+      "name": "11. the day after the first suspense is AMBER",
+      "today": "2026-09-09",
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "LATE",
+        "code": 5,
+        "actionOwner": "Facility",
+        "actionRequired": true
+      }
+    },
+    {
+      "name": "11. ON the final call is still Late, not Overdue",
+      "today": "2026-09-10",
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "LATE",
+        "code": 5
+      }
+    },
+    {
+      "name": "12. the day after the final call is RED",
+      "today": "2026-09-11",
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "OVERDUE",
+        "code": 1,
+        "actionOwner": "Facility",
+        "actionRequired": true
+      }
+    },
+    {
+      "name": "no dates at all",
+      "today": "2026-09-11",
+      "dates": {
+        "effective_due_date": null,
+        "effective_final_call_date": null
+      },
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "NOT_DUE",
+        "code": 4
+      }
+    },
+    {
+      "name": "no final call: held to the first suspense",
+      "today": "2026-09-09",
+      "dates": {
+        "effective_due_date": "2026-09-08",
+        "effective_final_call_date": null
+      },
+      "input": {
+        "authority_status": "VERIFIED"
+      },
+      "expect": {
+        "status": "OVERDUE",
+        "code": 1
+      }
     }
   ],
   "packages": [
     {
       "name": "the colour rollup would say Complete; it is In progress",
-      "statuses": ["ACCEPTED", "NOT_DUE", "NOT_DUE"],
-      "expect": { "state": "IN_PROGRESS", "code": 4 }
+      "statuses": [
+        "ACCEPTED",
+        "NOT_DUE",
+        "NOT_DUE"
+      ],
+      "expect": {
+        "state": "IN_PROGRESS",
+        "code": 4
+      }
     },
     {
       "name": "everything applicable accepted",
-      "statuses": ["ACCEPTED", "ACCEPTED", "NOT_APPLICABLE"],
-      "expect": { "state": "COMPLETE", "code": 3 }
+      "statuses": [
+        "ACCEPTED",
+        "ACCEPTED",
+        "NOT_APPLICABLE"
+      ],
+      "expect": {
+        "state": "COMPLETE",
+        "code": 3
+      }
     },
     {
       "name": "nothing applicable",
-      "statuses": ["NOT_APPLICABLE", "NOT_APPLICABLE"],
-      "expect": { "state": "NOT_APPLICABLE", "code": 0 }
+      "statuses": [
+        "NOT_APPLICABLE",
+        "NOT_APPLICABLE"
+      ],
+      "expect": {
+        "state": "NOT_APPLICABLE",
+        "code": 0
+      }
     },
     {
       "name": "one overdue beats everything",
-      "statuses": ["ACCEPTED", "ACCEPTED", "OVERDUE", "RECEIVED_PENDING_QC"],
-      "expect": { "state": "ACTION_REQUIRED", "code": 1 }
+      "statuses": [
+        "ACCEPTED",
+        "OVERDUE",
+        "RECEIVED_PENDING_QC"
+      ],
+      "expect": {
+        "state": "ACTION_REQUIRED",
+        "code": 1
+      }
     },
     {
-      "name": "not satisfied is action required, not in review",
-      "statuses": ["ACCEPTED", "NOT_SATISFIED"],
-      "expect": { "state": "ACTION_REQUIRED", "code": 1 }
+      "name": "LATE is action required, not in progress",
+      "statuses": [
+        "ACCEPTED",
+        "LATE"
+      ],
+      "expect": {
+        "state": "ACTION_REQUIRED",
+        "code": 1
+      }
+    },
+    {
+      "name": "RETURNED is action required",
+      "statuses": [
+        "ACCEPTED",
+        "RETURNED"
+      ],
+      "expect": {
+        "state": "ACTION_REQUIRED",
+        "code": 1
+      }
     },
     {
       "name": "awaiting review with nothing adverse",
-      "statuses": ["ACCEPTED", "RECEIVED_PENDING_QC"],
-      "expect": { "state": "IN_REVIEW", "code": 2 }
+      "statuses": [
+        "ACCEPTED",
+        "RECEIVED_PENDING_QC"
+      ],
+      "expect": {
+        "state": "IN_REVIEW",
+        "code": 2
+      }
     },
     {
       "name": "a provisional row neither completes nor blocks",
-      "statuses": ["ACCEPTED", "PENDING_VALIDATION"],
-      "expect": { "state": "COMPLETE", "code": 3 }
+      "statuses": [
+        "ACCEPTED",
+        "PENDING_VALIDATION"
+      ],
+      "expect": {
+        "state": "COMPLETE",
+        "code": 3
+      }
     },
     {
-      "name": "provisional alone is in progress, not complete",
-      "statuses": ["PENDING_VALIDATION", "PENDING_VALIDATION"],
-      "expect": { "state": "IN_PROGRESS", "code": 4 }
+      "name": "provisional alone is in progress",
+      "statuses": [
+        "PENDING_VALIDATION",
+        "PENDING_VALIDATION"
+      ],
+      "expect": {
+        "state": "IN_PROGRESS",
+        "code": 4
+      }
     },
     {
       "name": "the realistic mid-month mix",
-      "statuses": ["ACCEPTED", "ACCEPTED", "RECEIVED_PENDING_QC", "NOT_DUE", "PENDING_VALIDATION"],
-      "expect": { "state": "IN_REVIEW", "code": 2 }
+      "statuses": [
+        "ACCEPTED",
+        "ACCEPTED",
+        "RECEIVED_PENDING_QC",
+        "NOT_DUE",
+        "PENDING_VALIDATION"
+      ],
+      "expect": {
+        "state": "IN_REVIEW",
+        "code": 2
+      }
     }
   ]
 }

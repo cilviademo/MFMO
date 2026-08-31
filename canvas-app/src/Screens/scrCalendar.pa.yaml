@@ -1,0 +1,213 @@
+# =============================================================================
+# scrCalendar — what is due, and when.
+#
+# Every expected item is ALREADY a dated event. The calendar PROJECTS
+# MF_EOM_Item rather than duplicating it into MF_Calendar_Event — two sources
+# of truth for the same suspense would drift the first time a QC return moved
+# a correction date.
+#
+# MF_Calendar_Event carries only what the checklist cannot: assessments, data
+# calls, reminders somebody authored.
+#
+# Dates shown are NOMINAL with the effective date in brackets where they
+# differ, which is the same phrase the package row uses.
+# =============================================================================
+
+Screens:
+  scrCalendar:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: =Set(locCalMonth, DateAdd(Today(), -1, Months))
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            TabIndex: =-1
+          Children:
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =12
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  TabIndex: =-1
+                Children:
+                  - btnBack:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Back"
+                        AccessibleLabel: ="Back to home"
+                        OnSelect: =Back(ScreenTransition.None)
+                        TabIndex: =0
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Calendar"
+                        TabIndex: =-1
+                  - cmbPeriod:
+                      Control: ComboBox
+                      Properties:
+                        Items: =MF_SelectablePeriods
+                        DisplayFields: =["Period"]
+                        SelectMultiple: =false
+                        DefaultSelectedItems: =[{ Period: locPeriod }]
+                        OnChange: =Set(locPeriod, Self.Selected.Period)
+                        AccessibleLabel: ="Reporting period"
+                        LayoutMinWidth: =160
+                        TabIndex: =0
+
+            - conContent:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =12
+                  LayoutMinWidth: =320
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - lblSuspensesHeading:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: ="Suspenses for " & locPeriod
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+
+                  - lblAdjustedNote:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # Say it once, at the top, rather than per row.
+                        Text: |
+                          =With(
+                              { n: CountRows(Filter(MF_VisibleItems(locPeriod), Due_Date_Adjusted = true)) },
+                              If(n = 0, "",
+                                 Text(n) & " suspense date(s) moved off a weekend or holiday. The policy date is shown first and the date you are held to in brackets.")
+                          )
+                        Color: =clrTextSecondary
+                        Visible: =CountRows(Filter(MF_VisibleItems(locPeriod), Due_Date_Adjusted = true)) > 0
+                        AutoHeight: =true
+                        TabIndex: =-1
+
+                  - galSuspenses:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        # Projected from the checklist, sorted by the date people
+                        # are actually held to.
+                        Items: |
+                          =SortByColumns(
+                              Filter(MF_VisibleItems(locPeriod), Final_Status <> "NOT_APPLICABLE"),
+                              "Effective_Due_Date", SortOrder.Ascending
+                          )
+                        TemplateSize: =72
+                        Visible: =CountRows(Self.AllItems) > 0
+                        AccessibleLabel: ="Suspense dates for " & locPeriod
+                        TabIndex: =0
+                      Children:
+                        - conDay:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              LayoutGap: =12
+                              LayoutWrap: =true
+                              PaddingTop: =8
+                              PaddingBottom: =8
+                              TabIndex: =-1
+                            Children:
+                              - lblWhen:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: =MF_DueDatePhrase(ThisItem.Nominal_Due_Date, ThisItem.Effective_Due_Date)
+                                    FontWeight: =FontWeight.Semibold
+                                    LayoutMinWidth: =190
+                                    TabIndex: =-1
+                              - lblWhat:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: =LookUp('MF EOM Requirement', Requirement_ID = ThisItem.Requirement_ID).Document_Code
+                                    FillPortions: =1
+                                    LayoutMinWidth: =120
+                                    TabIndex: =-1
+                              - lblFinalCall:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: ="Final call " & Text(ThisItem.Nominal_Final_Call_Date, "d mmm")
+                                    Color: =clrTextSecondary
+                                    Visible: =!IsBlank(ThisItem.Nominal_Final_Call_Date)
+                                    LayoutMinWidth: =120
+                                    TabIndex: =-1
+                              - badgeDay:
+                                  Control: Component
+                                  ComponentName: cmpStatusBadge
+                                  Properties:
+                                    FinalStatus: =ThisItem.Final_Status
+                                    NominalDueDate: =ThisItem.Nominal_Due_Date
+                                    EffectiveDueDate: =ThisItem.Effective_Due_Date
+                                    LayoutMinWidth: =170
+
+                  - lblEventsHeading:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: ="Assessments, data calls and reminders"
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+
+                  - galEvents:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        # Authored events only, scoped to what the viewer may see.
+                        Items: |
+                          =SortByColumns(
+                              Filter('MF Calendar Event',
+                                     Active_Flag = true,
+                                     Scope_Type = "Enterprise"
+                                         || Scope_ID = gblMyInstallation
+                                         || Scope_ID = gblMyPortfolio),
+                              "Event_Date", SortOrder.Ascending
+                          )
+                        TemplateSize: =56
+                        Visible: =CountRows(Self.AllItems) > 0
+                        AccessibleLabel: ="Authored calendar events"
+                        TabIndex: =0
+                      Children:
+                        - lblEventRow:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: =Text(ThisItem.Event_Date, "ddd d mmm") & "  " & ThisItem.Event_Type & "  " & ThisItem.Title
+                              AutoHeight: =true
+                              TabIndex: =-1
+
+                  - emptyCalendar:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =CountRows(galSuspenses.AllItems) = 0 && CountRows(galEvents.AllItems) = 0
+                        Title: ="Nothing scheduled for this period"
+                        Body: |
+                          ="Expected items are generated on the 1st of each month for onboarded installations. If your base is not yet onboarded there will be nothing here - that is 'not yet asked', not 'nothing due'."

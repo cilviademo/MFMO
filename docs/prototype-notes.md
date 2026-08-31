@@ -1,5 +1,27 @@
 # Prototype — what it demonstrates, and what changed
 
+> ## STALE — read this first
+>
+> `mf-operations-prototype.html` is the **V3** prototype. Its information
+> architecture, its security model and its domain boundaries are still the
+> reference and are worth porting. **Its status engine is not.**
+>
+> It predates:
+>
+> | | Prototype | Current |
+> |---|---|---|
+> | Visual states | five | **six** — yellow split from amber |
+> | Suspense dates | one | **two** — first suspense and final call, with LATE between |
+> | Date model | one date | **nominal and effective**, resolved against non-duty days |
+> | QC verdicts | four | **seven plus Recalled**, four collapsing to RETURNED |
+> | On-time | one fact | **two** — initial submission and final evidence |
+> | Access grain | facility | **installation**, from CAC and the GAL |
+>
+> `scripts/status_engine.py` is the reference implementation and
+> `docs/status-calculation.md` is the definition. Do not read the engine out of
+> this file — treating a stale prototype as the spec is exactly how the Power Fx
+> stayed wrong across four releases.
+
 `docs/mf-operations-prototype.html` is a single file with no dependencies. It is
 the executable specification for the status engine, the security model and the
 information architecture. Codex should port its domain boundaries, not its

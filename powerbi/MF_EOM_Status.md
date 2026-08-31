@@ -41,16 +41,21 @@ The fact already carries everything. These aggregate; they never recompute.
 ```dax
 EOM Items = COUNTROWS ( MF_EOM_Status )
 
--- Colour codes as stored by EOM-03. 0 Gray 1 Red 2 Amber 3 Green 4 Blue.
-EOM Accepted    = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 3 )
-EOM Needs Action= CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 1 )
-EOM In Progress = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 2 )
-EOM Informational = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 4 )
+-- Colour codes as stored by EOM-03.
+--   0 Gray  1 Red  2 Yellow  3 Green  4 Blue  5 Amber
+EOM Accepted      = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 3 )
+EOM Out of runway = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 1 )
+EOM With runway   = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 5 )
+EOM Awaiting AFSVC= CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 2 )
+EOM Not due       = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] = 4 )
 
 -- Applicable excludes Gray. It does NOT exclude Blue: a not-due requirement
 -- is still an obligation, it simply has not arrived.
 EOM Applicable =
-CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] IN { 1, 2, 3, 4 } )
+CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] IN { 1, 2, 3, 4, 5 } )
+
+-- The base owes something now: Red AND Amber. Amber is not "fine".
+EOM Base owes = CALCULATE ( [EOM Items], MF_EOM_Status[Status_Code] IN { 1, 5 } )
 ```
 
 ### Provisional is not overdue
@@ -103,21 +108,41 @@ SWITCH ( SELECTEDVALUE ( MF_EOM_Status[Package_State] ),
 > computed once, server-side, over semantic statuses. See
 > `docs/handoffs/RECONCILIATION.md` C3.
 
-### Timeliness
+### Timeliness — two rates, not one
 
-`Days_Late` and `On_Time_Flag` are set by EOM-03, not computed here.
+`Days_Late` and both on-time flags are set by EOM-03, not computed here.
 
 ```dax
 Average days late =
 AVERAGEX ( FILTER ( MF_EOM_Status, MF_EOM_Status[Received_Flag] ),
            MF_EOM_Status[Days_Late] )
 
-On-time rate =
+-- What the BASE is told: did the first version arrive by the first suspense.
+Submission on-time rate =
 DIVIDE (
-    CALCULATE ( [EOM Items], MF_EOM_Status[On_Time_Flag] = TRUE () ),
+    CALCULATE ( [EOM Items], MF_EOM_Status[Initial_Submission_On_Time] = TRUE () ),
+    CALCULATE ( [EOM Items], MF_EOM_Status[Received_Flag] = TRUE () )
+)
+
+-- What LEADERSHIP is told: did usable evidence exist by the final call.
+Evidence on-time rate =
+DIVIDE (
+    CALCULATE ( [EOM Items], MF_EOM_Status[Final_Evidence_On_Time] = TRUE () ),
     CALCULATE ( [EOM Items], MF_EOM_Status[Received_Flag] = TRUE () )
 )
 ```
+
+**Report both, and never merge them.** Uploaded 4 Sep, returned 9 Sep, accepted
+12 Sep is *submitted on time* and *evidence late* — a single rate hides which
+half of the process is slow, and they have different owners.
+
+### Nominal, not effective, on a leadership view
+
+`Nominal_Due_Date` is what a brief says. `Effective_Due_Date` is what the
+status was evaluated against. A COP that reports against the effective date
+quietly tells leadership the suspense moved, which is true for the base and
+misleading in aggregate. Use nominal, and surface `Due_Date_Adjusted` where
+somebody asks why a row is not late.
 
 **No completion percentage is stored** in the fact. A ratio quietly treats
 "not yet due" as either done or failing. Where the COP needs one it is computed
@@ -199,7 +224,7 @@ DirectQuery: DirectQuery against a SharePoint list at this volume is slower
 than the refresh window it replaces, and the fact is rebuilt nightly anyway.
 
 The gov Power BI service URL differs by cloud. It comes from
-`MF_App_Config.PowerBIReportURL`; never hard-code `app.powerbi.com`.
+`MF_App_Config.PowerBIReportURL`; never hard-code the commercial service URL. <!-- prerelease: allow CLD-02 naming the prohibited host in the sentence prohibiting it -->
 
 ---
 
@@ -210,10 +235,12 @@ The gov Power BI service URL differs by cloud. It comes from
 | Portfolio | Portfolio × period | Packages by state. Provisional shown separately from overdue. |
 | Installation | Installation × facility | The matrix, conditionally formatted from `Status_Code` |
 | Facility | Facility × requirement | The same `Requirement · Scope · Due · Status · Action` row as the app |
-| Provisional | Requirement | The programme's own backlog: what is unverified and how much rides on it |
+| Provisional | Requirement | The programme's own backlog: what is unverified, and what grain is still Proposed |
+| Onboarding | Installation | `Generation_Enabled` — who is not yet asked, which is not the same as compliant |
 | Timeliness | Period | `Days_Late`, `On_Time_Flag`, aging |
 
-Conditional formatting comes from `Status_Code`; the label beside it comes from
-`Final_Status`. **Status is never colour-only in the report either** — a green
+Conditional formatting comes from `Status_Code` — six values, and Amber must
+be visually distinct from Yellow in the theme or the split is lost. The label
+beside it comes from `Final_Status`. **Status is never colour-only in the report either** — a green
 square with no text fails the same gate in Power BI as it does in the app.
 Every chart carries a text summary and a data-table alternative.

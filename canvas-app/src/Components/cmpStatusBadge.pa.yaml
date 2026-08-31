@@ -25,10 +25,17 @@ ComponentDefinitions:
         DataType: Text
         Default: ="NOT_DUE"
 
-      DueDate:
+      NominalDueDate:
         PropertyKind: Input
-        DisplayName: DueDate
-        Description: Included in the accessible sentence so a screen reader user gets what a sighted user reads from the row.
+        DisplayName: NominalDueDate
+        Description: The policy date. Leadership reporting uses this, so "the 5th" stays the 5th.
+        DataType: Date
+        Default: =Blank()
+
+      EffectiveDueDate:
+        PropertyKind: Input
+        DisplayName: EffectiveDueDate
+        Description: After the non-duty-day policy. What the person is actually held to, and what the status was evaluated against. Shown in brackets where it differs.
         DataType: Date
         Default: =Blank()
 
@@ -75,7 +82,7 @@ ComponentDefinitions:
               =If(
                   !IsBlank(cmpStatusBadge.AccessibleLabelOverride),
                   cmpStatusBadge.AccessibleLabelOverride,
-                  MF_StatusAccessibleLabel(cmpStatusBadge.FinalStatus, cmpStatusBadge.DueDate)
+                  MF_StatusAccessibleLabel(cmpStatusBadge.FinalStatus, cmpStatusBadge.NominalDueDate, cmpStatusBadge.EffectiveDueDate)
               )
             # A status change announces without moving focus. Gate A10.
             Live: =Live.Polite
@@ -92,11 +99,12 @@ ComponentDefinitions:
                     =Switch(
                         MF_Status(cmpStatusBadge.FinalStatus).status,
                         "OVERDUE",             Icon.Warning,
-                        "CORRECTION_REQUIRED", Icon.Undo,
+                        "RETURNED",            Icon.Undo,
                         "NOT_SATISFIED",       Icon.Error,
+                        "LATE",                Icon.Clock,
                         "RECEIVED_PENDING_QC", Icon.View,
                         "ACCEPTED",            Icon.CheckBadge,
-                        "NOT_DUE",             Icon.Clock,
+                        "NOT_DUE",             Icon.CalendarBlank,
                         "PENDING_VALIDATION",  Icon.Information,
                         Icon.Blocked
                     )

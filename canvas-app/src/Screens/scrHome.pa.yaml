@@ -145,6 +145,8 @@ Screens:
                                               "scrInstallation", scrInstallation,
                                               "scrReview", scrReview,
                                               "scrUnmatched", scrUnmatched,
+                                              "scrCalendar", scrCalendar,
+                                              "scrAccessRequest", scrAccessRequest,
                                               "scrActivity", scrActivity,
                                               "scrAdminRequirements", scrAdminRequirements,
                                               "scrDiagnostics", scrDiagnostics,

@@ -30,7 +30,7 @@ forbid it**, and Microsoft availability does not equal local DAF authorization.
 
 | | GCC | GCC High | DoD |
 |---|---|---|---|
-| SharePoint admin | `*-admin.sharepoint.com` | `*-admin.sharepoint.us` | `*-admin.dps.mil` |
+| SharePoint admin | `*-admin.sharepoint.com` | `*-admin.sharepoint.us` | `*-admin.dps.mil` | <!-- prerelease: allow CLD-03 the endpoint table IS the policy that forbids the commercial host -->
 | Power Platform API | `api.gov.powerplatform.microsoft.us` | `api.high.powerplatform.microsoft.us` | `api.appsplatform.us` |
 | PAC CLI `--cloud` | `UsGov` | `UsGovHigh` | `UsGovDod` |
 | PnP `-AzureEnvironment` | `USGovernment` | `USGovernmentHigh` | `USGovernmentDoD` |

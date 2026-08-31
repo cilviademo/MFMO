@@ -24,20 +24,30 @@ the decision record** — read it before changing anything load-bearing.
 
 | Input | What it is |
 |---|---|
-| [`docs/handoffs/MASTER_HANDOFF.md`](docs/handoffs/MASTER_HANDOFF.md) | The consolidated project handoff. Broadest scope. |
-| [`docs/handoffs/CODEX_BUILD_HANDOFF.md`](docs/handoffs/CODEX_BUILD_HANDOFF.md) | The build handoff written against V3. Later, and corrects two MASTER conclusions. |
-| [`reference/v3/`](reference/) | The V3 artifacts as delivered. Prior art, not live source. |
+| [`docs/build-notes.md`](docs/build-notes.md) | **The programme's own answers**, plus the AFSVC procedures deck and two addenda. The current domain truth. |
+| [`reference/v11/`](reference/) | The latest solution snapshot as delivered. |
+| [`docs/handoffs/`](docs/handoffs/) | Four handoffs — CODEX, MASTER, and two later revisions. |
+| [`reference/v3/`](reference/) | The earliest snapshot. Kept because some decisions still trace to it. |
 
-**Precedence: V3 for what exists, CODEX for what to do next, MASTER for
-everything neither covers.** Where V3's code disagreed with V3's own
-documentation, the documentation won — three such defects are corrected here
-and listed as C1–C3 in the record.
+**Precedence: v11 and the build notes for the domain, CODEX for engineering
+discipline, MASTER for what neither covers.**
+
+**Every snapshot has the same defect: the decision table is current and the
+code is stale.** V3 shipped three parallel status functions that had already
+diverged from its own table; v11 still carries a four-state Power Fx block
+underneath a twelve-rule, six-state decision order in the same file. That is
+why this repository keeps one reference implementation and a test suite that
+holds every transliteration to it. **Twenty corrections, C1–C20, each held by a
+test.**
 
 ## Read these first
 
 | | |
 |---|---|
-| [`docs/status-calculation.md`](docs/status-calculation.md) | One engine, one evaluation. Eight semantic statuses over five visual codes. |
+| [`docs/status-calculation.md`](docs/status-calculation.md) | One engine, one evaluation. Nine semantic statuses over six visual codes, two suspense dates, two on-time facts. |
+| [`docs/build-notes.md`](docs/build-notes.md) | The programme's answers, the AFSVC deck, and what is still open. |
+| [`docs/security-open-issue.md`](docs/security-open-issue.md) | The data layer does not enforce installation scope. Unresolved. |
+| [`docs/access-management.md`](docs/access-management.md) | CAC, the GAL, and how access is actually granted. |
 | [`docs/government-environment-mode.md`](docs/government-environment-mode.md) | Cloud endpoints, capability gates, the kill switch, releases and rollback. |
 | [`docs/accessibility.md`](docs/accessibility.md) | Section 508 as a build gate, not a review step. |
 
@@ -66,9 +76,13 @@ PAC CLI authorized        UNKNOWN  — verify
 Tenant cloud              UNKNOWN  — GCC, GCC High or DoD, confirm
 ```
 
-**Two answers gate everything**: which government cloud this tenant is in, and
+**Two answers gate deployment**: which government cloud this tenant is in, and
 whether PAC CLI may run against it. Neither changes the design; both change the
-deployment scripts. Do not guess either one.
+deployment scripts.
+
+**And four gate the first generation run**: the grain of SF 1080, GPC and 1038,
+and whether the 1119-1 is conditional. Changing scope after items exist means
+regenerating a period.
 
 ---
 
@@ -78,19 +92,22 @@ deployment scripts. Do not guess either one.
 scripts/eom_schema.py             single source of truth. Nothing else declares a list.
 scripts/status_engine.py          the reference status engine
 scripts/generate_expected_items.py  EOM-01 reference implementation
-scripts/validate_solution.py      pre-release gate
+scripts/validate_solution.py      delegation, accessibility and staleness gate
+scripts/prerelease_scan.py        security gate. A FAIL means do not export.
 
 docs/                             settled decisions, runbook, prototype
 docs/handoffs/                    the two handoffs and the reconciliation record
-configuration/                    seeds: requirements, config, flags, sample dimensions
+configuration/                    the real registry, requirements, config, flags, rules
+data/                             the scrubbed QRG the registry was built from
+security/                         manifest, connector allowlist, role matrix
 provisioning/                     PowerShell: gates, lists and indexes, seeding
 canvas-app/formulas/              App.Formulas, StatusEngine, Cascade, Delegation
 canvas-app/src/                   .pa.yaml — the app. This is the code.
 flows/                            five implementation specs
 powerbi/                          semantic model, measures, RLS
 solution/                         packaging envelope and connection references
-reference/v3/                     the V3 build as delivered. Not live source.
-tests/                            99 tests. bash tests/run_tests.sh
+reference/v3/, reference/v11/     prior snapshots as delivered. Not live source.
+tests/                            134 tests + the release gate. bash tests/run_tests.sh
 dist/                             release ZIPs. Rollback imports from here.
 ```
 
@@ -155,18 +172,25 @@ sets. Installation- and Contract-scope requirements carry a **null**
 10. No AI Builder, Dataverse, Graph, custom connectors, PCF, premium pipelines
     or multiple environments in MVP.
 11. **Do not expose data outside the viewer's scope through rollups.**
-12. **An unverified requirement cannot create an adverse status.**
+12. **An unverified requirement cannot create an adverse status.** Eleven of
+    thirteen are now verified, so this protects the exceptions rather than the
+    estate.
+13. **A base that is not onboarded reads as *not yet asked*, never as
+    compliant.**
+14. **Requested access expires.**
 
 ## Status, in one paragraph
 
-`Final_Status` is the semantic string, `Status_Code` is the numeric visual code
-0–4. Both are stored, written together by one evaluation, and neither derived
-from the other. Five codes, not four: Blue separates *not due yet* from *not
-applicable*. A provisional requirement past its due date is Blue, owned by the
-programme — and since all twelve seeded requirements are `UNVERIFIED`, that is
-the default path today. Package rollups run over semantic statuses, never over
-colour: `[ACCEPTED, NOT_DUE, NOT_DUE]` is **In progress**, not Complete. There
-is no colour picker anywhere.
+`Final_Status` is the semantic string, `Status_Code` the numeric visual code
+0–5. Both stored, written together by one evaluation, neither derived from the
+other. **Six codes, and colour carries ownership**: Blue nobody yet, Amber the
+base with runway, Red the base out of runway, Yellow AFSVC, Green nobody, Gray
+nobody. Two suspense dates with a LATE window between them — the only week
+where a reminder still changes the outcome. Every date exists as nominal and
+effective, so "the 5th" stays the 5th in a brief while the base is held to a
+date they can meet. Package rollups run over semantic statuses, never colour:
+`[ACCEPTED, NOT_DUE, NOT_DUE]` is **In progress**, not Complete. There is no
+colour picker anywhere.
 
 ## Delegation
 

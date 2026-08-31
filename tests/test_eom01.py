@@ -27,8 +27,9 @@ TODAY = dt.date(2026, 9, 12)
 def seeds():
     return dict(
         requirements=load_csv(os.path.join(CONFIG, "requirements.csv")),
-        installations=load_csv(os.path.join(CONFIG, "installations.sample.csv")),
-        facilities=load_csv(os.path.join(CONFIG, "facilities.sample.csv")),
+        installations=load_csv(os.path.join(CONFIG, "installations.csv")),
+        facilities=load_csv(os.path.join(CONFIG, "facilities.csv")),
+        non_duty_days=load_csv(os.path.join(CONFIG, "non-duty-days.sample.csv")),
     )
 
 
@@ -36,6 +37,11 @@ def run(period=PERIOD, today=TODAY, existing=None, **overrides):
     s = seeds()
     s.update(overrides)
     return generate(period=period, today=today, existing=existing, **s)
+
+
+ONBOARDED = {i["Installation_ID"] for i in
+             load_csv(os.path.join(CONFIG, "installations.csv"))
+             if i["Generation_Enabled"] == "TRUE"}
 
 
 class TestIdempotency(unittest.TestCase):
@@ -100,14 +106,44 @@ class TestFacilityIdIsNullNotEmptyString(unittest.TestCase):
                     if r["Requirement_Scope"] in ("Installation", "Contract")}
         self.assertEqual(by_null, by_scope)
 
-    def test_contract_rows_carry_a_contract_and_an_installation(self):
+    def test_contract_scope_is_dormant_in_r1_but_well_formed(self):
+        # The only Contract-scope requirement is the Food 2.0 contractor
+        # invoice, and Food 2.0 is deferred by decision, so nothing generates
+        # today. The machinery is still asserted so it does not rot before the
+        # handbook lands.
+        s = seeds()
+        contract_reqs = [r for r in s["requirements"]
+                         if r["Requirement_Scope"] == "Contract"]
+        self.assertTrue(contract_reqs, "the catalogue must still model contract scope")
+        self.assertTrue(all(r["Active_Flag"] == "FALSE" for r in contract_reqs),
+                        "R1 is Legacy-only; contract scope is Food 2.0")
+
         rows, _ = run()
+        for r in rows.values():
+            if r["Requirement_Scope"] == "Contract":
+                self.assertTrue(r["Contract_ID"])
+                self.assertTrue(r["Installation_ID"])
+                self.assertIsNone(r["Facility_ID"])
+
+    def test_activating_contract_scope_produces_null_facility_rows(self):
+        # Prove the path rather than trusting it: activate the contractor
+        # invoice and give a pilot facility a contract.
+        s = seeds()
+        for r in s["requirements"]:
+            if r["Requirement_Scope"] == "Contract":
+                r["Active_Flag"] = "TRUE"
+                r["Required_Flag"] = "TRUE"
+                r["Applicable_Model"] = "Legacy/APF"
+        for f in s["facilities"]:
+            if f["Installation_ID"] == "KADENA_AB" and f["Operating_Model"] == "Legacy/APF":
+                f["Contract_ID"] = "CTR-TEST-001"
+        rows, _ = run(requirements=s["requirements"], facilities=s["facilities"])
         contract_rows = [r for r in rows.values() if r["Requirement_Scope"] == "Contract"]
-        self.assertTrue(contract_rows, "no contract-scope rows generated")
+        self.assertTrue(contract_rows, "activating the requirement generated nothing")
         for r in contract_rows:
-            self.assertTrue(r["Contract_ID"])
+            self.assertEqual(r["Contract_ID"], "CTR-TEST-001")
             self.assertTrue(r["Installation_ID"])
-            self.assertIsNone(r["Facility_ID"])
+            self.assertIsNone(r["Facility_ID"], "contract scope carries a NULL facility")
 
     def test_every_row_carries_portfolio_and_installation(self):
         # Both are denormalized because the portfolio filter is the first
@@ -118,128 +154,222 @@ class TestFacilityIdIsNullNotEmptyString(unittest.TestCase):
             self.assertTrue(r["Portfolio_ID"], r["EOM_Item_ID"])
 
 
+class TestOnboardingGate(unittest.TestCase):
+    """EOM-01 generates only where Generation_Enabled is TRUE."""
+
+    def test_only_onboarded_installations_generate(self):
+        rows, _ = run()
+        self.assertTrue(rows, "the pilot set must generate something")
+        for row in rows.values():
+            self.assertIn(row["Installation_ID"], ONBOARDED, row["EOM_Item_ID"])
+
+    def test_a_base_awaiting_onboarding_is_reported_not_silent(self):
+        # FALSE reads as "not yet onboarded", never as compliant.
+        _rows, stats = run()
+        self.assertGreater(len(stats["installations_not_onboarded"]), 50)
+        for iid in stats["installations_not_onboarded"]:
+            self.assertNotIn(iid, ONBOARDED)
+
+    def test_turning_the_gate_off_stops_generation_for_that_base(self):
+        s = seeds()
+        for i in s["installations"]:
+            i["Generation_Enabled"] = "FALSE"
+        rows, stats = run(installations=s["installations"])
+        self.assertEqual(rows, {})
+        self.assertEqual(stats["created"], 0)
+
+
 class TestOperatingModelFollowsTheFacility(unittest.TestCase):
     """One base can run a legacy DFAC and a Food 2.0 cafe."""
 
-    def test_the_two_lackland_facilities_generate_different_sets(self):
+    def test_a_mixed_model_base_generates_only_its_legacy_facilities(self):
+        # Eglin runs Legacy/APF and Food 2.0 side by side. R1 is Legacy-only,
+        # so the Food 2.0 facilities correctly generate nothing.
         rows, _ = run()
-        dfac = {r["Requirement_ID"] for r in rows.values()
-                if r["Facility_ID"] == "FAC-LACK-1234"}
-        cafe = {r["Requirement_ID"] for r in rows.values()
-                if r["Facility_ID"] == "FAC-LACK-CAFE"}
-        self.assertTrue(dfac, "the legacy DFAC generated nothing")
-        self.assertTrue(cafe, "the Food 2.0 cafe generated nothing")
-        self.assertNotEqual(dfac, cafe, "both facilities generated the same set")
-        # REQ-001 (1119) is Legacy/APF; REQ-011 (SAIIT) is Food 2.0.
-        self.assertIn("REQ-001", dfac)
-        self.assertNotIn("REQ-001", cafe)
-        self.assertIn("REQ-011", cafe)
-        self.assertNotIn("REQ-011", dfac)
+        facs = {f["Facility_ID"]: f for f in seeds()["facilities"]}
+        generated = {r["Facility_ID"] for r in rows.values()
+                     if r["Facility_ID"] and r["Installation_ID"] == "EGLIN_AFB"}
+        self.assertTrue(generated, "Eglin generated no facility rows")
+        for fid in generated:
+            self.assertEqual(facs[fid]["Operating_Model"], "Legacy/APF", fid)
+        food20 = {fid for fid, f in facs.items()
+                  if f["Installation_ID"] == "EGLIN_AFB"
+                  and f["Operating_Model"] == "Food 2.0"}
+        self.assertTrue(food20, "the seed must contain a Food 2.0 facility at Eglin")
+        self.assertEqual(generated & food20, set())
 
-    def test_facility_type_narrows_further(self):
-        # Kiosks rarely file a 1119.
-        rows, _ = run()
-        kiosk = {r["Requirement_ID"] for r in rows.values()
-                 if r["Facility_ID"] == "FAC-LACK-KIOSK"}
-        self.assertNotIn("REQ-001", kiosk)
-        self.assertEqual(kiosk, set(), "the kiosk should generate nothing in this seed")
+    def test_a_facility_with_no_operating_model_generates_nothing(self):
+        # The twenty NO_DFAC registry rows. Recorded, not a fault, and never
+        # read as compliant.
+        rows, stats = run()
+        self.assertEqual(len(stats["facilities_without_model"]), 20)
+        no_model = set(stats["facilities_without_model"])
+        for row in rows.values():
+            self.assertNotIn(row["Facility_ID"], no_model)
 
-    def test_a_facility_with_no_requirement_set_is_reported(self):
-        # A configuration gap, not a facility with nothing to do. It would
-        # otherwise sit silently green forever.
-        _rows, stats = run()
-        self.assertIn("FAC-LACK-KIOSK", stats["facilities_with_no_requirements"])
+    def test_an_unknown_facility_type_generates_rather_than_disappearing(self):
+        # The QRG carries no facility type. Excluding on it would drop every
+        # facility from every type-scoped requirement, and a base with no
+        # expected rows is indistinguishable from a base with nothing due.
+        self.assertTrue(facility_type_applies(
+            {"Applicable_Facility_Types": "Main DFAC;MAF"}, ""))
+        rows, stats = run()
+        self.assertTrue([r for r in rows.values() if r["Requirement_Scope"] == "Facility"],
+                        "type-scoped requirements generated no facility rows")
+        self.assertTrue(stats["facilities_without_type"],
+                        "facilities with no confirmed type must be reported")
+
+    def test_a_known_type_outside_the_list_is_excluded(self):
+        self.assertFalse(facility_type_applies(
+            {"Applicable_Facility_Types": "Main DFAC;MAF"}, "Kiosk"))
 
     def test_the_model_filter_is_applied_at_facility_scope_only(self):
-        # An installation has no operating model, and a contract may span
-        # facilities running different ones.
         rows, _ = run()
-        self.assertTrue([r for r in rows.values() if r["Requirement_Scope"] == "Installation"])
-        self.assertTrue([r for r in rows.values() if r["Requirement_Scope"] == "Contract"])
-
-    def test_installation_scope_needs_a_matching_facility(self):
-        # A base with no Food 2.0 operation does not owe a Food 2.0
-        # installation return.
-        rows, _ = run()
-        sf1080_bases = {r["Installation_ID"] for r in rows.values()
-                        if r["Requirement_ID"] == "REQ-007"}
-        self.assertEqual(sf1080_bases, set(), "REQ-007 is inactive and must generate nothing")
-        sik_legacy = {r["Installation_ID"] for r in rows.values()
-                      if r["Requirement_ID"] == "REQ-003"}
-        # Creech runs only Food 2.0, so it owes no Legacy/APF SIK bill.
-        self.assertNotIn("INST-CREECH", sik_legacy)
+        self.assertTrue([r for r in rows.values()
+                         if r["Requirement_Scope"] == "Installation"])
 
     def test_all_applies_to_every_model(self):
         for model in ("Legacy/APF", "Food 2.0", "MAFFO/MAF", "AOR/CDS"):
             self.assertTrue(model_applies({"Applicable_Model": "All"}, model))
         self.assertFalse(model_applies({"Applicable_Model": "Food 2.0"}, "Legacy/APF"))
+        # A blank model matches nothing: a base with no feeding facility owes
+        # no 1119.
+        self.assertFalse(model_applies({"Applicable_Model": "All"}, ""))
 
-    def test_blank_facility_types_means_every_type(self):
-        self.assertTrue(facility_type_applies({"Applicable_Facility_Types": ""}, "Kiosk"))
-        self.assertFalse(facility_type_applies(
-            {"Applicable_Facility_Types": "Main DFAC;MAF"}, "Kiosk"))
+    def test_installation_scope_needs_a_matching_facility(self):
+        # A base with no Legacy operation does not owe a Legacy installation
+        # return.
+        rows, _ = run()
+        facs = seeds()["facilities"]
+        for row in rows.values():
+            if row["Requirement_Scope"] != "Installation":
+                continue
+            models = {f["Operating_Model"] for f in facs
+                      if f["Installation_ID"] == row["Installation_ID"]
+                      and f["Active_Flag"] == "TRUE"}
+            self.assertIn("Legacy/APF", models, row["EOM_Item_ID"])
 
 
 class TestCatalogueRespected(unittest.TestCase):
     def test_inactive_requirements_generate_nothing(self):
+        # Five are inactive: SIK and DAF 79 (retired against the procedures
+        # deck), the two Food 2.0 placeholders (deferred by decision), and
+        # mid-month inventory (on the record, not yet in scope).
         s = seeds()
-        inactive = {r["Requirement_ID"] for r in s["requirements"] if r["Active_Flag"] == "FALSE"}
-        self.assertEqual(len(inactive), 3)
+        inactive = {r["Requirement_ID"] for r in s["requirements"]
+                    if r["Active_Flag"] == "FALSE"}
+        self.assertEqual(len(inactive), 5)
         rows, _ = run()
         for row in rows.values():
             self.assertNotIn(row["Requirement_ID"], inactive)
 
+    def test_a_retired_requirement_stays_on_the_record(self):
+        # SIK carries RETIRED_OR_NOT_APPLICABLE with the programme's wording,
+        # so later guidance can reactivate it without a schema change. It is a
+        # record of the decision, not a requirement.
+        s = seeds()
+        sik = [r for r in s["requirements"] if r["Document_Code"] == "SIK"]
+        self.assertTrue(sik, "SIK must remain in the catalogue as a record")
+        for r in sik:
+            self.assertEqual(r["Active_Flag"], "FALSE")
+            self.assertEqual(r["Authority_Status"], "RETIRED_OR_NOT_APPLICABLE")
+            self.assertTrue(r["Authority_Reference"].strip())
+
     def test_inactive_facilities_and_installations_generate_nothing(self):
+        s = seeds()
+        inactive_f = {f["Facility_ID"] for f in s["facilities"] if f["Active_Flag"] != "TRUE"}
+        inactive_i = {i["Installation_ID"] for i in s["installations"]
+                      if i["Active_Flag"] != "TRUE"}
         rows, _ = run()
-        self.assertFalse(any(r["Facility_ID"] == "FAC-LACK-OLD" for r in rows.values()))
-        self.assertFalse(any(r["Installation_ID"] == "INST-CLOSED" for r in rows.values()))
+        for row in rows.values():
+            self.assertNotIn(row["Facility_ID"], inactive_f)
+            self.assertNotIn(row["Installation_ID"], inactive_i)
 
     def test_frequency_gates_the_period(self):
-        self.assertTrue(frequency_applies("Monthly", "2026-08"))
-        self.assertTrue(frequency_applies("Quarterly", "2026-09"))
-        self.assertFalse(frequency_applies("Quarterly", "2026-08"))
-        self.assertTrue(frequency_applies("Annual", "2026-09"))
-        self.assertFalse(frequency_applies("Annual", "2026-08"))
-        self.assertTrue(frequency_applies("Semiannual", "2026-03"))
-        # Conditional requirements are never auto-generated.
-        self.assertFalse(frequency_applies("Conditional", "2026-08"))
+        def f(freq, period, month=None):
+            return frequency_applies(
+                {"Frequency": freq, "Applicable_Period_Month": month}, period)
+        self.assertTrue(f("Monthly", "2026-08"))
+        self.assertTrue(f("Quarterly", "2026-09"))
+        self.assertFalse(f("Quarterly", "2026-08"))
+        self.assertTrue(f("Semiannual", "2026-03"))
+        # Annual keys off Applicable_Period_Month, defaulting to September.
+        self.assertTrue(f("Annual", "2026-09"))
+        self.assertFalse(f("Annual", "2026-08"))
+        self.assertTrue(f("Annual", "2026-06", month="6"))
+        self.assertFalse(f("Annual", "2026-09", month="6"))
 
-    def test_due_date_comes_from_the_requirement_row(self):
+    def test_conditional_requirements_are_never_auto_generated(self):
+        # The 1119-1 is FIELD FEEDING, not a 1119 continuation. Auto-generating
+        # it would put a permanent red row on every DFAC that ran no field
+        # feeding exercise - the false overdue that teaches people to ignore
+        # the dashboard.
+        self.assertFalse(frequency_applies({"Frequency": "Conditional"}, "2026-08"))
+        rows, stats = run()
+        conditional = {r["Requirement_ID"] for r in seeds()["requirements"]
+                       if r["Frequency"] == "Conditional"}
+        self.assertTrue(conditional, "the seed must exercise the conditional path")
+        for row in rows.values():
+            self.assertNotIn(row["Requirement_ID"], conditional, row["EOM_Item_ID"])
+        self.assertGreater(stats["skipped_conditional"], 0)
+
+    def test_nominal_dates_come_from_the_requirement_row(self):
         rows, _ = run()
         by_req = {r["Requirement_ID"]: r for r in seeds()["requirements"]}
         for row in rows.values():
             req = by_req[row["Requirement_ID"]]
-            self.assertTrue(row["Due_Date"].endswith(f"-{int(req['Due_Day']):02d}"),
-                            f"{row['EOM_Item_ID']} due {row['Due_Date']}")
+            self.assertTrue(
+                row["Nominal_Due_Date"].endswith(f"-{int(req['Due_Day']):02d}"),
+                f"{row['EOM_Item_ID']} nominal due {row['Nominal_Due_Date']}")
+
+    def test_every_row_carries_both_date_pairs(self):
+        rows, _ = run()
+        for row in rows.values():
+            for field in ("Nominal_Due_Date", "Effective_Due_Date",
+                          "Nominal_Final_Call_Date", "Effective_Final_Call_Date"):
+                self.assertTrue(row[field], f"{row['EOM_Item_ID']}.{field}")
+            self.assertGreaterEqual(row["Effective_Due_Date"], row["Nominal_Due_Date"])
+
+    def test_a_weekend_suspense_is_adjusted_and_flagged(self):
+        # 5 Sep 2026 is a Saturday and 7 Sep is Labor Day in the seed, so the
+        # 2026-08 first suspense lands on Tuesday 8 September.
+        rows, _ = run()
+        due5 = [r for r in rows.values() if r["Nominal_Due_Date"] == "2026-09-05"]
+        self.assertTrue(due5, "no requirement with a 5th suspense generated")
+        for row in due5:
+            self.assertEqual(row["Effective_Due_Date"], "2026-09-08")
+            self.assertTrue(row["Due_Date_Adjusted"])
 
 
 class TestGeneratedStatus(unittest.TestCase):
-    def test_every_generated_row_is_provisional_today(self):
-        # All twelve seeded requirements are UNVERIFIED, so rule 2 catches
-        # every new row. This is the default path, not an edge case.
-        rows, _ = run(today=dt.date(2027, 6, 1))
-        for row in rows.values():
-            self.assertEqual(row["Authority_Status"], "UNVERIFIED")
-            self.assertEqual(row["Final_Status"], "PENDING_VALIDATION", row["EOM_Item_ID"])
-            self.assertEqual(row["Status_Code"], 4, row["EOM_Item_ID"])
-            self.assertEqual(row["Action_Owner"], "Admin")
-            self.assertFalse(row["Action_Required"])
+    def test_a_verified_requirement_goes_red_when_missed(self):
+        # Eleven of thirteen requirements moved to VERIFIED when the AFSVC
+        # procedures deck landed, so a missed 1119 turns red as it should.
+        rows, _ = run(today=dt.date(2026, 10, 1))
+        verified = [r for r in rows.values() if r["Authority_Status"] == "VERIFIED"]
+        self.assertTrue(verified, "the seed must contain verified requirements")
+        for row in verified:
+            self.assertEqual(row["Final_Status"], "OVERDUE", row["EOM_Item_ID"])
+            self.assertEqual(row["Status_Code"], 1, row["EOM_Item_ID"])
 
-    def test_nothing_is_red_however_late_the_run(self):
-        rows, _ = run(today=dt.date(2030, 1, 1))
-        self.assertFalse(any(r["Status_Code"] == 1 for r in rows.values()))
+    def test_the_three_time_states_at_generation(self):
+        for today, want in ((dt.date(2026, 9, 3), "NOT_DUE"),
+                            (dt.date(2026, 9, 9), "LATE"),
+                            (dt.date(2026, 9, 13), "OVERDUE")):
+            rows, _ = run(today=today)
+            statuses = {r["Final_Status"] for r in rows.values()}
+            self.assertEqual(statuses, {want}, str(today))
 
-    def test_verifying_a_requirement_changes_the_outcome(self):
+    def test_a_provisional_requirement_would_stay_blue(self):
         s = seeds()
         for r in s["requirements"]:
-            if r["Requirement_ID"] == "REQ-001":
-                r["Authority_Status"] = "Verified"
-        rows, _ = run(today=dt.date(2026, 10, 1), requirements=s["requirements"])
-        verified = [r for r in rows.values() if r["Requirement_ID"] == "REQ-001"]
-        self.assertTrue(verified)
-        for row in verified:
-            self.assertEqual(row["Final_Status"], "OVERDUE")
-            self.assertEqual(row["Status_Code"], 1)
+            r["Authority_Status"] = "UNVERIFIED"
+        rows, _ = run(today=dt.date(2027, 6, 1), requirements=s["requirements"])
+        self.assertTrue(rows)
+        for row in rows.values():
+            self.assertEqual(row["Final_Status"], "PENDING_VALIDATION")
+            self.assertEqual(row["Status_Code"], 4)
+            self.assertEqual(row["Action_Owner"], "Admin")
 
     def test_every_row_carries_all_four_status_fields(self):
         rows, _ = run()

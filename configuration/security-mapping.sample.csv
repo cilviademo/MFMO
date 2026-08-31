@@ -1,10 +1,8 @@
-Security_ID,UPN,Scope_Type,Portfolio_ID,Installation_ID,Facility_ID,Role,Can_QC,Can_Submit_On_Behalf,Can_Edit_Requirements,Developer_Flag,Tester_Flag,Active_Flag
-SEC-001,dfac.manager@example.mil,Facility,PORT-3,INST-LACKLAND,FAC-LACK-1234,DFAC Manager,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
-SEC-002,cafe.manager@example.mil,Facility,PORT-3,INST-LACKLAND,FAC-LACK-CAFE,DFAC Manager,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
-SEC-003,accountant@example.mil,Installation,PORT-3,INST-LACKLAND,,Accountant,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
-SEC-004,mfm.lackland@example.mil,Installation,PORT-3,INST-LACKLAND,,MFM,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE
-SEC-005,portfolio3.manager@example.mil,Portfolio,PORT-3,,,Portfolio Manager,TRUE,TRUE,FALSE,FALSE,FALSE,TRUE
-SEC-006,afsvc.leadership@example.mil,Enterprise,,,,AFSVC Leadership,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
-SEC-007,mf.admin@example.mil,Enterprise,,,,Admin,TRUE,TRUE,TRUE,FALSE,FALSE,TRUE
-SEC-008,build.developer@example.mil,Enterprise,,,,Admin,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
-SEC-009,minot.dfac@example.mil,Facility,PORT-3,INST-MINOT,FAC-MINOT-1120,DFAC Manager,FALSE,FALSE,FALSE,FALSE,FALSE,TRUE
+Security_ID,UPN,Scope_Type,Portfolio_ID,Installation_ID,Facility_ID,Role,Job_Title,Can_QC,Can_Submit_On_Behalf,Can_Edit_Requirements,Can_Grant_Access,Grant_Scope,Grant_Type,Granted_By,Granted_Date,Expires_Date,Developer_Flag,Tester_Flag,Active_Flag
+SEC-001,dfac.manager@example.mil,Installation,PORTFOLIO 2,JBSA_LACKLAND,,BASE_USER,DFAC Manager,FALSE,FALSE,FALSE,FALSE,None,GAL derived,,,,FALSE,FALSE,TRUE
+SEC-002,accountant@example.mil,Installation,PORTFOLIO 2,JBSA_LACKLAND,,BASE_USER,Food Service Accountant,FALSE,FALSE,FALSE,FALSE,None,GAL derived,,,,FALSE,FALSE,TRUE
+SEC-003,gm@example.mil,Installation,PORTFOLIO 1,KADENA_AB,,BASE_USER,General Manager,FALSE,FALSE,FALSE,FALSE,None,GAL derived,,,,FALSE,FALSE,TRUE
+SEC-004,pm.portfolio2@example.mil,Portfolio,PORTFOLIO 2,,,PORTFOLIO_MANAGER,Portfolio Manager,TRUE,TRUE,FALSE,FALSE,None,Manual,enterprise.admin@example.mil,2026-08-01,,FALSE,FALSE,TRUE
+SEC-005,enterprise.admin@example.mil,Enterprise,,,,PORTFOLIO_MANAGER,AFSVC/VMF,TRUE,TRUE,TRUE,TRUE,Enterprise,Manual,,2026-08-01,,FALSE,FALSE,TRUE
+SEC-006,pcsd.member@example.mil,Installation,PORTFOLIO 2,KEESLER_AFB,,BASE_USER,DFAC Manager,FALSE,FALSE,FALSE,FALSE,None,Requested,pm.portfolio2@example.mil,2026-08-15,2026-10-14,FALSE,FALSE,TRUE
+SEC-007,build.developer@example.mil,Enterprise,,,,PORTFOLIO_MANAGER,Developer,TRUE,TRUE,TRUE,FALSE,None,Manual,enterprise.admin@example.mil,2026-08-01,,TRUE,TRUE,TRUE

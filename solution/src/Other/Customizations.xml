@@ -68,7 +68,7 @@
     </environmentvariabledefinition>
     <environmentvariabledefinition schemaname="mfops_MF_PowerBIReportURL">
       <displayname>MF_PowerBIReportURL</displayname>
-      <description>COP deep link. The gov endpoint differs by cloud; never hard-code app.powerbi.com.</description>
+      <description>COP deep link. The government service URL differs by cloud and must be supplied at import.</description>
       <type>100000000</type>
       <isrequired>0</isrequired>
     </environmentvariabledefinition>

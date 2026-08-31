@@ -61,35 +61,53 @@ MF_DelegationWarnAt = MF_ConfigNumber("DelegationWarningThreshold", 2000);
 
 // --- scope ---------------------------------------------------------------
 // Delegable: filters on UPN, an indexed column, server-side.
+// Nobody is provisioned for their own base. CAC identifies the user, the GAL
+// gives their installation, and anyone at that installation may view and edit
+// its EOM submissions regardless of unit. INSTALLATION is the unit of access.
+//
+// WARNING: this filter is PRESENTATION. Power Apps Visible and Filter() are not
+// an access-control boundary — Microsoft is explicit that permissions
+// implemented in an app do not remove the user's permission to the underlying
+// data. The evidence library must enforce the same scope independently.
+// See docs/security-open-issue.md.
 gblMyScope =
     Filter('MF Security Mapping',
            UPN = gblCurrentUser.Email,
            Active_Flag = true);
 
-gblHasAccess = CountRows(gblMyScope) > 0;
+gblHasAccess = CountRows(MF_LiveScope) > 0;
 
 // Widest scope wins, ranked rather than alphabetical.
 gblScopeType =
-    With( { s: gblMyScope },
+    With( { s: MF_LiveScope },
         If( "Enterprise"   in s.Scope_Type, "Enterprise",
             "Portfolio"    in s.Scope_Type, "Portfolio",
             "Installation" in s.Scope_Type, "Installation",
             "Facility"     in s.Scope_Type, "Facility",
             "None" ) );
 
-gblRole = First(gblMyScope).Role;
+gblRole = If("PORTFOLIO_MANAGER" in MF_LiveScope.Role, "PORTFOLIO_MANAGER", "BASE_USER");
 
-gblCanQC       = CountRows(Filter(gblMyScope, Can_QC = true)) > 0;
-gblCanOnBehalf = CountRows(Filter(gblMyScope, Can_Submit_On_Behalf = true)) > 0;
-gblCanEditReqs = CountRows(Filter(gblMyScope, Can_Edit_Requirements = true)) > 0;
+// An expired grant is not a grant. Requested access carries an expiry so a
+// departing member has a handover window, not permanent rights to a base they
+// left, and the app must honour it without waiting for a cleanup job.
+MF_LiveScope =
+    Filter(gblMyScope, IsBlank(Expires_Date) || Expires_Date >= Today());
+
+gblCanQC       = CountRows(Filter(MF_LiveScope, Can_QC = true)) > 0;
+gblCanOnBehalf = CountRows(Filter(MF_LiveScope, Can_Submit_On_Behalf = true)) > 0;
+gblCanEditReqs = CountRows(Filter(MF_LiveScope, Can_Edit_Requirements = true)) > 0;
+gblCanGrant    = CountRows(Filter(MF_LiveScope, Can_Grant_Access = true)) > 0;
+gblGrantScope  = First(SortByColumns(Filter(MF_LiveScope, Can_Grant_Access = true),
+                                     "Grant_Scope", SortOrder.Descending)).Grant_Scope;
 
 // Never granted by a role. Only by an explicit flag on the mapping row.
-gblIsDeveloper = CountRows(Filter(gblMyScope, Developer_Flag = true)) > 0;
-gblIsTester    = CountRows(Filter(gblMyScope, Tester_Flag = true))    > 0;
+gblIsDeveloper = CountRows(Filter(MF_LiveScope, Developer_Flag = true)) > 0;
+gblIsTester    = CountRows(Filter(MF_LiveScope, Tester_Flag = true))    > 0;
 
-gblMyPortfolio    = First(gblMyScope).Portfolio_ID;
-gblMyInstallation = First(gblMyScope).Installation_ID;
-gblMyFacility     = First(gblMyScope).Facility_ID;
+gblMyPortfolio    = First(MF_LiveScope).Portfolio_ID;
+gblMyInstallation = First(MF_LiveScope).Installation_ID;
+gblMyFacility     = First(MF_LiveScope).Facility_ID;
 
 // Write access: read-only mode locks everyone except developers, and
 // maintenance mode locks everyone except developers and admins.
@@ -127,6 +145,9 @@ MF_IsFeatureOn(Key: Text): Boolean =
 
 // --- scope-resolved reference data ---------------------------------------
 // Small tables, safe to hold. Everything transactional stays server-filtered.
+// Only onboarded bases generate expected items, so only onboarded bases have
+// anything to show. A base with Generation_Enabled FALSE is "not yet
+// onboarded", never "compliant".
 MF_MyInstallations =
     Switch( gblScopeType,
         "Enterprise", Filter('MF Installation', Active_Flag = true),
@@ -150,6 +171,16 @@ MF_SelectablePeriods =
     ForAll( Sequence(13, 0, 1) As n,
         { Period: Text(DateAdd(Today(), -1 - n.Value, Months), "yyyy-mm") } );
 
+// Non-duty days in scope for this viewer. Small, and the same list the flow
+// resolves effective dates against, so the app and EOM-01 never disagree about
+// which Monday a suspense moved to.
+MF_MyNonDutyDays =
+    Filter( 'MF Non Duty Day',
+            Active_Flag = true,
+            Scope_Type = "Enterprise"
+                || Scope_ID = gblMyInstallation
+                || Scope_ID = gblMyPortfolio );
+
 
 // --- navigation ----------------------------------------------------------
 // Role-shaped: three destinations for a facility user, six for an admin.
@@ -162,7 +193,9 @@ colNavigation =
             { key: "upload",   label: "Submit",         screen: "scrUpload",            flag: "EOM_UPLOAD",      need: "write"  },
             { key: "review",   label: "Review",         screen: "scrReview",            flag: "EOM_QC",          need: "qc"     },
             { key: "unmatch",  label: "Needs classification", screen: "scrUnmatched",   flag: "EOM_UNMATCHED",   need: "qc"     },
+            { key: "calendar", label: "Calendar",       screen: "scrCalendar",          flag: "EOM_CALENDAR",    need: "all"    },
             { key: "activity", label: "Activity",       screen: "scrActivity",          flag: "",                need: "all"    },
+            { key: "access",   label: "Request access",  screen: "scrAccessRequest",     flag: "EOM_ACCESS_REQUEST", need: "all" },
             { key: "admin",    label: "Requirements",   screen: "scrAdminRequirements", flag: "EOM_ADMIN_REQS",  need: "admin"  },
             { key: "diag",     label: "Diagnostics",    screen: "scrDiagnostics",       flag: "EOM_DIAGNOSTICS", need: "dev"    }
         ),
@@ -172,6 +205,7 @@ colNavigation =
                "write", gblCanWrite,
                "qc",    gblCanQC,
                "admin", gblCanEditReqs,
+               "grant", gblCanGrant,
                "dev",   gblIsDeveloper,
                false )
     );
@@ -180,8 +214,12 @@ colNavigation =
 // --- colour tokens -------------------------------------------------------
 // Declared once. No screen may use a colour literal. Ratios verified in
 // docs/accessibility.md.
-clrStatusBlue    = ColorValue("#0F548C");   clrStatusBlueBg  = ColorValue("#EFF6FC");
-clrStatusAmber   = ColorValue("#8A5300");   clrStatusAmberBg = ColorValue("#FFF9F0");
+clrStatusBlue    = ColorValue("#0F548C");   clrStatusBlueBg   = ColorValue("#EFF6FC");
+clrStatusAmber   = ColorValue("#8A5300");   clrStatusAmberBg  = ColorValue("#FFF9F0");
+// Yellow is NOT amber. Amber means the base has time risk; yellow means AFSVC
+// has the document. They must be distinguishable at a glance and in greyscale,
+// so yellow is cooler and lighter and its chip carries a different icon.
+clrStatusYellow  = ColorValue("#6B5300");   clrStatusYellowBg = ColorValue("#FFFBEA");
 clrStatusRed     = ColorValue("#A4262C");   clrStatusRedBg   = ColorValue("#FDF3F4");
 clrStatusGreen   = ColorValue("#0E700E");   clrStatusGreenBg = ColorValue("#F1FAF1");
 clrStatusGray    = ColorValue("#424242");   clrStatusGrayBg  = ColorValue("#F5F5F5");
