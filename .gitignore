@@ -1,5 +1,20 @@
 # Build artifacts — the YAML is the code, these are outputs.
-# dist/ is NOT ignored: R1 definition of done requires the release ZIP be committed.
+#
+# The release ZIP and its checksum are NOT committed, and this is deliberate.
+# SHA256SUMS.txt records the commit the artifact was built from; committing it
+# changes that commit, which changes the recorded hash, which needs another
+# commit. It never converges. A build output that names its own commit cannot
+# live inside that commit.
+#
+# Rebuild either from the tag instead. It is reproducible -- timestamps are
+# normalised, so a given tag always yields the same bytes and the same
+# checksum:
+#
+#     bash scripts/build_release.sh v1.0.0
+#
+# The release DOCUMENTATION beside it is committed, because it is source.
+dist/*/*.zip
+dist/*/SHA256SUMS.txt
 *.msapp
 solution/bin/
 solution/obj/

@@ -51,6 +51,12 @@ the same build.
 bash scripts/build_release.sh v1.0.0
 ```
 
+**The ZIP and its checksum are not committed.** `SHA256SUMS.txt` records the
+commit it was built from, so committing it would change that commit, change the
+recorded hash, and need another commit — it never converges. A build output that
+names its own commit cannot live inside that commit. Rebuild it from the tag;
+the bytes are identical every time.
+
 **It contains the solution envelope only** — `Solution.xml` and
 `Customizations.xml`. There is no `.msapp` and no flow `definition.json`,
 because the canvas app has not been authored in Power Apps and the flows have
