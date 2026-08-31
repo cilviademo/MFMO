@@ -136,7 +136,7 @@ Checked by the release gate. Any drift blocks the build.
 
 ```
 dist/MissionFeedingOperations_1.0.0/MissionFeedingOperations_1.0.0.zip
-SHA-256  a646731f2b2cc72879f39bc83c6e4110b5f7ed1adbb369482d1eaf78ba9aa497
+SHA-256  222e0b85a21abb6fe9451cf49ddb1a6a67f3e5476c838c28213bf07de96c6eea
 ```
 
 Packed from the tagged commit by `scripts/build_release.sh`, not from the
@@ -147,6 +147,10 @@ the same build.
 ```
 bash scripts/build_release.sh v1.0.0
 ```
+
+The ZIP is packed from `solution/src` alone, so the commit that records this
+checksum in this report does not change it. Only `SHA256SUMS.txt` moves, because
+it names its own commit.
 
 **The ZIP and its checksum are not committed.** `SHA256SUMS.txt` records the
 commit it was built from, so committing it would change that commit, change the
