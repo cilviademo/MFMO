@@ -184,7 +184,14 @@ Screens:
                         Text: ="Drop file here or browse"
                         AccessibleLabel: ="Choose a file to submit"
                         DisplayMode: =MF_WriteMode
-                        OnChange: =Set(locUploadError, "")
+                        # Minting the idempotency key HERE, when the file is
+                        # chosen, is the whole point: it must be stable across
+                        # every retry of this one user action. Minting it at
+                        # Submit would give a second press a second GUID, which
+                        # is exactly the duplicate it exists to prevent.
+                        OnChange: |
+                          =Set(locUploadError, "");
+                           Set(locRequestId, GUID())
                         TabIndex: =0
 
                   - lblChosenFile:
@@ -222,7 +229,8 @@ Screens:
                         DisplayMode: |
                           =If(
                               !gblCanWrite || locUploadBusy
-                                  || IsBlank(addFile.Media) || IsBlank(locRequirementId),
+                                  || IsBlank(addFile.Media) || IsBlank(locRequirementId)
+                                  || IsBlank(locRequestId),
                               DisplayMode.Disabled,
                               DisplayMode.Edit
                           )
@@ -254,9 +262,16 @@ Screens:
                                        {
                                            eomItemId:      locItem.EOM_Item_ID,
                                            eomItemKey:     locItem.EOM_Item_Key,
+                                           // Stable across retries. See
+                                           // flows/EOM02-Submission step 1a.
+                                           submissionRequestId: locRequestId,
                                            fileName:       addFile.FileName,
                                            fileContent:    addFile.Media,
-                                           uploadedBy:     gblCurrentUser.Email,
+                                           // uploadedBy is NOT sent. The flow
+                                           // takes the caller's UPN from its
+                                           // authenticated context: a client
+                                           // that can name its own user is not
+                                           // an authorisation system.
                                            onBehalfOf:     If(locOnBehalf, locSelectedFacility, Blank()),
                                            intakeMethod:   "App upload",
                                            classification: "Declared at upload",
@@ -274,6 +289,9 @@ Screens:
                                        NotificationType.Success
                                    );
                                    Reset(addFile);
+                                   // Cleared with the picker: the next file is
+                                   // a new request and must not reuse this key.
+                                   Set(locRequestId, Blank());
                                    Back(ScreenTransition.None),
                                !IsBlank(locUploadResult) && !locUploadResult.ok,
                                    Set(locUploadError, locUploadResult.message)

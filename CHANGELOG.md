@@ -6,6 +6,106 @@ retired column is marked unused, never deleted.
 
 ---
 
+## [1.0.0] — R1 release consolidation.
+
+The consolidation pass. No new features; everything here makes the existing
+build coherent, correct and importable. `docs/DECISION_LOG.md` records what was
+superseded, `docs/DUPLICATION_AUDIT.md` what was consolidated, and
+`docs/CORRECTNESS_VERIFICATION.md` the defects found and fixed.
+
+**No Power Platform environment has been touched.** Tenant validation has not
+occurred and the data-layer scope issue is open. Recommended target is **DEV or
+PILOT only**.
+
+### A second live upload architecture was removed
+
+The build carried two. R1 writes evidence directly into each portfolio's own
+authoritative destination — and it *also* still provisioned a central
+`Mission Feeding Evidence` library, with `EOM_Root_Path` and
+`EvidenceRootPath` telling an intake flow which subtree to watch and which to
+ignore.
+
+That is not a stale document. It was a second write target, created by the
+provisioning script on every run. Removed from the script, the config, the
+environment variables, the canvas formulas and the solution package in the same
+commit that records the decision; only the explanation survives, in
+`docs/DECISION_LOG.md` D-01.
+
+### Seven correctness defects
+
+| Defect | Why it mattered |
+|---|---|
+| `Delegation.fx` sorted three item queries on `Due_Date` | A column that stopped existing at the four-date split. `SortByColumns` against a missing column does not error — the list renders unsorted and nobody notices |
+| `gen_registry.py` had gone stale | It emitted the raw QRG operating model and no `Facility_Type`, while the committed CSVs carried both. **Regenerating would have silently reintroduced the defect that cost a month** |
+| The pilot onboarding was a hand edit to a *generated* file | And it was lost, in this pass, by running the generator — which is exactly how the generator went stale in the first place. Now `configuration/pilot-onboarding.csv` |
+| No submission request idempotency | A user pressing Submit twice after a timeout — the normal case on a government network, not the edge case — got two files and two submission rows |
+| The schema version check was a warning on a diagnostics screen, pinned to a stale `3.0` | A newer app writing against an older schema patches columns that do not exist, which writes nothing rather than erroring. A document reads as submitted while nothing was recorded |
+| The fallback ceiling was implied by construction, not asserted | A file above the approved root looks like it worked: it is in SharePoint, the upload returned success, and it is somewhere nobody will look |
+| `EOM_Folder_URL` described as the installation's folder root | A second answer to "where do this installation's documents live" is how two answers diverge |
+
+### Orphaned package references
+
+`Solution.xml` still declared `mfops_EOM02FileIntake` and
+`mfops_EOM05AppUpload` — flows renamed two releases ago — and
+`Customizations.xml` still defined the two retired environment variables while
+knowing nothing of the four site bindings. An orphaned root component fails the
+import with a message naming the missing component and nothing else useful, at
+the worst possible moment.
+
+A stale Teams connection reference went with them. Nothing used it, and an
+unused connection reference is not free: it prompts at import, it needs its own
+DLP conversation with the tenant admin, and it widens the declared surface for
+no behaviour.
+
+### One security claim was stronger than the deployment
+
+The manifest carried `user_may_edit_audit_author: false`. The app writes
+`Actor_UPN` as `User().Email`, which Power Apps derives from the signed-in
+session and which a user cannot forge from inside the app — but nothing stops a
+user with direct write access to the audit list. Recorded now as two separate
+facts:
+
+```
+audit_author_is_authenticated_identity: true
+audit_author_enforced_at_data_layer:    false
+```
+
+Claiming a control the deployment does not have is worse than recording the
+gap, because the gap then never gets closed. It is the same exposure as
+installation scope, on the same lists, and it closes the same way.
+
+### Requirement applicability was implemented twice
+
+`Cascade.fx` filtered the requirement dropdown with an inline predicate while
+`generate_expected_items.py` decided what EOM-01 generates. The inline version
+got the unknown-facility-type case right **by accident** — Power Fx `in` is
+substring containment and the empty string is a substring of everything — and
+got a real type that is a substring of another wrong: `MAF` matched a list
+containing `MAFFO`. Both are now named functions matching on a delimited exact
+term, held to the Python predicate by test.
+
+### New gates
+
+* `scripts/release_gate.py` — the 18 stop conditions. Exit 1 blocks the build.
+* `scripts/routing_dryrun.py` — all four site collections, seven failure paths,
+  proving no folder is created and no fallback rises above its approved root.
+* `docs/SHAREPOINT_SCHEMA_MANIFEST.md` — internal names for 17 lists and 284
+  columns, reconciled against every formula and flow in the three positions
+  where a wrong name reads blank instead of erroring.
+* `deployment/DEPENDENCY_MANIFEST.md` — 66 destination-side resources, each
+  with an owner and a provisioning path. **16 MUST ALREADY EXIST**, 7 need
+  manual `.mil` configuration, and importing the ZIP creates none of them.
+* `docs/REPOSITORY_INVENTORY.md`, `docs/DECISION_LOG.md`,
+  `docs/DUPLICATION_AUDIT.md`, `docs/CORRECTNESS_VERIFICATION.md`,
+  `docs/SECURITY_VERIFICATION.md`, `docs/TEST_MATRIX.md`.
+
+Three superseded documents were archived to `docs/archive/` with headers naming
+what replaced them. Documentation is archived; executable code is removed.
+
+346 tests, up from 248.
+
+---
+
 ## [0.8.0] — The routing finding. Four site collections, not four channels.
 
 Integrates v12, v13 and v14 with their action document, and the Figma design

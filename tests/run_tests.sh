@@ -31,6 +31,10 @@ echo "== pre-release security scan =="
 python3 scripts/prerelease_scan.py
 
 echo
+echo "== routing dry run: four site collections =="
+python3 scripts/routing_dryrun.py
+
+echo
 echo "== EOM-01 dry run against the sample seed =="
 python3 scripts/generate_expected_items.py --period 2026-08 --today 2026-09-12
 
@@ -38,3 +42,7 @@ echo
 echo "All local checks passed. Tenant checks remain: see docs/DEPLOYMENT.md,"
 echo "and the data layer still does not enforce installation scope —"
 echo "docs/security-open-issue.md."
+
+echo
+echo "== release gate: the stop conditions =="
+python3 scripts/release_gate.py

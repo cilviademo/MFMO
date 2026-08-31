@@ -149,3 +149,31 @@ exactly from the tagged commit.
 **`dist/` currently holds no ZIP.** No tenant has been touched, so there is
 nothing to roll back to yet, and a hand-assembled artifact that had never been
 imported would be worse than none.
+
+---
+
+## What R1 adds to this
+
+**The four site bindings are not in the ZIP.** Rolling the solution back does
+not unbind them and does not rebind them — `Site_URL`, `Verified_By` and
+`Active_Flag` live in `MF_Document_Destination`, which is data. If a
+destination was wrongly activated, set `Active_Flag = FALSE` on that row: EOM-02
+fails closed immediately and no import is needed.
+
+**A schema rollback is not a solution rollback.** Importing the previous ZIP
+gives you the previous app and flows against the *current* SharePoint schema.
+That is safe in one direction only:
+
+| | |
+|---|---|
+| Older app, newer schema | **Safe.** The app reads columns it knows and ignores the rest. The schema gate refuses writes on a version mismatch, which is the intended behaviour, not a fault |
+| Newer app, older schema | **Not safe, and now blocked.** The app patches columns that do not exist, which writes nothing rather than erroring. `gblSchemaMatches` disables writes for everyone, developers included |
+
+So a rollback of the app alone is fine. A rollback that also means reverting
+`scripts/eom_schema.py` is not a rollback — it is a migration, and columns are
+never deleted, only marked unused.
+
+**`Submission_Request_ID` is required.** A rolled-back app that does not send it
+cannot write a submission at all. That is deliberate: an app that skips the
+idempotency key would create duplicates on every retry. If you must run an
+older app against this schema, do it read-only.

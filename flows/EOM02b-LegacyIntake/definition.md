@@ -13,6 +13,29 @@ Filter:   path starts with the destination's Root_Folder
 Else:     exit silently
 ```
 
+## Schema compatibility — checked before any write
+
+```
+expected = the schema version this flow was authored against   (a literal)
+deployed = MF_App_Config.SchemaVersion
+
+if expected <> deployed:
+        return CONFIGURATION_REQUIRED
+        log SCHEMA_MISMATCH with both versions
+        stop before any write
+```
+
+**Every flow makes this comparison independently.** The app disabling its own
+submit button is not a control — a flow can be invoked directly, and a flow run
+on a schedule has no app in front of it at all.
+
+A newer flow writing against an older schema patches columns that do not exist
+yet. SharePoint does not error on that; it writes nothing. A document then reads
+as submitted while nothing was recorded, which is the failure this whole build
+exists to prevent.
+
+`docs/SHAREPOINT_SCHEMA_MANIFEST.md` is the contract being checked.
+
 ## Four sites means four instances of this flow
 
 The four portfolios are four separate **site collections**. A SharePoint trigger

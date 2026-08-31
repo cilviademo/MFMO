@@ -68,12 +68,18 @@ The app build does not wait on this. The deployment does.
 pwsh provisioning/Seed-MFOpsConfiguration.ps1 -SiteUrl <site> -TenantCloud UsGovDod
 ```
 
-Seeds `MF_App_Config`, `MF_Feature_Flags` and the twelve requirements. Then
-load the **real** installation, facility and security rows — the `*.sample.csv`
-files are for a test tenant and only load with `-IncludeSampleData`.
+Seeds `MF_App_Config`, `MF_Feature_Flags`, the thirteen requirements, the
+notification rules and the four document destinations. Add `-IncludeRegistry`
+to load the real 103 installations and 154 facilities; the `*.sample.csv` files
+are for a test tenant and only load with `-IncludeSampleData`.
 
-Set `PowerBIReportURL`, `SupportContact`, `EOM_Root_Path`, `EvidenceRootPath`
-and `CurrentFiscalYear` to real values. Leave the kill switch off.
+Set `PowerBIReportURL`, `SupportContact` and `CurrentFiscalYear` to real
+values. Leave the kill switch off.
+
+**There is no evidence library and no root path to set.** An earlier design
+wrote every submission into a central library on this site; R1 places evidence
+directly in its portfolio's own destination, and there is one authoritative
+copy. Destinations are bound in gate 3b, not here.
 
 ### 3a. Build the registry and onboard the pilot
 
@@ -355,6 +361,13 @@ Food 2.0 legitimately stops generating some requirements and starts others.
 at **library** level, not to a folder — a folder-scoped trigger does not fire
 recursively and silently misses every folder created after it was authored.
 
-**Everything is Blue.** That is correct today. All twelve requirements are
-`UNVERIFIED` and cannot drive an adverse status. Verify one on
-`scrAdminRequirements`, with a citation, and it will.
+**Everything is Blue.** Check the requirement's `Authority_Status` before
+assuming a bug. An `UNVERIFIED` requirement cannot drive an adverse status by
+design — it stays Blue past its suspense with the owner set to Admin, rather
+than telling a base it is late against a rule nobody has confirmed exists. Of
+the thirteen seeded requirements, **eight are active and all eight are
+`VERIFIED`**, so a Blue item on an active requirement past its suspense is
+worth investigating. The three `UNVERIFIED` rows are inactive.
+
+Verify a requirement on `scrAdminRequirements`, with a citation, and it starts
+driving status on the next reconciliation run.

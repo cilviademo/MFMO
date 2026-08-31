@@ -6,7 +6,7 @@ below is wrong, change it here first, then change the code.
 
 | Input | What it is | Held in |
 |---|---|---|
-| **MASTER** | The consolidated project handoff. Broadest scope, the full data model, the UX direction, the pilot and acceptance criteria. | `docs/handoffs/MASTER_HANDOFF.md` |
+| **MASTER** | The consolidated project handoff. Broadest scope, the full data model, the UX direction, the pilot and acceptance criteria. | `docs/archive/MASTER_HANDOFF-consolidated.md` (archived) |
 | **CODEX** | The build handoff written against the V3 repo. Narrower, later, and explicitly corrects two MASTER conclusions. | `docs/handoffs/CODEX_BUILD_HANDOFF.md` |
 | **V3** | The artifacts as first delivered. | `reference/v3/` |
 | **v7–v11** | Four later solution snapshots, plus the programme's answers to twenty questions and the AFSVC procedures deck. **v11 is the current domain truth.** | `reference/v11/` |

@@ -117,12 +117,21 @@
 
 // Items for one facility and period. Bounded by construction — at most the
 // requirement count. Reporting_Period first, then the indexed facility.
+// SORTED BY THE EFFECTIVE DATE, not the nominal one. The nominal date is what
+// leadership is briefed on -- "the 5th" stays the 5th -- but the order a base
+// works its list in is the order the dates actually fall, and a suspense rolled
+// off a weekend falls later than one that did not. Sorting by nominal would put
+// two items with the same printed date in an order that contradicts when they
+// are really owed.
+//
+// `Due_Date` was the column here until the four-date split. It no longer
+// exists, and SortByColumns against a missing column does not error loudly.
 MF_ItemsForFacility(FacilityId: Text, Period: Text): Table =
     SortByColumns(
         Filter( 'MF EOM Item',
                 Reporting_Period = Period,
                 Facility_ID = FacilityId ),
-        "Due_Date", SortOrder.Ascending );
+        "Effective_Due_Date", SortOrder.Ascending );
 
 // Everything at one installation for a period, including the Installation- and
 // Contract-scope rows whose Facility_ID is null. Reached through
@@ -132,7 +141,7 @@ MF_ItemsForInstallation(InstallationId: Text, Period: Text): Table =
         Filter( 'MF EOM Item',
                 Reporting_Period = Period,
                 Installation_ID = InstallationId ),
-        "Due_Date", SortOrder.Ascending );
+        "Effective_Due_Date", SortOrder.Ascending );
 
 // Portfolio view. This is the query that would truncate if Portfolio_ID were
 // not denormalized onto the item — a join to MF Facility would be client-side.
@@ -183,7 +192,7 @@ MF_HasItems(FacilityId: Text, Period: Text): Boolean =
 MF_MyWork(Period: Text): Table =
     SortByColumns(
         Filter( MF_VisibleItems(Period), Action_Required = true ),
-        "Due_Date", SortOrder.Ascending );
+        "Effective_Due_Date", SortOrder.Ascending );
 
 // Waiting on someone else. A submitter's "needs your attention" list must not
 // contain documents sitting in AFSVC's review queue.

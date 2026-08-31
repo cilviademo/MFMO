@@ -15,7 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 from generate_expected_items import (  # noqa: E402
-    generate, load_csv, item_id_for, frequency_applies,
+    generate, load_csv, onboard, item_id_for, frequency_applies,
     model_applies, facility_type_applies,
 )
 
@@ -24,10 +24,22 @@ PERIOD = "2026-08"
 TODAY = dt.date(2026, 9, 12)
 
 
+def installations():
+    """The generated registry with the pilot onboarding applied.
+
+    installations.csv is GENERATED and ships every row Generation_Enabled
+    FALSE. Onboarding is a human decision recorded in pilot-onboarding.csv, and
+    applying it here rather than editing the generated file is what keeps
+    `python3 scripts/gen_registry.py` idempotent.
+    """
+    return onboard(load_csv(os.path.join(CONFIG, "installations.csv")),
+                   load_csv(os.path.join(CONFIG, "pilot-onboarding.csv")))
+
+
 def seeds():
     return dict(
         requirements=load_csv(os.path.join(CONFIG, "requirements.csv")),
-        installations=load_csv(os.path.join(CONFIG, "installations.csv")),
+        installations=installations(),
         facilities=load_csv(os.path.join(CONFIG, "facilities.csv")),
         non_duty_days=load_csv(os.path.join(CONFIG, "non-duty-days.sample.csv")),
     )
@@ -39,8 +51,7 @@ def run(period=PERIOD, today=TODAY, existing=None, **overrides):
     return generate(period=period, today=today, existing=existing, **s)
 
 
-ONBOARDED = {i["Installation_ID"] for i in
-             load_csv(os.path.join(CONFIG, "installations.csv"))
+ONBOARDED = {i["Installation_ID"] for i in installations()
              if i["Generation_Enabled"] == "TRUE"}
 
 
@@ -135,7 +146,9 @@ class TestFacilityIdIsNullNotEmptyString(unittest.TestCase):
                 r["Required_Flag"] = "TRUE"
                 r["Applicable_Model"] = "Legacy/APF"
         for f in s["facilities"]:
-            if f["Installation_ID"] == "KADENA_AB" and f["Operating_Model"] == "Legacy/APF":
+            # An ONBOARDED base, or the row is filtered out before scope is
+            # ever considered and the test proves nothing.
+            if f["Installation_ID"] == "JBSA_LACKLAND" and f["Operating_Model"] == "Legacy/APF":
                 f["Contract_ID"] = "CTR-TEST-001"
         rows, _ = run(requirements=s["requirements"], facilities=s["facilities"])
         contract_rows = [r for r in rows.values() if r["Requirement_Scope"] == "Contract"]

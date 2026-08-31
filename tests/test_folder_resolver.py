@@ -354,3 +354,69 @@ class BindingsAreDocumented(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheFallbackCeiling(unittest.TestCase):
+    """A fallback that reaches a site root, a library root or another portfolio
+    is a stop condition.
+
+    A file above the approved root looks like it worked: it is in SharePoint,
+    the upload returned success, and it is somewhere nobody will look. That is
+    strictly worse than a failed upload, which gets retried.
+    """
+
+    root = "Shared Documents/Legacy_Portfolio 2/5. Monthly Data Call"
+
+    def nothing_matches(self):
+        return tree({})
+
+    def test_the_fallback_lands_exactly_on_the_approved_root(self):
+        r = resolve_destination_folder(destination(), "2026-08",
+                                       self.nothing_matches())
+        self.assertEqual(r.path, self.root)
+
+    def test_the_fallback_never_rises_above_the_approved_root(self):
+        r = resolve_destination_folder(destination(), "2026-08",
+                                       self.nothing_matches())
+        self.assertTrue(r.path.startswith(destination()["Library_Name"]))
+        self.assertIn(destination()["Root_Folder"].split("/")[-1], r.path)
+        # Not the library root, not the site root.
+        self.assertNotEqual(r.path, destination()["Library_Name"])
+        self.assertGreaterEqual(len(r.path.split("/")), 3)
+
+    def test_a_blank_root_folder_is_refused_rather_than_widened(self):
+        with self.assertRaises(DestinationNotUsable) as ctx:
+            resolve_destination_folder(destination(Root_Folder=""), "2026-08",
+                                       self.nothing_matches())
+        self.assertEqual(ctx.exception.code, "DESTINATION_NOT_CONFIGURED")
+        self.assertIn("above the library root", ctx.exception.detail)
+
+    def test_the_fallback_cannot_reach_another_portfolio(self):
+        # The root is built from THIS destination row and nothing else, so
+        # there is no input that redirects it. Prove it across all four.
+        import csv
+        path = os.path.join(ROOT, "configuration", "document-destinations.csv")
+        with open(path, encoding="utf-8-sig") as fh:
+            rows = list(csv.DictReader(fh))
+        for row in rows:
+            live = destination(Root_Folder=row["Root_Folder"],
+                               Library_Name=row["Library_Name"])
+            r = resolve_destination_folder(live, "2026-08", self.nothing_matches())
+            self.assertIn(row["Root_Folder"], r.path)
+            for other in rows:
+                if other["Destination_ID"] == row["Destination_ID"]:
+                    continue
+                self.assertNotIn(other["Root_Folder"], r.path)
+
+    def test_the_fallback_is_always_flagged(self):
+        # A file at root that nobody knows about is the failure this prevents.
+        r = resolve_destination_folder(destination(), "2026-08",
+                                       self.nothing_matches())
+        self.assertTrue(r.needs_filing)
+        self.assertTrue(r.note.strip())
+
+    def test_find_or_fail_refuses_rather_than_falling_back(self):
+        with self.assertRaises(DestinationNotUsable) as ctx:
+            resolve_destination_folder(destination(Fallback_Policy="FIND_OR_FAIL"),
+                                       "2026-08", self.nothing_matches())
+        self.assertEqual(ctx.exception.code, "DESTINATION_FOLDER_NOT_FOUND")

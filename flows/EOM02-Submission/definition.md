@@ -10,17 +10,41 @@ site collections**, and their folders are found rather than built.
 The app supplies logical identifiers. **It never supplies a path.**
 
 ```
-Installation_ID   LACKLAND_AFB
-Reporting_Period  2026-08
-Requirement_ID    REQ-001
-Facility_ID       optional — null for installation and contract scope
-File              content + original filename
-On_Behalf_Of      optional
-Note              optional
+Submission_Request_ID  a GUID the app minted BEFORE this call
+Installation_ID        LACKLAND_AFB
+Reporting_Period       2026-08
+Requirement_ID         REQ-001
+Facility_ID            optional — null for installation and contract scope
+File                   content + original filename
+On_Behalf_Of           optional
+Note                   optional
 ```
 
 Moving Lackland to another portfolio is then an edit to
 `MF_Installation.Portfolio_ID`. It is not a change to the app.
+
+## Schema compatibility — checked before any write
+
+```
+expected = the schema version this flow was authored against   (a literal)
+deployed = MF_App_Config.SchemaVersion
+
+if expected <> deployed:
+        return CONFIGURATION_REQUIRED
+        log SCHEMA_MISMATCH with both versions
+        stop before any write
+```
+
+**Every flow makes this comparison independently.** The app disabling its own
+submit button is not a control — a flow can be invoked directly, and a flow run
+on a schedule has no app in front of it at all.
+
+A newer flow writing against an older schema patches columns that do not exist
+yet. SharePoint does not error on that; it writes nothing. A document then reads
+as submitted while nothing was recorded, which is the failure this whole build
+exists to prevent.
+
+`docs/SHAREPOINT_SCHEMA_MANIFEST.md` is the contract being checked.
 
 ## Why a flow instead of the Attachments control
 
@@ -62,6 +86,41 @@ system, and this flow can be invoked directly by anyone who can see it.
 
 Each of these is also checked in the app. The app's version gives a fast,
 specific error; this one is the control.
+
+## Step 1a — Idempotency, before anything is written
+
+```
+if a MF_EOM_Submission row already carries this Submission_Request_ID:
+        return that row's result   — ok, its Submission_ID, its Version_No
+        log SUBMISSION_REPLAY
+        stop. Create no file. Create no row.
+```
+
+**The check happens before the file write, not after it.** A check that runs
+after the upload has already created the duplicate it was meant to prevent.
+
+`Submission_Request_ID` is minted by the app when the user picks the file, not
+when the call is made, and it is **resent unchanged on every retry of the same
+user action**. A new file or a changed declaration is a new request and gets a
+new GUID.
+
+**A user pressing Submit twice after a timeout is the normal case on a
+government network, not the edge case.** The first request usually succeeded and
+the response was lost; the client that timed out is precisely the one that
+cannot know. Without this, that user gets two files and two submission rows, one
+of them superseding the other for no reason a reviewer can explain.
+
+**Disabling the button in Power Apps is not protection.** The flow can be
+invoked directly, the app can be reloaded mid-call, and a dropped connection
+does not ask the button's permission. This must hold at the workflow and data
+layer:
+
+* `Submission_Request_ID` is **required and indexed**, and is part of
+  `MF_EOM_Submission`'s declared unique key.
+* The lookup filters on it server-side — an indexed equality, delegable.
+* If two calls race past the lookup, the unique constraint rejects the second
+  write. Handle that rejection by re-reading the winner and returning its
+  result, **not** by retrying the write.
 
 ## Step 2 — Resolve the expected item
 
@@ -180,6 +239,7 @@ supersede any Is_Current submission for this item:
     Is_Current = false, Superseded_By = new Submission_ID
 
 create MF_EOM_Submission:
+    Submission_Request_ID  as supplied — the idempotency key
     Version_No             prior count + 1
     File_Name              as uploaded
     SharePoint_Unique_ID   the document GUID — THE DURABLE HANDLE
@@ -276,4 +336,10 @@ report the problem.
 `MF_EOM_Audit`: `Action = 'Uploaded'`, entity the submission.
 `MF_App_Event_Log`: `SubmissionCreated`, plus `VersionSuperseded` when a prior
 current version was demoted, plus `SUBMISSION_FILED_AT_ROOT` when the folder
-could not be matched. All stamped with `App_Version`.
+could not be matched, plus `SUBMISSION_REPLAY` when a request arrived twice.
+All stamped with `App_Version`.
+
+**`SUBMISSION_REPLAY` is not an error and is not shown to the user.** They see
+the same confirmation they would have seen the first time, because from where
+they are standing that is what happened. The count of replays is worth watching
+though: a sustained rise means the flow is timing out before it finishes.

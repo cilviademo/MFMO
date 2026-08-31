@@ -93,8 +93,10 @@ ComponentDefinitions:
                 Control: Icon
                 Properties:
                   # Shape is a third redundant channel alongside text and
-                  # colour, so the five states stay distinguishable in
-                  # greyscale and to a colour-blind reader.
+                  # colour, so the six states stay distinguishable in
+                  # greyscale and to a colour-blind reader. Amber and yellow
+                  # need it most: they are 41 degrees of hue apart, which is
+                  # ample in colour and nothing at all without it.
                   Icon: |
                     =Switch(
                         MF_Status(cmpStatusBadge.FinalStatus).status,

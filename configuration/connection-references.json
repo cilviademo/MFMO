@@ -14,11 +14,7 @@
       "schemaName": "mfops_office365",
       "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365",
       "displayName": "MF Ops - Outlook (notifications)"
-    },
-    {
-      "schemaName": "mfops_teams",
-      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-      "displayName": "MF Ops - Teams (escalation)"
     }
-  ]
+  ],
+  "_note": "Four connectors were declared; the Teams one was removed in the R1 consolidation. Nothing used it -- notifications are Outlook, and escalation is a notification rule, not a Teams post. An unused connection reference is not free: it prompts at import, it needs a DLP conversation with the tenant admin, and it widens the app's declared surface for no behaviour. security/connector-allowlist.yaml is the governing list; anything here that is not there is a defect, and tests/test_hardening.py checks that."
 }

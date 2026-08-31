@@ -71,6 +71,37 @@ def _null_if_blank(v):
     return v or None
 
 
+def onboard(installations, pilot):
+    """Apply the pilot onboarding list to a freshly generated registry.
+
+    `configuration/installations.csv` is GENERATED from the QRG and ships every
+    row with `Generation_Enabled = FALSE`. Onboarding is a human decision about
+    a specific base -- who validated its facilities and when -- so it lives in
+    its own file rather than as a hand edit to a generated one.
+
+    Editing the generated file directly is how the registry generator became
+    stale in the first place: somebody corrected the output, nobody corrected
+    the generator, and the next regeneration silently reverted it.
+    """
+    by_id = {p["Installation_ID"]: p for p in pilot}
+    unknown = set(by_id) - {i["Installation_ID"] for i in installations}
+    if unknown:
+        raise ValueError(
+            f"pilot-onboarding.csv names installations that are not in the "
+            f"registry: {sorted(unknown)}. An installation cannot be onboarded "
+            "before it exists.")
+    out = []
+    for i in installations:
+        row = dict(i)
+        p = by_id.get(row["Installation_ID"])
+        if p:
+            row["Generation_Enabled"] = "TRUE"
+            row["Registry_Validated_By"] = p["Registry_Validated_By"]
+            row["Registry_Validated_Date"] = p["Registry_Validated_Date"]
+        out.append(row)
+    return out
+
+
 def load_csv(path):
     with open(path, newline="", encoding="utf-8-sig") as fh:
         return list(csv.DictReader(fh))
@@ -137,7 +168,14 @@ def facility_type_applies(requirement, facility_type) -> bool:
     facility_type = (facility_type or "").strip()
     if not facility_type:
         return True
-    return facility_type in {t.strip() for t in raw.split(";") if t.strip()}
+    # Matched on a whole delimited term, never a substring: "MAF" must not
+    # match a list containing "MAFFO". Case-insensitively, because the list is
+    # hand-edited in a SharePoint text column and the transliteration in
+    # canvas-app/formulas/Cascade.fx (MF_FacilityTypeApplies) uses Power Fx
+    # `in`, which is case-insensitive. Two predicates that must agree should
+    # not disagree about capitalisation.
+    wanted = facility_type.casefold()
+    return wanted in {t.strip().casefold() for t in raw.split(";") if t.strip()}
 
 
 def item_id_for(period, scope_id, requirement_id) -> str:
@@ -382,7 +420,8 @@ def main(argv=None):
     d = args.config_dir
     rows, stats = generate(
         load_csv(os.path.join(d, "requirements.csv")),
-        load_csv(os.path.join(d, "installations.csv")),
+        onboard(load_csv(os.path.join(d, "installations.csv")),
+                load_csv(os.path.join(d, "pilot-onboarding.csv"))),
         load_csv(os.path.join(d, "facilities.csv")),
         period,
         today=today,

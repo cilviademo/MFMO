@@ -350,7 +350,16 @@ MF_Installation = ListDef(
         c("Component", "Choice", req=True, choices=COMPONENT,
           note="Active, ANG or AFRC. ANG routes EOY inventory to NGB/A1X, not "
                "AFSVC/VMF — see MF_EOM_Requirement.Routing_Org."),
-        c("EOM_Folder_URL", "URL", note="Teams/SharePoint folder root for this installation"),
+        c("EOM_Folder_URL", "URL",
+          note="OPTIONAL convenience deep link, set by an administrator, shown "
+               "on scrInstallation as 'open this folder in SharePoint'. Blank "
+               "in the seed and blank by default -- the registry generator has "
+               "no site to point at, and a .mil URL in source is a destination "
+               "leak.\n"
+               "IT IS NOT A ROUTING MECHANISM. EOM-02 resolves where a file "
+               "goes from MF_Document_Destination and never reads this. A "
+               "second place that answers 'where do this installation's "
+               "documents live' is how the two diverge."),
         c("Generation_Enabled", "Boolean", req=True, indexed=True,
           note="THE onboarding gate. EOM-01 generates only where this is TRUE. A base "
                "with it FALSE reads as 'not yet onboarded', never as compliant. Flip it "
@@ -400,7 +409,14 @@ MF_Facility = ListDef(
                "facility, and they legitimately have no model. A facility with no "
                "model generates nothing and is surfaced by the health check, never "
                "read as compliant."),
-        c("Program_Type", "Text", note="QRG programme string, e.g. 'Legacy - SB'."),
+        c("Source_Operating_Model", "Text",
+          note="The feeding type AS THE QRG WRITES IT, before normalisation. "
+               "Operating_Model above is the normalised value the requirement "
+               "catalogue filters on -- the QRG says 'Legacy', the catalogue "
+               "says 'Legacy/APF'. Keeping the raw string means a mapping can "
+               "be corrected without re-reading the source, and an unmapped "
+               "value is visible rather than silently blank."),
+c("Program_Type", "Text", note="QRG programme string, e.g. 'Legacy - SB'."),
         c("Contract_Type", "Text", note="Mess Attendant, Aramark, Sodexo, and so on."),
         c("Primary_PV", "Text", note="Prime vendor."),
         c("POS_Terminals_Raw", "Text", note="As recorded in the QRG. Unparsed."),
@@ -604,11 +620,23 @@ MF_EOM_Submission = ListDef(
     title="MF EOM Submission",
     grain="One row per uploaded file version",
     volume_estimate=400000,
-    unique_key=("Submission_ID",),
+    unique_key=("Submission_ID", "Submission_Request_ID"),
     note="Versioned evidence. v1 Correction Required and v2 Accepted both persist; "
          "nothing is overwritten or deleted. QC applies to the Is_Current version.",
     columns=(
         c("Submission_ID", "Text", req=True, indexed=True),
+        c("Submission_Request_ID", "Text", req=True, indexed=True,
+          note="IDEMPOTENCY KEY. A GUID minted by the app BEFORE the file is "
+               "sent, and resent unchanged on every retry of the same user "
+               "action. EOM-02 looks it up before writing anything; a second "
+               "arrival returns the first result instead of creating a second "
+               "file and a second row.\n"
+               "On a government network a user pressing Submit again after a "
+               "timeout is the NORMAL case, not the edge case -- the request "
+               "usually succeeded and the response was lost. Disabling the "
+               "button in Power Apps is not protection: the flow can be "
+               "invoked directly, and the client that timed out is the one "
+               "that cannot know what happened."),
         c("EOM_Item_ID", "Text", req=True, indexed=True),
         c("Version_No", "Number", req=True, note="Assigned by upload timestamp order"),
         c("File_Name", "Text", req=True,

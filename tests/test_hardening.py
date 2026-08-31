@@ -23,7 +23,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 import prerelease_scan as SCAN            # noqa: E402
-from generate_expected_items import generate  # noqa: E402
+from generate_expected_items import generate, onboard  # noqa: E402
 from vocabulary_guard import (            # noqa: E402
     VocabularyMismatch, check_requirement_filters, check_vocabulary,
     observed_values, split_terms,
@@ -34,6 +34,13 @@ def load(name):
     with open(os.path.join(ROOT, "configuration", f"{name}.csv"),
               encoding="utf-8-sig") as fh:
         return list(csv.DictReader(fh))
+
+
+def onboarded_installations():
+    """installations.csv is generated and ships every row disabled. The pilot
+    onboarding is a separate, human-authored file -- see
+    generate_expected_items.onboard()."""
+    return onboard(load("installations"), load("pilot-onboarding"))
 
 
 class SplittingFilters(unittest.TestCase):
@@ -87,7 +94,7 @@ class TheGuardCatchesTheDefectThatCostAMonth(unittest.TestCase):
 
     def setUp(self):
         self.reqs = load("requirements")
-        self.insts = load("installations")
+        self.insts = onboarded_installations()
         self.facs = load("facilities")
 
     def de_normalise(self):
@@ -144,7 +151,7 @@ class EmptyFilterMeansNoConstraint(unittest.TestCase):
 
     def test_the_generator_reports_facilities_needing_a_type(self):
         # Generating on unknown is only safe because it is visible.
-        _, stats = generate(load("requirements"), load("installations"),
+        _, stats = generate(load("requirements"), onboarded_installations(),
                             load("facilities"), "2026-08")
         self.assertIn("facilities_without_type", stats)
 
@@ -252,3 +259,71 @@ class TheScanStillPasses(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConnectorsMatchTheAllowlist(unittest.TestCase):
+    """Every declared connection reference must be on the allowlist.
+
+    An unused connection reference is not free: it prompts at import, it needs
+    a DLP conversation with the tenant admin, and it widens the app's declared
+    surface for no behaviour. A Teams reference shipped for two releases that
+    nothing used.
+    """
+
+    def setUp(self):
+        import json
+        with open(os.path.join(ROOT, "configuration",
+                               "connection-references.json"),
+                  encoding="utf-8") as fh:
+            self.refs = json.load(fh)["connectionReferences"]
+        with open(os.path.join(ROOT, "security", "connector-allowlist.yaml"),
+                  encoding="utf-8") as fh:
+            self.allowlist = fh.read()
+
+    def connector_id(self, ref):
+        return ref["connectorId"].rsplit("/", 1)[-1].replace("shared_", "")
+
+    def allowed_ids(self):
+        # Everything under `allowed:` or `conditional:`, before `prohibited_r1:`.
+        head = self.allowlist.split("prohibited_r1:")[0]
+        return set(re.findall(r"- id:\s*(\S+)", head))
+
+    def prohibited_ids(self):
+        tail = self.allowlist.split("prohibited_r1:")[1].split("rules:")[0]
+        return set(re.findall(r"- id:\s*(\S+)", tail))
+
+    def test_every_declared_connector_is_allowed(self):
+        allowed = self.allowed_ids()
+        for ref in self.refs:
+            cid = self.connector_id(ref)
+            # office365 is Outlook; the allowlist names it office365outlook.
+            cid = {"office365": "office365outlook"}.get(cid, cid)
+            self.assertIn(cid, allowed,
+                          f"{ref['schemaName']} declares {cid}, which is not on "
+                          "the allowlist. Add it there and to the security "
+                          "manifest first, or remove the reference.")
+
+    def test_no_prohibited_connector_is_declared(self):
+        prohibited = self.prohibited_ids()
+        for ref in self.refs:
+            self.assertNotIn(self.connector_id(ref), prohibited)
+
+    def test_the_data_layer_connector_is_present(self):
+        ids = {self.connector_id(r) for r in self.refs}
+        self.assertIn("sharepointonline", ids)
+
+    def test_no_teams_connector(self):
+        # Removed in the R1 consolidation: nothing used it.
+        ids = {self.connector_id(r) for r in self.refs}
+        self.assertNotIn("teams", ids)
+
+    def test_every_conditional_connector_declares_a_fallback(self):
+        # "Degrade, do not block" is only true if somebody wrote down how.
+        block = self.allowlist.split("conditional:")[1].split("prohibited_r1:")[0]
+        entries = [e for e in block.split("- id:") if e.strip()]
+        self.assertGreaterEqual(len(entries), 3)
+        for entry in entries:
+            self.assertIn("fallback:", entry)
+            fallback = entry.split("fallback:")[1].split("\n")[0].strip()
+            self.assertTrue(fallback and fallback != '""',
+                            f"a conditional connector has no fallback: {entry[:40]}")

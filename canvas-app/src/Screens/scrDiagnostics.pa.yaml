@@ -81,6 +81,7 @@ Screens:
                 Properties:
                   Text: |
                     ="App version: " & gblAppVersion & Char(10) &
+                     "Schema version expected by this app: " & MF_ExpectedSchemaVersion & Char(10) &
                      "Schema version in config: " & gblSchemaVersion & Char(10) &
                      "Tenant cloud: " & gblTenantCloud & Char(10) &
                      "Open period: " & gblOpenPeriod & "   Selected: " & locPeriod & Char(10) &
@@ -95,9 +96,9 @@ Screens:
                 Properties:
                   # A schema mismatch is the failure that produces baffling
                   # blank columns. Surface it rather than debugging it twice.
-                  Text: ="WARNING: MF App Config SchemaVersion does not read 3.0. The lists may not match what this app expects."
+                  Text: =MF_SchemaMismatchDetail
                   Color: =clrStatusRed
-                  Visible: =gblSchemaVersion <> "3.0"
+                  Visible: =!gblSchemaMatches
                   AutoHeight: =true
                   Live: =Live.Polite
                   TabIndex: =-1

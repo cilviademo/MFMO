@@ -249,8 +249,27 @@ def resolve_destination_folder(destination, period, list_children):
 
 
 def _fall_back(policy, root, note, fiscal_year_folder=None):
+    """THE FALLBACK CEILING.
+
+    The fallback writes to the approved Monthly Data Call root and **never
+    above it** — not to the site root, not to the library root, not to another
+    portfolio. A file that lands above the approved root looks like it worked:
+    it is in SharePoint, the upload returned success, and it is somewhere
+    nobody will ever look. That is strictly worse than a failed upload, because
+    a failed upload gets retried.
+
+    `root` is built from the destination row's own Library_Name and
+    Root_Folder, so it cannot be anything else — but the assertion is here
+    anyway, because "it cannot happen" is what every silent failure in this
+    programme has had in common.
+    """
     if policy == "FIND_OR_FAIL":
         raise DestinationNotUsable("DESTINATION_FOLDER_NOT_FOUND", note)
+    if not root or len(root.split(SEP)) < 2:
+        raise DestinationNotUsable(
+            "DESTINATION_NOT_CONFIGURED",
+            f"refusing to fall back to {root!r}: that is at or above the "
+            "library root, not the approved Monthly Data Call root")
     return Resolution(path=root, needs_filing=True, note=note,
                       fiscal_year_folder=fiscal_year_folder)
 

@@ -20,18 +20,59 @@ MF_FacilityChoices(InstallationId: Text): Table =
         Filter(MF_MyFacilities, Installation_ID = InstallationId),
         "Facility_Name", SortOrder.Ascending );
 
+// --- applicability, defined once -----------------------------------------
+// These two mirror model_applies() and facility_type_applies() in
+// scripts/generate_expected_items.py line for line, and
+// tests/test_duplication.py holds them to it. EOM-01 decides what is EXPECTED;
+// these decide what a user may FILE against. Different questions, deliberately
+// the same predicate -- a dropdown that offers a requirement EOM-01 would
+// never generate, or hides one it would, is a dropdown that argues with the
+// checklist beside it.
+
+// 'All' applies regardless of model. A facility with NO model -- the NO_DFAC
+// registry rows -- matches nothing: a base with no feeding facility owes no
+// 1119.
+MF_ModelApplies(ApplicableModel: Text, OperatingModel: Text): Boolean =
+    !IsBlank(Trim(OperatingModel))
+    && ( ApplicableModel = "All" || ApplicableModel = OperatingModel );
+
+// A blank REQUIREMENT list means every type. A blank FACILITY type means
+// unknown, and unknown MATCHES -- the QRG carries no facility type for any
+// row, so excluding on it would hide every type-scoped requirement from every
+// facility.
+//
+// The inline predicate this replaced got the blank-type case right only by
+// accident, and got a real type that is a substring of another wrong. See
+// docs/DUPLICATION_AUDIT.md for what it was and why it looked correct.
+//
+// Matching is on a DELIMITED EXACT TERM: both sides are wrapped in the
+// separator so ";MAF;" cannot match inside ";MAFFO;". Spaces around the
+// separators are normalised first, because the seed writes
+// "Main DFAC; Flight Kitchen" and a human editing the list will too.
+MF_FacilityTypeApplies(ApplicableTypes: Text, FacilityType: Text): Boolean =
+    IsBlank(Trim(ApplicableTypes))
+    || IsBlank(Trim(FacilityType))
+    || With( { list: ";" & Substitute(Substitute(Trim(ApplicableTypes),
+                                                 "; ", ";"), " ;", ";") & ";" },
+             (";" & Trim(FacilityType) & ";") in list );
+
 // Facility-scope requirements applicable to ONE facility's model and type.
 // Installation- and Contract-scope requirements are deliberately absent: they
 // belong on the installation screen, not in a facility's upload box, and
 // putting them here is how a DFAC manager ends up filing the base's SIK bill.
+//
+// DELEGATION: Active_Flag and Requirement_Scope are indexed and delegable, and
+// MF EOM Requirement holds ~13 rows -- three orders of magnitude below the
+// ceiling -- so the two applicability predicates run client-side without risk.
+// This is the ONLY place in the app where that is acceptable, and it is
+// acceptable only because the table is bounded by the requirement catalogue.
 MF_RequirementChoices(OperatingModel: Text, FacilityType: Text): Table =
     SortByColumns(
-        Filter( 'MF EOM Requirement',
-                Active_Flag = true,
-                Requirement_Scope = "Facility",
-                Applicable_Model = OperatingModel || Applicable_Model = "All",
-                IsBlank(Applicable_Facility_Types)
-                    || FacilityType in Applicable_Facility_Types ),
+        Filter( Filter( 'MF EOM Requirement',
+                        Active_Flag = true,
+                        Requirement_Scope = "Facility" ),
+                MF_ModelApplies(Applicable_Model, OperatingModel),
+                MF_FacilityTypeApplies(Applicable_Facility_Types, FacilityType) ),
         "Sort_Order", SortOrder.Ascending );
 
 // Installation- and Contract-scope requirements for the installation screen.

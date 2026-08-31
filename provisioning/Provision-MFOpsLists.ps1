@@ -26,9 +26,6 @@
     per cloud. This deployment is UsGovDod. Pointing the wrong cloud's endpoints
     at a tenant fails in ways that look like a permissions problem.
 
-.PARAMETER EvidenceLibraryPath
-    Server-relative path of the evidence document library to create or verify.
-
 .PARAMETER WhatIf
     Report what would change without changing it. Run this first, always.
 
@@ -46,7 +43,6 @@ param(
     [Parameter(Mandatory = $true)][string] $SiteUrl,
     [Parameter(Mandatory = $true)][ValidateSet('UsGov', 'UsGovHigh', 'UsGovDod')][string] $TenantCloud,
     [string] $SchemaJson = (Join-Path $PSScriptRoot 'schema.generated.json'),
-    [string] $EvidenceLibraryPath = 'Mission Feeding Evidence',
     [switch] $EmitRestOnly,
     [switch] $SkipIndexes
 )
@@ -56,7 +52,7 @@ Set-StrictMode -Version Latest
 
 $script:ExpectedSchemaVersion = '5.0'
 $script:ExpectedListCount     = 17
-$script:ExpectedColumnCount   = 282
+$script:ExpectedColumnCount   = 284
 
 # PnP's cloud identifier differs from the PAC CLI's.
 $script:PnPEnvironment = switch ($TenantCloud) {
@@ -236,30 +232,17 @@ function New-MFList {
     }
 }
 
-function New-EvidenceLibrary {
-    Write-Step "Document library '$EvidenceLibraryPath'"
-    if ($EmitRestOnly) { Write-Skip 'skipped in REST-only mode'; return }
-
-    $lib = Get-PnPList -Identity $EvidenceLibraryPath -ErrorAction SilentlyContinue
-    if ($null -eq $lib) {
-        if ($PSCmdlet.ShouldProcess($EvidenceLibraryPath, 'Create document library')) {
-            New-PnPList -Title $EvidenceLibraryPath -Template DocumentLibrary -OnQuickLaunch:$false | Out-Null
-            Write-Ok 'created'
-        }
-    }
-    else { Write-Skip 'library exists' }
-
-    if ($PSCmdlet.ShouldProcess($EvidenceLibraryPath, 'Enable versioning')) {
-        # Never overwrite a file. Major versions only; 500 is the ceiling.
-        Set-PnPList -Identity $EvidenceLibraryPath -EnableVersioning $true -MajorVersions 500 | Out-Null
-        Write-Ok 'versioning on, 500 major versions'
-    }
-
-    # EOM-02 triggers at library level, not folder level: a folder-level
-    # trigger silently misses everything dropped into a folder created after
-    # the flow was authored.
-    Write-Skip 'EOM-02 binds to this library at library level (see flows/EOM02b-LegacyIntake)'
-}
+# THIS SCRIPT CREATES NO DOCUMENT LIBRARY.
+#
+# An earlier design wrote every submission into one central library on this
+# site. It is retired: R1 places evidence directly in its portfolio's own
+# authoritative destination, and there is ONE authoritative copy. A second copy
+# creates ambiguity about which is authoritative, a retention problem, and
+# broken links when the two diverge. docs/DECISION_LOG.md D-01.
+#
+# The four destination libraries ALREADY EXIST, on four separate site
+# collections, and are not provisioned from here. They are bound at import --
+# deployment/site-bindings.md and deployment/DEPENDENCY_MANIFEST.md.
 
 function Test-Indexes {
     param($Schema)
@@ -304,7 +287,6 @@ if (-not $EmitRestOnly) {
 }
 
 foreach ($listDef in $schema.lists) { New-MFList -ListDefinition $listDef }
-New-EvidenceLibrary
 if (-not $SkipIndexes) { Test-Indexes -Schema $schema }
 
 Write-Host ''

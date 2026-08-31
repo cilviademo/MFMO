@@ -282,16 +282,87 @@ class TestConfigurationSeeds(unittest.TestCase):
             if model:
                 self.assertIn(model, S.OPERATING_MODEL, f["Facility_ID"])
 
-    def test_the_onboarding_gate_starts_closed_for_all_but_the_pilot(self):
+    def test_the_generated_registry_onboards_nobody(self):
+        # installations.csv is GENERATED. Every row ships disabled, and a hand
+        # edit here is how the generator went stale before: somebody corrected
+        # the output, nobody corrected the generator, and the next regeneration
+        # silently reverted it.
         rows = read_csv("installations.csv")
-        enabled = [i for i in rows if i["Generation_Enabled"] == "TRUE"]
-        self.assertTrue(enabled, "a pilot set must be onboarded to exercise EOM-01")
-        self.assertLess(len(enabled), len(rows) // 2,
+        self.assertTrue(rows)
+        for i in rows:
+            self.assertEqual(i["Generation_Enabled"], "FALSE",
+                             f"{i['Installation_ID']} is onboarded in a "
+                             "generated file")
+
+    def test_the_pilot_is_onboarded_in_its_own_file_with_sign_off(self):
+        pilot = read_csv("pilot-onboarding.csv")
+        rows = read_csv("installations.csv")
+        known = {i["Installation_ID"] for i in rows}
+        self.assertTrue(pilot, "a pilot set must be onboarded to exercise EOM-01")
+        self.assertLess(len(pilot), len(rows) // 2,
                         "onboarding is per base, after the registry is validated")
-        for i in enabled:
-            self.assertTrue(i["Registry_Validated_By"].strip(),
-                            f"{i['Installation_ID']} is enabled with no sign-off")
-            self.assertTrue(i["Registry_Validated_Date"].strip(), i["Installation_ID"])
+        for p in pilot:
+            self.assertIn(p["Installation_ID"], known,
+                          "an installation cannot be onboarded before it exists")
+            self.assertTrue(p["Registry_Validated_By"].strip(),
+                            f"{p['Installation_ID']} is enabled with no sign-off")
+            self.assertTrue(p["Registry_Validated_Date"].strip(),
+                            p["Installation_ID"])
+
+    def test_the_registry_generator_reproduces_the_committed_files(self):
+        """The generator and its output must not drift apart.
+
+        They did: the committed CSVs carried normalised operating models and a
+        Facility_Type column, and the generator emitted neither. Regenerating
+        would have silently reintroduced the vocabulary mismatch that made
+        every facility-scope requirement match nothing -- the defect that cost
+        a month.
+        """
+        import hashlib
+        import subprocess
+        names = ("installations.csv", "facilities.csv", "qrg-data-quality.csv")
+        paths = [os.path.join(ROOT, "configuration", n) for n in names]
+        before = {p: hashlib.sha256(open(p, "rb").read()).hexdigest()
+                  for p in paths}
+        try:
+            r = subprocess.run(
+                [sys.executable, os.path.join(ROOT, "scripts", "gen_registry.py")],
+                capture_output=True, text=True, cwd=ROOT)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            after = {p: hashlib.sha256(open(p, "rb").read()).hexdigest()
+                     for p in paths}
+        finally:
+            pass
+        drifted = [os.path.basename(p) for p in paths if before[p] != after[p]]
+        self.assertEqual(
+            drifted, [],
+            "regenerating changed these files, so the committed copy is not "
+            "what the generator produces. Fix the GENERATOR, never the output.")
+
+    def test_the_generated_registry_uses_the_requirement_vocabulary(self):
+        # C16, held. The QRG says 'Legacy'; the catalogue filters 'Legacy/APF'.
+        models = {f["Operating_Model"] for f in read_csv("facilities.csv")
+                  if f["Operating_Model"]}
+        for m in models:
+            self.assertIn(m, S.OPERATING_MODEL,
+                          f"{m!r} is not a value any requirement filters on")
+        raw = {f["Source_Operating_Model"] for f in read_csv("facilities.csv")
+               if f["Source_Operating_Model"]}
+        self.assertTrue(raw, "the raw QRG value is not preserved")
+        self.assertIn("Legacy", raw,
+                      "normalisation has stopped being visible in the data")
+
+    def test_applying_the_pilot_onboards_exactly_that_set(self):
+        import sys as _sys
+        _sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        from generate_expected_items import onboard
+        merged = onboard(read_csv("installations.csv"),
+                         read_csv("pilot-onboarding.csv"))
+        enabled = {i["Installation_ID"] for i in merged
+                   if i["Generation_Enabled"] == "TRUE"}
+        self.assertEqual(
+            enabled,
+            {p["Installation_ID"] for p in read_csv("pilot-onboarding.csv")})
 
     def test_two_notification_rules_ship_enabled(self):
         rows = read_csv("notification-rules.csv")

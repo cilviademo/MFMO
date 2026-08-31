@@ -44,38 +44,121 @@
     </connectionreference>
   </connectionreferences>
 
-  <!-- Definitions only. Every value is supplied at import time, and every one
-       has a matching MF_App_Config row so neither path is load-bearing alone.
-       The full set is in configuration/environment-variables.json. -->
+  <!-- Definitions only. Every value is supplied at import time and every
+       default is blank. Generated from
+       configuration/environment-variables.json; tests/test_package.py fails if
+       the two disagree.
+
+       The four MF_Portfolio*_SiteURL variables are four SEPARATE SITE
+       COLLECTIONS, not four folders in one library. Their slugs are not
+       consistent. deployment/site-bindings.md. -->
   <environmentvariables>
     <environmentvariabledefinition schemaname="mfops_MF_SharePointSiteURL">
       <displayname>MF_SharePointSiteURL</displayname>
-      <description>Site collection holding the MF lists. No URL is hard-coded anywhere in the app, the flows or the scripts.</description>
+      <description>DEV site collection URL for the MF Operations lists</description>
       <type>100000000</type>
       <isrequired>1</isrequired>
     </environmentvariabledefinition>
-    <environmentvariabledefinition schemaname="mfops_MF_FileIntakeLibrary">
-      <displayname>MF_FileIntakeLibrary</displayname>
-      <description>Document library where the Portfolio FY folders live. EOM-02 binds to it at LIBRARY level, not folder level.</description>
+    <environmentvariabledefinition schemaname="mfops_MF_Portfolio1_SiteURL">
+      <displayname>MF_Portfolio1_SiteURL</displayname>
+      <description>Site collection URL for Portfolio 1. The four portfolios are four SEPARATE site collections with inconsistent slugs — bind each one from what is on the site, never by pattern from another. Blank in source.</description>
       <type>100000000</type>
       <isrequired>1</isrequired>
     </environmentvariabledefinition>
-    <environmentvariabledefinition schemaname="mfops_MF_EvidenceRootPath">
-      <displayname>MF_EvidenceRootPath</displayname>
-      <description>Where EOM-05 writes. EOM-02 ignores everything under here, so the app's own writes never come back round as unclassified strays.</description>
+    <environmentvariabledefinition schemaname="mfops_MF_Portfolio2_SiteURL">
+      <displayname>MF_Portfolio2_SiteURL</displayname>
+      <description>Site collection URL for Portfolio 2. THIS IS THE ODD ONE: its slug carries a 'Legacy_' prefix the other three do not. A URL built by pattern 404s here and nowhere else. Blank in source.</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_Portfolio3_SiteURL">
+      <displayname>MF_Portfolio3_SiteURL</displayname>
+      <description>Site collection URL for Portfolio 3. The four portfolios are four SEPARATE site collections with inconsistent slugs — bind each one from what is on the site, never by pattern from another. Blank in source.</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_Portfolio4_SiteURL">
+      <displayname>MF_Portfolio4_SiteURL</displayname>
+      <description>Site collection URL for Portfolio 4. The four portfolios are four SEPARATE site collections with inconsistent slugs — bind each one from what is on the site, never by pattern from another. Blank in source.</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_RequirementList">
+      <displayname>MF_RequirementList</displayname>
+      <description>MF EOM Requirement</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_ItemList">
+      <displayname>MF_ItemList</displayname>
+      <description>MF EOM Item</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_SubmissionList">
+      <displayname>MF_SubmissionList</displayname>
+      <description>MF EOM Submission</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_UnmatchedList">
+      <displayname>MF_UnmatchedList</displayname>
+      <description>MF Unmatched File</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_SecurityList">
+      <displayname>MF_SecurityList</displayname>
+      <description>MF Security Mapping</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_AuditList">
+      <displayname>MF_AuditList</displayname>
+      <description>MF EOM Audit</description>
       <type>100000000</type>
       <isrequired>1</isrequired>
     </environmentvariabledefinition>
     <environmentvariabledefinition schemaname="mfops_MF_PowerBIReportURL">
       <displayname>MF_PowerBIReportURL</displayname>
-      <description>COP deep link. The government service URL differs by cloud and must be supplied at import.</description>
+      <description>COP report deep link for the Home screen button</description>
       <type>100000000</type>
       <isrequired>0</isrequired>
     </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_CurrentFiscalYear">
+      <displayname>MF_CurrentFiscalYear</displayname>
+      <description>FY2027</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
     <environmentvariabledefinition schemaname="mfops_MF_NotificationsEnabled">
       <displayname>MF_NotificationsEnabled</displayname>
-      <description>Master switch for EOM-04. Ship FALSE; enable after reading the suppressed-send log for a full cycle.</description>
+      <description>Master switch. Ship FALSE; enable after UAT.</description>
       <type>100000001</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_EscalationDaysOverdue">
+      <displayname>MF_EscalationDaysOverdue</displayname>
+      <description>Days past suspense before escalation. Default 5.</description>
+      <type>100000002</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_StatusList">
+      <displayname>MF_StatusList</displayname>
+      <description>MF EOM Status - the canonical Power BI fact</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_ConfigList">
+      <displayname>MF_ConfigList</displayname>
+      <description>MF App Config - read first, environment variables second</description>
+      <type>100000000</type>
+      <isrequired>1</isrequired>
+    </environmentvariabledefinition>
+    <environmentvariabledefinition schemaname="mfops_MF_TenantCloud">
+      <displayname>MF_TenantCloud</displayname>
+      <description>UsGov | UsGovHigh | UsGovDod. This deployment is UsGovDod. Confirm the Power Platform environment is in the same tenant as the SharePoint sites.</description>
+      <type>100000000</type>
       <isrequired>1</isrequired>
     </environmentvariabledefinition>
   </environmentvariables>

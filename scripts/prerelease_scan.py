@@ -15,6 +15,12 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__", "dist", ".figma", "data",
              # imported, kept only so a decision can be traced to what it came
              # from — and they necessarily quote the strings they forbid.
              "reference", "handoffs"}
+# Path-anchored, not name-anchored: a directory called "archive" anywhere else
+# in the tree is still scanned. Superseded documentation lives here with a
+# header naming what replaced it, and a superseded document necessarily quotes
+# the endpoints and structures it was superseded FOR. Nothing here is on the
+# packaging path.
+SKIP_PATHS = {os.path.join(ROOT, "docs", "archive")}
 # These files name prohibited strings in order to prohibit them. Excluding a
 # rule would weaken the gate for everyone; excluding the four documents that
 # define the gate does not. Nothing here is imported into Power Platform.
@@ -154,12 +160,15 @@ REQUIRED_FILES = [
     "CHANGELOG.md",
     "ROLLBACK.md",
     "deployment/site-bindings.md",
+    "deployment/DEPENDENCY_MANIFEST.md",
 ]
 
 
 def walk():
     for base, dirs, files in os.walk(ROOT):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        dirs[:] = [d for d in dirs
+                   if d not in SKIP_DIRS
+                   and os.path.join(base, d) not in SKIP_PATHS]
         for f in files:
             if f in SKIP_FILES:
                 continue

@@ -2,17 +2,17 @@
 
 # Data model
 
-Schema version **5.0** — **17 lists**, **282 columns**.
+Schema version **5.0** — **17 lists**, **284 columns**.
 
 Derived from the V3 build with the corrections recorded in [`handoffs/RECONCILIATION.md`](handoffs/RECONCILIATION.md). Regenerate with `python3 scripts/eom_schema.py --markdown > docs/data-model.md`.
 
 | List | Grain | Columns | Indexed | Est. rows (yr 1) |
 |---|---|---:|---:|---:|
 | `MF_Installation` | One row per installation | 18 | 4 | 103 |
-| `MF_Facility` | One row per feeding facility | 18 | 5 | 154 |
+| `MF_Facility` | One row per feeding facility | 19 | 5 | 154 |
 | `MF_EOM_Requirement` | One row per document requirement per operating model | 23 | 4 | 200 |
 | `MF_EOM_Item` | One PERSISTENT row per expected submission per reporting period | 32 | 13 | 250,000 |
-| `MF_EOM_Submission` | One row per uploaded file version | 31 | 11 | 400,000 |
+| `MF_EOM_Submission` | One row per uploaded file version | 32 | 12 | 400,000 |
 | `MF_Unmatched_File` | One row per file found in the FY folder that could not be resolved | 13 | 4 | 5,000 |
 | `MF_Security_Mapping` | One row per user per granted scope | 20 | 8 | 5,000 |
 | `MF_EOM_Audit` | One row per state change | 9 | 4 | 1,000,000 |
@@ -43,7 +43,8 @@ Unique key: `Installation_ID`
 | `Portfolio_ID` | Text | Y | Y |  |
 | `MAJCOM` | Text |  |  |  |
 | `Component` | Choice | Y |  | Active, ANG or AFRC. ANG routes EOY inventory to NGB/A1X, not AFSVC/VMF — see MF_EOM_Requirement.Routing_Org. Choices: `Active`, `ANG`, `AFRC`. |
-| `EOM_Folder_URL` | URL |  |  | Teams/SharePoint folder root for this installation |
+| `EOM_Folder_URL` | URL |  |  | OPTIONAL convenience deep link, set by an administrator, shown on scrInstallation as 'open this folder in SharePoint'. Blank in the seed and blank by default -- the registry generator has no site to point at, and a .mil URL in source is a destination leak.
+IT IS NOT A ROUTING MECHANISM. EOM-02 resolves where a file goes from MF_Document_Destination and never reads this. A second place that answers 'where do this installation's documents live' is how the two diverge. |
 | `Generation_Enabled` | Boolean | Y | Y | THE onboarding gate. EOM-01 generates only where this is TRUE. A base with it FALSE reads as 'not yet onboarded', never as compliant. Flip it after the facilities and operating models are populated and validated. |
 | `Registry_Validated_By` | Text |  |  | Who signed off this base's registry entry. |
 | `Registry_Validated_Date` | DateTime |  |  |  |
@@ -72,6 +73,7 @@ Unique key: `Facility_ID`
 | `Unit` | Text |  |  | Owning unit, e.g. 97 FSS. |
 | `Facility_Type` | Choice |  |  | Nullable: the QRG does not carry it for every row, and guessing a type would silently change which requirements generate. Choices: `Main DFAC`, `Flight Kitchen`, `Kiosk`, `Satellite`, `MAF`, `Contract Cafe`. |
 | `Operating_Model` | Choice |  | Y | Drives which requirements apply to THIS facility. NULLABLE: the twenty NO_DFAC registry rows record that a base has no feeding facility, and they legitimately have no model. A facility with no model generates nothing and is surfaced by the health check, never read as compliant. Choices: `Legacy/APF`, `Food 2.0`, `MAFFO/MAF`, `AOR/CDS`. |
+| `Source_Operating_Model` | Text |  |  | The feeding type AS THE QRG WRITES IT, before normalisation. Operating_Model above is the normalised value the requirement catalogue filters on -- the QRG says 'Legacy', the catalogue says 'Legacy/APF'. Keeping the raw string means a mapping can be corrected without re-reading the source, and an unmapped value is visible rather than silently blank. |
 | `Program_Type` | Text |  |  | QRG programme string, e.g. 'Legacy - SB'. |
 | `Contract_Type` | Text |  |  | Mess Attendant, Aramark, Sodexo, and so on. |
 | `Primary_PV` | Text |  |  | Prime vendor. |
@@ -167,11 +169,13 @@ Unique key: `EOM_Item_ID`
 
 Versioned evidence. v1 Correction Required and v2 Accepted both persist; nothing is overwritten or deleted. QC applies to the Is_Current version.
 
-Unique key: `Submission_ID`
+Unique key: `Submission_ID`, `Submission_Request_ID`
 
 | Column | Type | Req | Idx | Notes |
 |---|---|:-:|:-:|---|
 | `Submission_ID` | Text | Y | Y |  |
+| `Submission_Request_ID` | Text | Y | Y | IDEMPOTENCY KEY. A GUID minted by the app BEFORE the file is sent, and resent unchanged on every retry of the same user action. EOM-02 looks it up before writing anything; a second arrival returns the first result instead of creating a second file and a second row.
+On a government network a user pressing Submit again after a timeout is the NORMAL case, not the edge case -- the request usually succeeded and the response was lost. Disabling the button in Power Apps is not protection: the flow can be invoked directly, and the client that timed out is the one that cannot know what happened. |
 | `EOM_Item_ID` | Text | Y | Y |  |
 | `Version_No` | Number | Y |  | Assigned by upload timestamp order |
 | `File_Name` | Text | Y |  | As uploaded. No naming convention required, and the name is never read for meaning. |

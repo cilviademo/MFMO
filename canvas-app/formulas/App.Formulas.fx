@@ -39,14 +39,32 @@ MF_ConfigBool(Key: Text, Fallback: Boolean): Boolean =
     Switch( Lower(MF_Config(Key, "")), "true", true, "false", false, Fallback );
 
 gblAppVersion     = MF_Config("AppVersion", "0.0.0-unconfigured");
+
+// --- schema compatibility ------------------------------------------------
+// THE SCHEMA VERSION THIS BUILD WAS COMPILED AGAINST. A literal, deliberately:
+// it is a property of the PACKAGE, not of the environment, and reading it from
+// the environment would make the check compare a value with itself.
+//
+// Bump it in the same commit as scripts/eom_schema.py SCHEMA_VERSION.
+// tests/test_schema_manifest.py fails if the two drift apart.
+MF_ExpectedSchemaVersion = "5.0";
+
+// What is actually deployed, from MF_App_Config. "unknown" when the config
+// list did not load -- which is itself a mismatch, not a pass.
 gblSchemaVersion  = MF_Config("SchemaVersion", "unknown");
+
+// A NEWER APP MUST NEVER WRITE AGAINST AN OLDER SCHEMA. It would patch columns
+// that do not exist yet -- which does not error in Power Apps, it writes
+// nothing -- and a document would read as submitted while nothing was
+// recorded. Every flow makes the same comparison independently; the app being
+// polite is not a control.
+gblSchemaMatches  = gblSchemaVersion = MF_ExpectedSchemaVersion;
 gblTenantCloud    = MF_Config("TenantCloud", "UNKNOWN");
 gblOpenPeriod     = MF_Config("OpenReportingPeriod", Text(DateAdd(Today(), -1, Months), "yyyy-mm"));
 gblFiscalYear     = MF_Config("CurrentFiscalYear", "");
 gblSupportMessage = MF_Config("SupportMessage", "Mission Feeding Operations is briefly unavailable for maintenance.");
 gblSupportContact = MF_Config("SupportContact", "");
 gblPowerBIURL     = MF_Config("PowerBIReportURL", "");
-gblEOMRootPath    = MF_Config("EOM_Root_Path", "/EOM");
 
 // The kill switch. Both default FALSE: a configuration outage must not lock
 // every user out, and must not silently unlock writes either — the flows check
@@ -142,15 +160,33 @@ gblMyFacility     = First(MF_LiveScope).Facility_ID;
 
 // Write access: read-only mode locks everyone except developers, and
 // maintenance mode locks everyone except developers and admins.
-gblCanWrite     = !gblReadOnlyMode || gblIsDeveloper;
+// A schema mismatch disables writes for EVERYONE, developers included. Read-only
+// mode is an operational decision a developer may need to work around; a schema
+// mismatch is a statement that this build does not know the shape of the data,
+// and a developer writing anyway is exactly how it becomes unrecoverable.
+gblCanWrite     = gblSchemaMatches && (!gblReadOnlyMode || gblIsDeveloper);
 gblCanEnterApp  = !gblMaintenanceMode || gblIsDeveloper || gblCanEditReqs;
 
 MF_WriteMode    = If(gblCanWrite, DisplayMode.Edit, DisplayMode.Disabled);
 
 MF_ReadOnlyBanner =
-    If( gblReadOnlyMode,
+    If( !gblSchemaMatches,
+        "This version of the app does not match the data it is connected to. " &
+        "Submitting is disabled until an administrator resolves it. " &
+        "Nothing you have already submitted is affected.",
+        gblReadOnlyMode,
         "The app is read-only while we finish maintenance. You can view status but not submit.",
         "" );
+
+// Admin-facing, and specific enough to act on. Never shown to a base user --
+// the two version strings are a deployment detail, not their problem.
+MF_SchemaMismatchDetail =
+    If( gblSchemaMatches, "",
+        $"CONFIGURATION_REQUIRED: this app expects schema {MF_ExpectedSchemaVersion}, " &
+        $"MF_App_Config reports '{gblSchemaVersion}'. Either the lists were " &
+        "provisioned from a different schema version, or MF_App_Config was not " &
+        "reseeded after they were. Run provisioning/Seed-MFOpsConfiguration.ps1. " &
+        "See docs/SHAREPOINT_SCHEMA_MANIFEST.md." );
 
 // The gate, evaluated before any screen renders. Unmapped users get a clear
 // route to fix it, not an empty app.
@@ -158,6 +194,9 @@ MF_StartScreen =
     If( !gblHasAccess,      scrNoAccess,
         !gblCanEnterApp,    scrMaintenance,
         scrHome );
+// A schema mismatch does NOT bounce the user out. They keep read access to
+// their own status, which is the thing they came for and which is still true.
+// It is writing that stops.
 
 
 // --- feature flags -------------------------------------------------------

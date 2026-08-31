@@ -40,6 +40,28 @@ sets of permissions and, per option 1 below, four libraries to break inheritance
 in, each with its own admin to persuade. `deployment/site-bindings.md` asks who
 administers each site for exactly this reason.
 
+## The same gap, on the audit list
+
+`MF_EOM_Audit.Actor_UPN` and `MF_EOM_Submission.Uploaded_By` are written by the
+app as `User().Email`. Inside the app that is the authenticated identity and a
+user cannot forge it — Power Apps derives it from the signed-in session, not
+from anything the user controls.
+
+**It is not enforced at the data layer.** A user with direct write access to
+`MF_EOM_Audit` could create a row attributing an action to somebody else. That
+is the same exposure as installation scope, on the same lists, and it closes
+the same way: deny end-user write on `MF_EOM_Audit` and `MF_EOM_Submission`,
+and let the flows write those rows under the application connection.
+
+Doing that also removes the last reason for a base user to hold write
+permission on anything but the item list, which makes option 1 below a smaller
+change than it first appears.
+
+`security-manifest.yaml` records this as
+`audit_author_enforced_at_data_layer: false`. It previously carried only
+`user_may_edit_audit_author: false`, which claimed a control the deployment
+does not yet have.
+
 ## Three ways to close it
 
 **1. Item-level permissions inside each portfolio's library.** Break inheritance

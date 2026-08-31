@@ -1,3 +1,17 @@
+> **ARCHIVED 31 Aug 2026. Superseded by `reference/v14/CLAUDE_CODE_HANDOFF.md`
+> and, above it, `reference/v14/ACTION_DOCUMENT.md`.**
+>
+> Two of its statements are now known wrong and must not be followed:
+>
+> * It records the tenant cloud as "UNKNOWN — GCC High or DoD". It is **DoD**
+>   (`usaf.dps.mil` / `dod.teams.microsoft.us`).
+> * It describes "one Teams site, four portfolio channels, access granted at
+>   the channel". The four portfolios are **four separate SharePoint site
+>   collections**. See `deployment/site-bindings.md`.
+>
+> Kept because its statement of the data-layer scope problem is the clearest
+> written anywhere, and `docs/security-open-issue.md` descends from it.
+
 # CLAUDE CODE HANDOFF — Mission Feeding Operations
 
 **Repo:** `mission-feeding-operations-v10.zip`

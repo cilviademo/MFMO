@@ -2,9 +2,18 @@
 <!--
   MissionFeedingOperations solution envelope.
 
-  The app is canvas-app/src/*.pa.yaml and the flows are
-  flows/*/definition.json. This file declares what the package contains and
-  at what version; it is not where behaviour lives.
+  The app is canvas-app/src/*.pa.yaml and the flows are specified in
+  flows/*/definition.md. This file declares what the package contains and at
+  what version; it is not where behaviour lives.
+
+  Every schemaName below must correspond to something that exists. An orphaned
+  RootComponent (a flow that was renamed, an environment variable that was
+  retired) fails the import with a message that names the missing component and
+  nothing else useful.
+
+  Note for anyone editing these comments: a double hyphen is illegal inside an
+  XML comment and makes this whole file unparseable, which fails the import
+  before it starts.
 
   Version must match MF_App_Config.AppVersion and the git tag.
 -->
@@ -17,7 +26,7 @@
     <Descriptions>
       <Description description="End of month and end of year document requirement, evidence, versioning, QC and common operational picture for mission feeding facilities. Release 1." languagecode="1033" />
     </Descriptions>
-    <Version>0.8.0</Version>
+    <Version>1.0.0</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>MissionFeeding</UniqueName>
@@ -32,22 +41,39 @@
       <RootComponent type="300" schemaName="mfops_missionfeedingoperations" behavior="0" />
       <!-- Flows -->
       <RootComponent type="29" schemaName="mfops_EOM01ExpectedPackage" behavior="0" />
-      <RootComponent type="29" schemaName="mfops_EOM02FileIntake" behavior="0" />
+      <RootComponent type="29" schemaName="mfops_EOM02Submission" behavior="0" />
+      <RootComponent type="29" schemaName="mfops_EOM02bLegacyIntake" behavior="0" />
       <RootComponent type="29" schemaName="mfops_EOM03Reconciliation" behavior="0" />
       <RootComponent type="29" schemaName="mfops_EOM04Notifications" behavior="0" />
-      <RootComponent type="29" schemaName="mfops_EOM05AppUpload" behavior="0" />
       <!-- Connection references. Ids are supplied at import time by the
            deployment settings file and are never edited in place. -->
       <RootComponent type="10108" schemaName="mfops_sharepointonline" behavior="0" />
       <RootComponent type="10108" schemaName="mfops_office365users" behavior="0" />
       <RootComponent type="10108" schemaName="mfops_office365" behavior="0" />
       <!-- Environment variables. Values are supplied at import time; no site
-           URL or library path is baked into the package. -->
+           URL or library path is baked into the package, and every default is
+           blank. The four MF_Portfolio*_SiteURL variables are the four
+           SEPARATE SITE COLLECTIONS. See deployment/site-bindings.md. This
+           list is generated from configuration/environment-variables.json and
+           tests/test_package.py fails if the two disagree. -->
       <RootComponent type="380" schemaName="mfops_MF_SharePointSiteURL" behavior="0" />
-      <RootComponent type="380" schemaName="mfops_MF_FileIntakeLibrary" behavior="0" />
-      <RootComponent type="380" schemaName="mfops_MF_EvidenceRootPath" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_Portfolio1_SiteURL" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_Portfolio2_SiteURL" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_Portfolio3_SiteURL" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_Portfolio4_SiteURL" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_RequirementList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_ItemList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_SubmissionList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_UnmatchedList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_SecurityList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_AuditList" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_PowerBIReportURL" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_CurrentFiscalYear" behavior="0" />
       <RootComponent type="380" schemaName="mfops_MF_NotificationsEnabled" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_EscalationDaysOverdue" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_StatusList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_ConfigList" behavior="0" />
+      <RootComponent type="380" schemaName="mfops_MF_TenantCloud" behavior="0" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

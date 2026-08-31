@@ -22,8 +22,13 @@ Normalization rules, all reversible:
   - Protected fields (DODAAC, DODAAD, org boxes, contract IDs) are created
     empty and are never populated outside the authorised environment.
 """
-import csv, os, re
+import csv, os, re, sys
 from collections import defaultdict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# ONE mapping, in the schema. A second copy here would be the third time this
+# programme has had two vocabularies that must agree and nothing making them.
+from eom_schema import normalize_operating_model  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SRC = os.path.join(ROOT, "data", "QRG__Scrubbed_.csv")
@@ -69,7 +74,12 @@ def main():
                 Installation_ID=iid, Installation_Name=physical(raw),
                 Source_Installation_String=raw, Location=g(r, "LOCATION"),
                 Portfolio_ID=nz(g(r, "PORTFOLIO")), MAJCOM=g(r, "MAJCOM"),
-                Component="Active", Generation_Enabled="FALSE",
+                Component="Active",
+                # Blank: the generator has no site to point at, and a .mil URL
+                # in source is a destination leak. An administrator sets it
+                # later as a convenience link. It is never used for routing.
+                EOM_Folder_URL="",
+                Generation_Enabled="FALSE",
                 Registry_Validated_By="", Registry_Validated_Date="",
                 Source_System="Mission Feeding QRG", Needs_Review_Flag="FALSE",
                 DODAAC="", DODAAD="", Org_Box_Email="", Official_POC_UPN="",
@@ -89,20 +99,44 @@ def main():
         if dupes:
             fid = f"{fid}_{dupes+1:02d}"
 
-        model = nz(g(r, "FEEDING TYPE"))
-        if not model:
+        # NORMALISED AT IMPORT, with the raw value preserved.
+        #
+        # The QRG says `Legacy`, `Food 2.0`, `MAFFO`, `Deployed / Field
+        # Feeding`. The requirement catalogue filters on `Legacy/APF`,
+        # `Food 2.0`, `MAFFO/MAF`, `AOR/CDS`. Emitting the raw value here means
+        # every facility-scope requirement matches nothing and EOM-01 reports
+        # "created 0" as success -- which is exactly what happened once, and
+        # cost a month. scripts/vocabulary_guard.py now raises on it, but a
+        # generator that produces data its own consumer rejects is still a bug.
+        raw_model = nz(g(r, "FEEDING TYPE"))
+        model = normalize_operating_model(raw_model) or ""
+        if not raw_model:
             issue("Missing feeding type", n, raw, fname,
                   "Cannot determine EOM applicability. No package generated.")
+        elif not model:
+            issue("Unmapped feeding type", n, raw, fname,
+                  f"QRG says {raw_model!r}, which is not in "
+                  "eom_schema.QRG_OPERATING_MODEL_MAP. Add the mapping rather "
+                  "than widening the requirement filter.")
 
         fac.append(dict(
             Facility_ID=fid, Installation_ID=iid, Facility_Name=fname,
             Designation=nz(g(r, "DESIGNATION")), Unit=g(r, "UNIT"),
-            Operating_Model=model, Program_Type=nz(g(r, "PROGRAM TYPE")),
+            # The QRG carries no facility type for any row. The column exists
+            # so a base can confirm one during onboarding; until it does,
+            # facility_type_applies() treats unknown as MATCHING, so a
+            # type-scoped requirement still generates and the facility is
+            # reported as needing a type. Under-generating is worse than
+            # over-generating: an extra row is visible and can be waived.
+            Facility_Type="",
+            Operating_Model=model,
+            Source_Operating_Model=raw_model,
+            Program_Type=nz(g(r, "PROGRAM TYPE")),
             Contract_Type=nz(g(r, "CONTRACT TYPE")),
             Primary_PV=nz(g(r, "PRIMARY PV")),
             POS_Terminals_Raw=nz(g(r, "POS TERMINALS")),
             POC_Display_Name=nz(g(r, "POC")),
-            In_R1_Scope="TRUE" if model == "Legacy" else "FALSE",
+            In_R1_Scope="TRUE" if model == "Legacy/APF" else "FALSE",
             Source_Row=n, Source_System="Mission Feeding QRG",
             Facility_DODAAC="", Contract_ID="", Active_Flag="TRUE"))
 
@@ -117,8 +151,11 @@ def main():
     os.makedirs(OUT, exist_ok=True)
 
     def write(name, data, cols):
+        # utf-8 without a BOM. Every reader in the tree opens with utf-8-sig,
+        # which accepts either -- but a BOM in a tracked file shows up as a
+        # phantom character in the first column name of every diff.
         with open(os.path.join(OUT, name), "w", newline="",
-                  encoding="utf-8-sig") as fh:
+                  encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
             w.writeheader()
             w.writerows(data)
@@ -127,7 +164,7 @@ def main():
           list(next(iter(inst.values())).keys()))
     write("facilities.csv", fac, list(fac[0].keys()))
     with open(os.path.join(OUT, "qrg-data-quality.csv"), "w", newline="",
-              encoding="utf-8-sig") as fh:
+              encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["Issue_ID", "Issue_Type", "Source_Row", "Installation",
                     "Facility", "Detail"])

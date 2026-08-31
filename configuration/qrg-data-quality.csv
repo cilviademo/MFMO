@@ -1,4 +1,4 @@
-﻿Issue_ID,Issue_Type,Source_Row,Installation,Facility,Detail
+Issue_ID,Issue_Type,Source_Row,Installation,Facility,Detail
 DQ-0001,Exact duplicate row,4,ANDERSEN AB,DFAC,Byte-identical to an earlier row. Excluded from the registry.
 DQ-0002,Exact duplicate row,5,ANDERSEN AB,DFAC,Byte-identical to an earlier row. Excluded from the registry.
 DQ-0003,Exact duplicate row,7,ANDERSEN AB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.

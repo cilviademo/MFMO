@@ -152,7 +152,7 @@ Screens:
                               # "no requirements exist" without this.
                               Visible: =CountRows(galRequirements.AllItems) = 0
                               Title: ="The requirement catalogue is empty"
-                              Body: ="Twelve requirements are seeded at provisioning. An empty catalogue means the list did not load or was never seeded. Do not add requirements here to work around it."
+                              Body: ="Thirteen requirements are seeded at provisioning, eight of them active. An empty catalogue means the list did not load or was never seeded. Do not add requirements here to work around it."
 
                   - conDetail:
                       Control: GroupContainer

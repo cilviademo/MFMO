@@ -1,3 +1,13 @@
+> **ARCHIVED 31 Aug 2026. Superseded by
+> `docs/handoffs/MASTER_HANDOFF_2026-08-31.md`.**
+>
+> The later document is roughly twice the length, carries the Figma UX and
+> .mil/DoW security material this one does not, and states in its own header
+> that it "supersedes earlier assumptions where conflicts exist".
+>
+> Kept because several decisions in the live tree are still traceable to
+> sections here, and `docs/handoffs/RECONCILIATION.md` cites it by section.
+
 # MISSION FEEDING OPERATIONS — MASTER HANDOFF
 ## EOM Document Submission, Power Apps, Power Automate, SharePoint/Teams, Power BI COP
 **Status:** Consolidated project handoff  

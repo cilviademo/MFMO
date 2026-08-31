@@ -1,3 +1,19 @@
+> **ARCHIVED 31 Aug 2026. Superseded by `docs/figma-prompt-v2.md`.**
+>
+> v2 supersedes this by its own account: "the previous draft ran to 27
+> sections. Generation tools average long prompts toward the middle; a
+> 27-section brief produces a compromise of everything in it." v2 is the same
+> instruction set at roughly half the length with the non-negotiables
+> front-loaded.
+>
+> The status palette below was updated to six states before archiving, so it
+> does not teach the amber/yellow collision — but `docs/accessibility.md` is
+> the authority on the tokens, and `docs/figma-prompt-v2.md` is the authority
+> on the brief. Do not send this one.
+>
+> Kept because the section-by-section reasoning about what the UI must not do
+> is more detailed here than in v2, and that reasoning is still sound.
+
 # Figma prompt
 
 Paste the block below into Figma Make, Figma AI, or any design-generation tool.

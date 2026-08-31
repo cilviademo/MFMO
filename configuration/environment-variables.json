@@ -41,22 +41,6 @@
       "required": true
     },
     {
-      "schemaName": "mfops_MF_FileIntakeLibrary",
-      "displayName": "MF_FileIntakeLibrary",
-      "type": "String",
-      "description": "Legacy folder-drop discovery library for EOM-02b only. The normal path writes to the portfolio destination.",
-      "defaultValue": "",
-      "required": true
-    },
-    {
-      "schemaName": "mfops_MF_EvidenceRootPath",
-      "displayName": "MF_EvidenceRootPath",
-      "type": "String",
-      "description": "Server-relative root for the managed evidence tree",
-      "defaultValue": "",
-      "required": true
-    },
-    {
       "schemaName": "mfops_MF_RequirementList",
       "displayName": "MF_RequirementList",
       "type": "String",
