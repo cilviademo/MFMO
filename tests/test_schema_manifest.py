@@ -553,3 +553,33 @@ class NoDocumentStatesAStaleTotal(unittest.TestCase):
                     bad.append(f"{rel}:{line} says {n} indexes, "
                                f"schema has {self.indexes}")
         self.assertEqual(bad, [], "\n".join(bad))
+
+
+class EveryTestIsClassified(unittest.TestCase):
+    """`scripts/classify_tests.py` declares what each test class proves.
+
+    The classification is the point: a suite that passes in full while the
+    tests and the generator share one wrong premise looks identical to a suite
+    that proves something. A new test class with no declared kind would be
+    counted in a total that implies coverage it may not have, so an
+    unclassified class fails here.
+    """
+
+    def test_the_classifier_accounts_for_every_class(self):
+        import subprocess
+        r = subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts", "classify_tests.py")],
+            capture_output=True, text=True, cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("UNCLASSIFIED", r.stdout)
+
+    def test_the_counts_add_up_to_the_suite(self):
+        import subprocess
+        import re as _re
+        c = subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts", "classify_tests.py")],
+            capture_output=True, text=True, cwd=ROOT).stdout
+        total = int(_re.search(r"TOTAL\s+(\d+)", c).group(1))
+        parts = sum(int(_re.search(rf"{k}\s+(\d+)", c).group(1))
+                    for k in ("BEHAVIOURAL", "STRUCTURAL", "POLICY"))
+        self.assertEqual(total, parts)

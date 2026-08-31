@@ -79,8 +79,15 @@ RULES = [
     # /teams/ as well as /sites/. A Teams-backed site -- which every private
     # channel is -- lives under /teams/, so a rule watching only /sites/ misses
     # exactly the URLs the four production portfolios actually use.
+    # Every government SharePoint host, every site path shape. sharepoint.<tld>
+    # rather than sharepoint.us: GCC High is .us, commercial is .com, and a
+    # rule naming only the clouds we expect is a rule that misses the one we
+    # did not. /teams/ as well as /sites/ because every private channel is a
+    # Teams-backed site, and the four production portfolios are private
+    # channels -- the rule spent this whole build watching the one path shape
+    # they do not use.
     ("URL-01", "FAIL",
-     r"https://[a-z0-9.-]+\.(sharepoint\.us|dps\.mil)/(sites|teams)/(?!<)",
+     r"https://[a-z0-9.-]+\.(sharepoint\.[a-z]{2,}|dps\.mil)/(sites|teams)/(?!<)",
      "Hardcoded government SharePoint site. Bind it from an environment "
      "variable — MF_SharePointSiteURL, or MF_Portfolio{n}_SiteURL for a "
      "portfolio destination. A real site URL in source is a destination leak."),
@@ -129,8 +136,8 @@ RULES = [
      "Placeholder account. Must not reach production."),
     # A fabricated address in a REAL namespace is the worse half of this
     # problem, and the rule above missed it: it only watched four prefixes, so
-    # five demo personas shipped as alvarez@us.af.mil and friends in a PUBLIC
-    # repository. A reader cannot tell a fixture from a real person's UPN, and
+    # five demo personas shipped with surnames in the us.af.mil namespace in a
+    # PUBLIC repository. A reader cannot tell a fixture from a real person's UPN, and
     # a made-up name can collide with a real one. Demo identities belong in
     # example.mil, which exists for this.
     ("IDN-02", "FAIL", r"[A-Za-z0-9._%+-]+@(us\.af\.mil|mail\.mil|us\.army\.mil|navy\.mil)",

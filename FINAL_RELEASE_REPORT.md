@@ -10,10 +10,11 @@ assembled in Studio.
 
 ## Per-list index counts
 
-Generated from `scripts/eom_schema.py`, not typed. `tests/test_schema_manifest.py`
+Generated from `scripts/eom_schema.py` by the same code that emits the
+provisioning payloads. `tests/test_schema_manifest.ReportIndexTableMatchesTheSchema`
 fails if this table and the schema disagree, and fails if any list exceeds 20.
 
-| List | Columns | Indexes | Over 20? |
+| List | Columns | Indexes | Over the cap of 20? |
 |---|---:|---:|---|
 | `MF_EOM_Item` | 32 | 13 | no |
 | `MF_EOM_Submission` | 33 | 13 | no |
@@ -34,22 +35,24 @@ fails if this table and the schema disagree, and fails if any list exceeds 20.
 | `MF_Feature_Flags` | 7 | 1 | no |
 | **TOTAL** | **286** | **90** | — |
 
-**Maximum 13, against a SharePoint cap of 20. No list is over.**
+**Maximum 13 on one list, against a SharePoint cap of 20. None is over.**
 
-The v21 baseline was 44 indexes. <!-- historical --> The 46 added are columns something in this
-build filters on. The two largest jumps carry the two lists that gained the most
-function: `MF_EOM_Submission` 3 → 13, taking the routing columns
-(`Destination_ID`, `Needs_Filing`, `Is_Pilot`), the idempotency key
+The v21 baseline was 44 indexes. <!-- historical --> The 46 added are columns
+something in this build filters on. The two largest jumps carry the two lists
+that gained the most function: `MF_EOM_Submission` 3 → 13, taking the routing
+columns (`Destination_ID`, `Needs_Filing`, `Is_Pilot`), the idempotency key
 `Submission_Request_ID`, and `Is_Current`, which every reconciliation query
 filters on; and `MF_Security_Mapping` 2 → 8, because scope resolution runs on
 every screen load and `Expires_Date` is what makes access actually stop working.
 
 **47 of the 90 sit on the six lists that cross 5,000 rows**, where SharePoint
-refuses to add an index afterwards. The remaining 43 are on lists that stay
-small, and are precautionary: a spare index costs a little write overhead, a
-missing one on a list that unexpectedly grows cannot be fixed at all.
+refuses to add an index afterwards. The other 43 are on lists that stay small
+and are precautionary: a spare index costs a little write overhead, a missing
+one on a list that unexpectedly grows cannot be fixed at all.
 
-## The four pre-release warnings, verbatim
+## The four pre-release warnings
+
+Captured from `python3 scripts/prerelease_scan.py` stdout, not transcribed.
 
 ```
   [IDN-01] configuration/security-mapping.sample.csv:5
@@ -66,29 +69,27 @@ missing one on a list that unexpectedly grows cannot be fixed at all.
         > provisioning. The SharePoint connector includes an action called **Send an HTTP
 ```
 
-**The scan itself reports six, and the extra two are this report quoting the
-four above.** A file that names a prohibited string in order to prohibit it
-still trips the rule, which is correct behaviour — the alternative is a scanner
-that can be silenced by writing about it. `tests/test_hardening.py` asserts that
-the count *outside this report* is exactly four, so the number cannot drift
-without a test failing.
+The scan itself prints **6**; the extra two are this report
+quoting the four above, and a file that names a prohibited string still trips
+the rule. That is correct — the alternative is a scanner you can silence by
+writing about it. `tests/test_hardening` pins the count *outside this report* at
+four, so the number cannot drift unnoticed.
 
-None blocks, and here is why each does not.
+**Why none blocks.**
 
-The three `IDN-01` hits are placeholder accounts in a `.sample.csv`. That file
-loads only under `-IncludeSampleData`, and step 3 of the import checklist has a
-box confirming it was not loaded. They sit in the `example.mil` namespace, which
-exists for exactly this. **They are warnings rather than nothing because a
-placeholder reaching production is a real failure** — it grants access to an
-account nobody owns — and import is the right moment to catch it.
+The three `IDN-01` hits are placeholder accounts in a `.sample.csv`, which loads
+only under `-IncludeSampleData`; step 3 of the import checklist has a box
+confirming it was not loaded. They sit in the `example.mil` namespace, which
+exists for this. They are warnings rather than nothing because a placeholder
+reaching production is a real failure — it grants access to an account nobody
+owns — and import is the right moment to catch it.
 
 The `CON-02` hit is a false positive on prose. `scripts/gen_rest_payloads.py`
 line 16 is a comment explaining that provisioning uses the SharePoint
-connector's own *Send an HTTP request to SharePoint* action. That is the
-SharePoint connector, not the prohibited HTTP connector. It stays a warning
-rather than being suppressed: the rule is watching the right words, and a
-suppression here would also silence a real HTTP connector added to that file
-later.
+connector's own *Send an HTTP request to SharePoint* action — the SharePoint
+connector, not the prohibited HTTP connector. It stays a warning rather than
+being suppressed: the rule is watching the right words, and suppressing it here
+would also silence a real HTTP connector added to that file later.
 
 ### The flows are implemented
 
@@ -119,67 +120,229 @@ tenant:
   expression treated a null final call as "no deadline" and left the item amber
   forever instead of going red — the wrong answer in the safe-looking direction.
 
-## Test coverage — what the 450 actually prove
+## Test classification — what 453 passing tests actually prove
 
-**450 tests written against the same generator that produced the artifact can
-all pass while the tests and the generator share one wrong assumption.** So the
-groups are split by what would have to be wrong for the test to still pass.
+**A suite written against the generator that produced the artifact can pass in
+full while the tests and the generator share one wrong premise.** Counting tests
+cannot distinguish that from real coverage, so every test class is classified by
+what would have to be wrong for it to still pass. The classification is
+*declared* in `scripts/classify_tests.py`, per class, and an unclassified class
+fails the release gate — a new test cannot join the total unlabelled.
 
-*Logic* means the test computes an answer from data or a standard that does not
-come from the code under test. *Self-agreement* means it checks that two things
-this repository generates say the same thing — real value, but it cannot tell
-you the shared premise is right.
+| Kind | Tests | Share | What a pass means |
+|---|---:|---:|---|
+| **BEHAVIOURAL** | 191 | 42% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
+| **STRUCTURAL** | 145 | 32% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
+| **POLICY** | 117 | 25% | A settled decision stays applied. These outlive the decisions they encode. |
+| **TOTAL** | **453** | | |
 
-| Group | Tests | Kind | What a passing run means |
+### Three POLICY tests encoded the decision this round reversed
+
+This is not hypothetical. `tests/test_folder_resolver.SeededDestinations` held
+three assertions that the four pilot rows must be **ACTIVE** and **VERIFIED**,
+and that Portfolio 2's site slug must appear in a note. Every one of those would
+have **failed the correct configuration and argued for the rejected one** — the
+exact hazard of a policy test outliving its decision.
+
+They are rewritten to the current ruling, with the reversal recorded in the
+docstring so the next reader sees that the assertion flipped and why:
+
+| Was | Is now |
+|---|---|
+| `test_every_portfolio_has_exactly_one_active_destination` — four rows ACTIVE | `test_no_row_ships_active_or_verified` — every row FALSE, `Verified_By` and `Verified_Date` blank |
+| `test_the_pilot_rows_are_the_active_ones` | `test_no_row_carries_a_site_url` — `Site_URL` blank on all eight |
+| `test_portfolio_two_keeps_its_odd_slug_on_the_record` — asserts the slug | `test_portfolio_two_keeps_its_irregularity_on_the_record` — asserts the warning, and asserts the slug is **absent** |
+
+### Where STRUCTURAL is the only coverage
+
+Three places, and they are the honest limits of this release.
+
+**1. The five flow bodies — 118 actions, 0 BEHAVIOURAL tests.**
+`test_flow_bodies` is 40 tests and every one is STRUCTURAL: each body contains
+the actions its spec describes, the `runAfter` graph has no cycle, every
+`foreach` pins concurrency. **Nothing executes them.** The one exception is the
+status expression, which `test_flow_expression` evaluates against the engine's
+fixture set — and that found two defects that would otherwise have reached the
+tenant, which is a fair measure of what the other 116 actions are not getting.
+The right test is a run against a real SharePoint site, and it is not available
+here.
+
+**2. Whether the ZIP imports — `test_package`, 52 tests, 0 BEHAVIOURAL.**
+They assert the package matches a structure taken from documentation. If that
+reading is wrong, all 52 pass and the import still fails naming an internal file.
+This is the single largest untested assumption in the release.
+
+**3. Accessibility labels — `EveryInteractiveControlHasAName`, 2 STRUCTURAL.**
+Every control declares a label in source. Whether a screen reader announces it
+usefully needs Studio's Accessibility Checker and a person.
+
+`docs/TEST_MATRIX.md` keeps a NOT TESTABLE LOCALLY column rather than quietly
+omitting these.
+
+### Per class
+
+| Module | Class | Kind | Tests | What a pass means |
+|---|---|---|---:|---|
+| `test_design_tokens` | `SixStatesExist` | **P** | 1 | the six-state palette is the settled model |
+| `test_design_tokens` | `EveryChipIsReadable` | **B** | 2 | WCAG contrast ratios computed from the token values |
+| `test_design_tokens` | `AmberIsNotYellow` | **B** | 6 | ΔE2000 and hue separation computed between the two tokens |
+| `test_design_tokens` | `TheDocumentedRatiosAreTrue` | **B** | 1 | documented ratios recomputed from the tokens |
+| `test_design_tokens` | `ThePrototypeTeachesSixStates` | **S** | 4 | the prototype and the token file agree |
+| `test_design_tokens` | `ThePeriodSelectorIsGenerated` | **S** | 3 | the selector reads the generator, not a literal list |
+| `test_design_tokens` | `EveryInteractiveControlHasAName` | **S** | 2 | every control in the source declares a label |
+| `test_design_tokens` | `NothingTheAdminOwnsIsHardcoded` | **P** | 6 | the five admin-owned values stay in configuration |
+| `test_design_tokens` | `ColourIsNeverTheOnlyChannel` | **P** | 3 | accessibility ruling: text and icon accompany colour |
+| `test_design_tokens` | `NoCountIsReportedWithoutItsDenominator` | **P** | 6 | the reporting ruling stays applied |
+| `test_duplication` | `ApplicabilityAgrees` | **B** | 5 | the Power Fx and Python predicates evaluated on the same cases |
+| `test_duplication` | `TheFxStillHasTheShapeTheModelAssumes` | **S** | 4 | the Fx source matches what the comparison assumes |
+| `test_duplication` | `OneImplementationPerConcept` | **P** | 4 | one reference implementation per concept |
+| `test_duplication` | `TheSecondUploadArchitectureIsGone` | **P** | 3 | the central evidence library stays removed |
+| `test_eom01` | `TestIdempotency` | **B** | 3 | the generator run twice against the real registry |
+| `test_eom01` | `TestFacilityIdIsNullNotEmptyString` | **B** | 6 | payload inspection across all three scopes |
+| `test_eom01` | `TestOnboardingGate` | **B** | 3 | generation gated on the flag, run and counted |
+| `test_eom01` | `TestOperatingModelFollowsTheFacility` | **B** | 7 | model filter applied at facility scope only, verified by run |
+| `test_eom01` | `TestCatalogueRespected` | **B** | 8 | frequency and scope filters exercised per period |
+| `test_eom01` | `TestGeneratedStatus` | **B** | 5 | the status engine run on generated rows |
+| `test_eom01` | `TheBackfillWindowIsEnforced` | **B** | 8 | periods inside and outside the window generated and counted |
+| `test_eom01` | `EverySixActiveRequirementIsFacilityScope` | **P** | 4 | the programme's scope ruling stays applied |
+| `test_flow_bodies` | `TheGraphIsSound` | **B** | 4 | runAfter graph walked for cycles and unreachable actions |
+| `test_flow_bodies` | `NothingEnvironmentSpecificIsHardCoded` | **S** | 4 | generated JSON checked for literals |
+| `test_flow_bodies` | `ConnectorsAreOnTheAllowlist` | **P** | 2 | the connector allowlist is the settled policy |
+| `test_flow_bodies` | `EveryWriteLoopIsSerial` | **S** | 1 | every foreach in the generated JSON pins concurrency |
+| `test_flow_bodies` | `TheSpecificationInvariantsHold` | **S** | 28 | each body contains the actions its spec describes |
+| `test_flow_bodies` | `EveryFlowImportsDisabled` | **P** | 1 | flows ship Draft by decision |
+| `test_flow_expression` | `TheInterpreterIsStrict` | **B** | 5 | the interpreter itself tested on cases with known answers |
+| `test_flow_expression` | `TheExpressionIsWellFormed` | **S** | 5 | the emitted expression parses and is shaped as expected |
+| `test_flow_expression` | `TheExpressionAgreesWithTheEngine` | **B** | 3 | the expression evaluated against the engine's fixture set |
+| `test_folder_resolver` | `FiscalYear` | **B** | 3 | date arithmetic against known DAF fiscal-year boundaries |
+| `test_folder_resolver` | `FiscalYearFolder` | **B** | 4 | folder matching against constructed listings |
+| `test_folder_resolver` | `MonthFolder` | **B** | 8 | month-folder matching across the naming variants seen on the sites |
+| `test_folder_resolver` | `Resolve` | **B** | 6 | end-to-end resolution against constructed listings |
+| `test_folder_resolver` | `FailClosed` | **B** | 5 | each failure path exercised and its code checked |
+| `test_folder_resolver` | `SeededDestinations` | **P** | 12 | the shape the destination seed ships in |
+| `test_folder_resolver` | `Sanitising` | **B** | 4 | path sanitising against adversarial inputs |
+| `test_folder_resolver` | `Versioning` | **B** | 3 | version suffixing against existing-file listings |
+| `test_folder_resolver` | `SpecAgreesWithTheCode` | **S** | 8 | the definition.md and the resolver say the same thing |
+| `test_folder_resolver` | `BindingsAreDocumented` | **S** | 5 | site-bindings.md covers what the schema declares |
+| `test_folder_resolver` | `ThePathUsesTheUrlSegment` | **B** | 3 | the built path is checked against the segment, not the display name |
+| `test_folder_resolver` | `TheFallbackCeiling` | **B** | 6 | fallback refused at and above the library root, computed per row |
+| `test_hardening` | `SplittingFilters` | **B** | 3 | delegable filter splitting exercised on queries |
+| `test_hardening` | `TheGuard` | **B** | 5 | the schema guard run against matching and mismatched versions |
+| `test_hardening` | `TheGuardCatchesTheDefectThatCostAMonth` | **B** | 3 | the historical defect reproduced and caught |
+| `test_hardening` | `EmptyFilterMeansNoConstraint` | **B** | 4 | empty-filter semantics exercised |
+| `test_hardening` | `RequiredArtifactsMustSaySomething` | **B** | 4 | the emptiness check run against planted stubs |
+| `test_hardening` | `InlineExceptionsMustBeExplained` | **B** | 5 | marker parsing run against good and bad markers |
+| `test_hardening` | `TheScanStillPasses` | **B** | 7 | each rule fired on a planted specimen and held off a lookalike |
+| `test_hardening` | `ConnectorsMatchTheAllowlist` | **P** | 5 | the connector allowlist is the settled policy |
+| `test_package` | `TheFilesAreWellFormed` | **S** | 3 | the emitted XML and JSON parse |
+| `test_package` | `TheManifestIsComplete` | **S** | 4 | solution components and configuration agree |
+| `test_package` | `NoOrphanedReference` | **S** | 9 | every reference resolves within the package |
+| `test_package` | `ThePackageHasNoCanvasApp` | **P** | 4 | no .msapp and no fabricated Canvas component |
+| `test_package` | `TheFlowsAreWiredEvenWhereTheyAreUnfinished` | **S** | 10 | each workflow is registered and parameterised |
+| `test_package` | `NothingEnvironmentSpecificIsBaked` | **P** | 2 | no connection or environment variable values in the package |
+| `test_package` | `VersionsAgree` | **S** | 1 | one version across solution, config and changelog |
+| `test_package` | `CustomizationsMatchesTheConfiguration` | **S** | 4 | Customizations.xml and the config files agree |
+| `test_package` | `TheDependencyManifestIsUsable` | **S** | 8 | the manifest covers what the package needs |
+| `test_package` | `LegacyIntakeShipsUnbound` | **P** | 3 | EOM-02b ships as an unbound template |
+| `test_package` | `ImportChecklistIsSequenced` | **P** | 4 | the import order and its gates are settled |
+| `test_schema` | `TestSchemaItself` | **B** | 10 | schema invariants computed: nullability, index cap, key shape |
+| `test_schema` | `TestRequirementSeed` | **P** | 11 | the requirement catalogue is the settled configuration |
+| `test_schema` | `TestConfigurationSeeds` | **P** | 21 | the seeded configuration is the settled configuration |
+| `test_schema` | `TestNoHardCodedEnvironment` | **P** | 4 | no environment literal in source |
+| `test_schema` | `TestFlowSpecs` | **S** | 8 | flow specs and schema agree |
+| `test_schema` | `TestAppSource` | **S** | 7 | app source and schema agree |
+| `test_schema_manifest` | `ListsReferencedExist` | **S** | 2 | every list named anywhere exists in the schema |
+| `test_schema_manifest` | `ColumnsReferencedExist` | **S** | 5 | every column named anywhere exists in the schema |
+| `test_schema_manifest` | `InternalNamesAreSafe` | **B** | 4 | internal-name encoding computed from display names |
+| `test_schema_manifest` | `TheManifestIsCurrent` | **S** | 5 | the manifest and the schema agree |
+| `test_schema_manifest` | `SchemaVersionIsGated` | **S** | 9 | every flow and the app compare the same version |
+| `test_schema_manifest` | `SubmissionIsRequestIdempotent` | **P** | 11 | request idempotency is the settled design |
+| `test_schema_manifest` | `OneCurrentSubmissionPerItem` | **P** | 2 | one current submission per item is the settled design |
+| `test_schema_manifest` | `ReportIndexTableMatchesTheSchema` | **S** | 3 | the report's table and the schema agree |
+| `test_schema_manifest` | `NoDocumentStatesAStaleTotal` | **S** | 1 | every stated total and the schema agree |
+| `test_schema_manifest` | `EveryTestIsClassified` | **S** | 2 | every test class carries a declared kind |
+| `test_status_engine` | `TestFixtureCases` | **B** | 2 | the engine run against fixture cases with hand-written expected states |
+| `test_status_engine` | `TestNonNegotiables` | **B** | 26 | each of the twelve rules exercised on constructed inputs |
+| `test_status_engine` | `TestTransliterationsAgree` | **B** | 10 | Python, Power Fx and Logic Apps evaluated against one fixture set |
+| `test_status_engine` | `TestReconciliationHeld` | **P** | 8 | the ten reconciliation rulings stay applied |
+
+## The URL sweep — every hit, explained
+
+Swept **all 318 tracked files** with no directory skips, no file skips and no
+inline allow markers — a wider net than the scanner itself, which exempts the
+four documents that define it and three vendored trees. Patterns: a site path on
+`.dps.mil` or `.sharepoint.<tld>` under `/sites/` or `/teams/`; a bare government
+host; an address in a real `.mil` namespace.
+
+**29 hits. None is a destination.**
+
+| Class | Hits | Where | Why each is not a leak |
 |---|---:|---|---|
-| `test_status_engine.py` | 46 | **Logic** | The twelve rules produce the expected state for hand-written fixture cases covering every rule and both suspense dates. |
-| `test_folder_resolver.py` | 66 | **Logic** | Destination resolution against constructed folder listings, including seven failure paths: no fallback rises above its approved root, no folder is ever created. |
-| `test_eom01.py` | 44 | **Logic** | The generator run against the real 103-installation / 154-facility registry. Idempotence, the null-vs-empty-string distinction, the frequency filter, the backfill window. |
-| `test_hardening.py` | 36 | **Logic** | Each scanner rule fired against a planted specimen and held off a lookalike that is not a leak. Adversarial, not descriptive. |
-| `test_design_tokens.py` | 34 | **Logic** | Contrast ratios and ΔE2000 separations computed against the WCAG formula — an external standard, not a value this repo chose. |
-| `test_flow_expression.py` | 13 | **Logic, with a caveat** | A Logic Apps interpreter evaluates the emitted expression against the same 30 fixtures the Python engine passes. Two implementations, one fixture set — but **the interpreter is also mine**, so a wrong belief about Logic Apps semantics would be shared. It found two real defects, which is evidence it is not vacuous; it is not evidence that it models the runtime correctly. |
-| `test_schema.py` | 61 | Mixed | Schema invariants (nullability, index declarations, the 20-index cap) are logic; the list-and-column inventory is self-agreement. |
-| `test_package.py` | 52 | **Self-agreement** | The solution XML and ZIP have the structure this build believes Power Platform wants. Nothing here has been near an import. |
-| `test_flow_bodies.py` | 40 | **Self-agreement** | Structural assertions on generated JSON — that each body contains the actions its spec describes. It found four genuine gaps, but it cannot tell you an action works. |
-| `test_schema_manifest.py` | 42 | **Self-agreement** | Documentation totals and the manifest match `eom_schema.py`. This is the group that caught eleven documents stating a stale column count. |
-| `test_duplication.py` | 16 | **Self-agreement** | One implementation per concept; no second status engine, no second upload path. |
+| Bare tenant host `usaf.dps.mil` | 15 | `README.md:15`, `configuration/app-config.csv:12`, `deployment/site-bindings.md:101`, `docs/DECISION_LOG.md:44`, `docs/DEPLOYMENT.md:5`, `docs/government-environment-mode.md:15`, `docs/handoffs/README.md:24`, `docs/handoffs/RECONCILIATION.md:341`, `docs/archive/CLAUDE_CODE_HANDOFF_v2.md:7`, `reference/v14/ACTION_DOCUMENT.md:25`, `reference/v14/CLAUDE_CODE_HANDOFF.md:23`, `reference/v14/deployment/site-bindings.md:39`, `security/security-manifest.yaml:16`, `tests/test_hardening.py:301`, `tests/test_schema.py:227` | A host with **no site path**. It names which cloud this is — the correction from GCC High to DoD that invalidated every earlier endpoint — and it identifies no destination. `URL-01` deliberately does not fire on it, and `test_naming_the_tenant_in_prose_is_not_a_leak` pins that. |
+| Admin endpoint table | 3 | `docs/government-environment-mode.md:55` | The commercial/GCC High/DoD comparison row. The table **is** the policy; naming the wrong endpoint is the point of the row. Carries an inline `CLD-03` marker with a reason, and the scanner prints it in its ALLOWED section every run. |
+| Cloud endpoint table | 2 | `deployment/site-bindings.md:40-41` | Same shape, added this round: the "Not" column names the two commercial Power Platform endpoints in order to forbid them. Inline `CLD-01` markers with reasons. |
+| Test specimens | 9 | `tests/test_hardening.py:257,259,269,271,296` | Synthetic `tenant.dps.mil` / `tenant.sharepoint.us` hosts with `ExampleSiteCollection` / `ExampleTeamSite` slugs, each carrying an inline `URL-01` marker. Changed this round from a real host plus a real site slug — a specimen proving a rule fires does not need to be a working destination. |
 
-Roughly **239 logic, 150 self-agreement, 61 mixed.**
+**Nothing in `configuration/` matched anything.** Every `Site_URL` is blank on
+all eight rows, and the site slugs that were in the `Site_Note` column were
+removed: the notes now record *that* Portfolio 2's slug is irregular without
+reproducing it, and the slug itself lives only in the operator's worksheet.
 
-**The single largest untested assumption is that the solution ZIP imports.** No
-test in this repository has opened Power Platform. `test_package.py` asserts the
-package matches a structure taken from documentation, and if that reading is
-wrong then 52 tests pass and the import still fails. The same holds for the flow
-bodies: they are structurally complete and have never executed against
-SharePoint.
+One hit was fixed rather than explained: `scripts/prerelease_scan.py:139`
+quoted a `us.af.mil` address inside the comment introducing the rule that
+forbids them. The scanner skips itself, so it could not catch it — the third
+time this round a document leaked the thing it was arguing against.
 
-That is the whole reason this release is PARTIAL rather than FULL, and the
-reason `docs/TEST_MATRIX.md` keeps a NOT TESTABLE LOCALLY column rather than
-quietly omitting it.
+## EOM-02b — verified unbound, from the packaged artifact
 
-## EOM-02b packaging — one template, duplicated three times
+Codex reports the trigger still references `MF_Portfolio1_SiteURL` with only the
+library blank. **That is not true of this artifact.** Read straight out of the
+workflow JSON in the ZIP:
 
-**The ZIP contains ONE EOM-02b workflow, and it ships with no site and no
-library bound.** It covers nothing on import.
+```json
+{
+  "host": {
+    "connectionName": "shared_sharepointonline",
+    "operationId": "OnNewFileV2",
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+  },
+  "parameters": {
+    "dataset": "",
+    "table": ""
+  },
+  "authentication": "@parameters('$authentication')"
+}
+```
 
-A SharePoint trigger watches one site and one library. The four portfolios are
-four separate site collections. No single instance can cover them, and the
-connector offers no option that would.
+Declared parameters, complete:
 
-Earlier in this round the trigger was bound to `MF_Portfolio1_SiteURL`. That
-version would have imported, activated, run correctly and discovered nothing in
-Portfolios 2, 3 and 4 — partial coverage that reads as full coverage from every
-angle except an inspection. The flow no longer declares a portfolio parameter at
-all, so the designer shows an unset field instead.
+```
+  $connections
+  $authentication
+  MF_SharePointSiteURL (mfops_MF_SharePointSiteURL)
+  MF_ConfigList (mfops_MF_ConfigList)
+  MF_UnmatchedList (mfops_MF_UnmatchedList)
+  MF_SubmissionList (mfops_MF_SubmissionList)
+  MF_SecurityList (mfops_MF_SecurityList)
+```
 
-After import: duplicate three times for four copies, bind each to a different
-site collection, confirm the four point at four distinct sites, and leave all
-four disabled until each site is verified. `IMPORT_CHECKLIST.md` step 7 states
-this as four imperative boxes, and `tests/test_package.py` fails if any of them
-is dropped.
+**No `MF_Portfolio*` parameter appears anywhere in the file.** The site is
+blank, the library is blank, and there is no portfolio parameter to bind. Codex
+was reading an earlier state — the binding it describes did exist and was
+removed, along with the parameter declaration, before the previous build.
 
-All five flows import as **Draft** (`StateCode 0`). Nothing runs until someone
-turns it on.
+Its reasoning is right regardless, and it is why the parameter went too: blank
+library plus bound site is not unbound. It imports, activates, runs correctly,
+and discovers nothing in three portfolios — coverage indistinguishable from full
+coverage until someone asks why Portfolio 3 has never had an unmatched file.
+
+One template, duplicated three times after import, each copy bound to a
+different site collection. `IMPORT_CHECKLIST.md` step 7 states it as four
+imperative boxes; `deployment/site-bindings.md` section 2 is the worksheet;
+`tests/test_package.LegacyIntakeShipsUnbound` fails if the trigger regains a
+site, a library, or a portfolio parameter.
+
+All five flows import as **Draft** (`StateCode 0`).
 
 ### What is verified, and what is not
 
@@ -292,7 +455,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **450 passed**, 0 failed |
+| Unit tests | **453 passed**, 0 failed — 191 behavioural, 145 structural, 117 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |

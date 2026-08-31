@@ -1,130 +1,143 @@
-# Site bindings — four sites, walked by a person, before the first upload
+# Site bindings — the operator's worksheet
 
-The four portfolios are **four separate SharePoint site collections.** Not four
-channels in one team, not four folders in one library. Every document in this
-programme before 31 Aug 2026 assumed one site, and that assumption invalidated
-every single-site provisioning plan built on it.
+**Nothing in this repository carries a site URL.** This file is where they are
+recorded, and it ships with placeholders. Fill it in as you walk the sites, then
+keep your filled-in copy **out of source control** — this repository is public.
 
-Nothing here can be derived. It has to be read off the sites.
+A destination with a blank `Site_URL` makes EOM-02 **fail closed** with
+`CONFIGURATION_REQUIRED`. Before binding, that is correct behaviour, not a
+fault: a submission that cannot be routed must stop rather than land somewhere
+plausible. `scripts/folder_resolver.check_destination` enforces it, and
+`tests/test_folder_resolver.FailClosed` proves it.
 
-## What has to be recorded
+---
 
-| Portfolio | Environment variable | Site slug | Library | Root folder |
+## Why none of this can be guessed
+
+**The four portfolios are four separate site collections** in SharePoint. Not four
+channels in one team, not four folders in one library. Every plan written before
+31 Aug 2026 assumed one site; that assumption was wrong and it invalidated every
+single-site provisioning design.
+
+**Portfolio 2's site slug carries a prefix the other three do not.** A URL built
+by pattern works for three portfolios and 404s on one. Three work and one is a
+mystery is the worst failure shape available, so **read every URL off the site**
+and never derive one from another.
+
+**Month folder naming differs per site and nobody can guess it.** EOM-02 finds
+folders and never creates them, so a mismatch means every submission falls back
+to the root with `Needs_Filing TRUE`. Record what is actually there.
+
+---
+
+## 0. The cloud
+
+**This deployment is DoD, not GCC High.** Every GCC High endpoint written for
+this programme before 31 Aug 2026 is wrong for it.
+
+| | This deployment | Not |
+|---|---|---|
+| Power Apps | `make.apps.appsplatform.us` | `make.powerapps.com`, `make.gov.powerapps.us` | <!-- prerelease: allow CLD-01 the wrong-endpoint column IS the warning; naming it is the point of the row -->
+| Power Automate | `flow.appsplatform.us` | `flow.microsoft.com` | <!-- prerelease: allow CLD-01 the wrong-endpoint column IS the warning; naming it is the point of the row -->
+| PAC CLI cloud | `UsGovDod` | `UsGovHigh`, `Public` |
+
+Commercial cloud is not supported. A commercial endpoint in any binding is a
+pre-release stop condition, not a configuration preference.
+
+---
+
+## 1. Environment variables — which one takes which URL
+
+Set these at import. All ship blank.
+
+| # | Environment variable | Takes the URL of | Your value |
+|---|---|---|---|
+| 1 | `mfops_MF_SharePointSiteURL` | The site holding the 17 MF lists | `_______________________` |
+| 2 | `mfops_MF_PilotSite_SiteURL` | The pilot site — all four pilot destinations share it | `_______________________` |
+| 3 | `mfops_MF_Portfolio1_SiteURL` | Portfolio 1 production site collection | `_______________________` |
+| 4 | `mfops_MF_Portfolio2_SiteURL` | Portfolio 2 — **the irregular slug. Read it off the site.** | `_______________________` |
+| 5 | `mfops_MF_Portfolio3_SiteURL` | Portfolio 3 production site collection | `_______________________` |
+| 6 | `mfops_MF_Portfolio4_SiteURL` | Portfolio 4 production site collection | `_______________________` |
+
+The remaining 18 of the 24 environment variables are list names, feature flags
+and thresholds. None is a URL.
+
+---
+
+## 2. EOM-02b copies — which copy watches which site
+
+The package contains **one** EOM-02b, unbound. Duplicate it three times.
+
+| Copy | Rename it to | Trigger site | Trigger library | Enabled? |
 |---|---|---|---|---|
-| 1 | `MF_Portfolio1_SiteURL` | `DAFMissionFeeding-Portfolio1` | Shared Documents | `Legacy_Portfolio 1/H. Monthly Data Call` |
-| 2 | `MF_Portfolio2_SiteURL` | `DAFMissionFeeding-Legacy_Portfolio2` | Shared Documents | `Legacy_Portfolio 2/5. Monthly Data Call` |
-| 3 | `MF_Portfolio3_SiteURL` | `DAFMissionFeeding-Portfolio3` | Shared Documents | `Legacy_Portfolio 3/Monthly Data Call` |
-| 4 | `MF_Portfolio4_SiteURL` | `DAFMissionFeeding-Portfolio4` | Shared Documents | `Legacy_Portfolio 4/Monthly Data Call` |
+| 1 (the imported one) | `EOM-02b Legacy Intake — Portfolio 1` | value of `MF_Portfolio1_SiteURL` | `Shared Documents` | **No** |
+| 2 | `EOM-02b Legacy Intake — Portfolio 2` | value of `MF_Portfolio2_SiteURL` | `Shared Documents` | **No** |
+| 3 | `EOM-02b Legacy Intake — Portfolio 3` | value of `MF_Portfolio3_SiteURL` | `Shared Documents` | **No** |
+| 4 | `EOM-02b Legacy Intake — Portfolio 4` | value of `MF_Portfolio4_SiteURL` | `Shared Documents` | **No** |
 
-**Portfolio 2's slug contains `Legacy_` and the other three do not.** A URL built
-by pattern works on three portfolios and 404s on one. That is the worst failure
-shape available: three people report it working and the fourth is told it must
-be something on their end.
+**Then open all four triggers and read the site off each.** Four copies pointed
+at the same site is the original gap with more moving parts, and it looks
+identical to working.
 
-**All four root folder names differ.** `H. Monthly Data Call`, `5. Monthly Data
-Call`, and two bare `Monthly Data Call`. The `H.` and `5.` are sort-order
-prefixes somebody typed years ago. No rule derives them.
+Enable a copy only once its site is verified in section 4.
 
-Real URLs never enter source. They are bound at import from the environment
-variables above, and `scripts/prerelease_scan.py` rule URL-01 blocks a `.mil`
-site URL in a tracked file — correctly, and it stays blocking.
+---
 
-## The walkthrough — four sites, about ten minutes
+## 3. Destination rows — which row gets which URL
 
-For each portfolio, open the site and record:
+Eight rows ship in `configuration/document-destinations.csv`, every one with
+`Site_URL` blank, `Verified_By` blank, `Verified_Date` blank and `Active_Flag`
+FALSE.
 
-- [ ] Exact site collection URL
-- [ ] Exact library name (assumed `Shared Documents` — verify, do not assume)
-- [ ] Exact root folder name, **including the sort prefix** where there is one
-- [ ] **The actual naming of the month folders inside FY26** — see below
-- [ ] Whether FY25, FY26 and FY27 all exist
-- [ ] Who administers permissions on that site
+| Destination_ID | Set `Site_URL` from | `Root_Folder` (already set) | Library segment |
+|---|---|---|---|
+| `PILOT-P1-EOM` | `MF_PilotSite_SiteURL` | `EOM-EOY/Portfolio 1` | `Shared Documents` |
+| `PILOT-P2-EOM` | `MF_PilotSite_SiteURL` | `EOM-EOY/Portfolio 2` | `Shared Documents` |
+| `PILOT-P3-EOM` | `MF_PilotSite_SiteURL` | `EOM-EOY/Portfolio 3` | `Shared Documents` |
+| `PILOT-P4-EOM` | `MF_PilotSite_SiteURL` | `EOM-EOY/Portfolio 4` | `Shared Documents` |
+| `PORT1-EOM` | `MF_Portfolio1_SiteURL` | `Legacy_Portfolio 1/H. Monthly Data Call` | `Shared Documents` |
+| `PORT2-EOM` | `MF_Portfolio2_SiteURL` | `Legacy_Portfolio 2/5. Monthly Data Call` | `Shared Documents` |
+| `PORT3-EOM` | `MF_Portfolio3_SiteURL` | `Legacy_Portfolio 3/Monthly Data Call` | `Shared Documents` |
+| `PORT4-EOM` | `MF_Portfolio4_SiteURL` | `Legacy_Portfolio 4/Monthly Data Call` | `Shared Documents` |
 
-Then set `Site_URL`, `Month_Folder_Pattern_Note`, `Verified_By`,
-`Verified_Date` and `Active_Flag = TRUE` in
-`configuration/document-destinations.csv`.
+All four pilot rows share one site and differ only by root folder, so pilot
+routing still exercises four destinations rather than a simplified single one.
 
-## The month folder question
+**`Library_Name` and `Library_Url_Segment` are different strings and are not
+interchangeable.** The pilot library displays as `Documents` and is
+`Shared Documents` in the URL. The path is always built from the segment;
+substituting the display name produces a 404 that reads like a permissions
+problem.
 
-This is the one item nobody will guess right, and it is the reason the checklist
-exists.
+---
 
-Four sites name their **root** folders four different ways. There is no reason
-to believe they name their **month** folders the same way as each other. `Aug
-26`, `August 2026`, `08 Aug`, `08. August` are all plausible and all live
-somewhere in the DAF.
+## 4. Verify before setting Active_Flag TRUE
 
-The matcher in `scripts/folder_resolver.py` handles the variants it can — month
-name, three-letter abbreviation, and two-digit number, case-insensitively,
-anywhere in the folder name, plus `FY26` / `FY 26` / `FY2026`. Record what is
-actually there anyway. When a file lands at root, the first question is always
-*"what was it looking for, and what is actually on the site"*, and
-`Month_Folder_Pattern_Note` is the answer written down before the incident
-rather than after it.
+Do this per row, on the site, with the row in front of you. Do not set
+`Active_Flag TRUE` on a row you have not walked.
 
-## Find, never create
+| # | Check | Why it cannot be skipped |
+|---|---|---|
+| 1 | The `Site_URL` you recorded opens in a browser | A pattern-built URL 404s on exactly one portfolio |
+| 2 | The library exists, and its **URL segment** matches `Library_Url_Segment` | The display name is not the URL segment |
+| 3 | `Root_Folder` exists **exactly**, sort prefix and all | `H. Monthly Data Call` and `Monthly Data Call` are different folders; the prefixes are inconsistent across portfolios |
+| 4 | An `FY26` folder exists under the root, and you have recorded **its exact name** | It might be `FY26`, `FY 26`, `FY2026`, or something else on this site |
+| 5 | **Record the exact month folder naming inside FY26** in `Month_Folder_Pattern_Note` | This differs per site and nobody can guess it. `08 Aug`, `Aug`, `August`, `2026-08`, `08` — all are in use somewhere |
+| 6 | The flow's service account can write to the root folder | A permission failure at write time strands a submission record with no file |
+| 7 | Only then: set `Verified_By`, `Verified_Date`, `Active_Flag TRUE` | `Verified_By` is a claim that a person walked this site on that date |
 
-`Create_Missing_Folders` is **FALSE, permanently**, on all four rows. The FY and
-month folders are curated by hand and the flow's job is to find them.
+**If step 5 is skipped, everything still "works".** EOM-02 finds no month
+folder, falls back to the configured root, flags `Needs_Filing TRUE`, and the
+documents pile up one level above where anyone looks for them. Nothing errors.
+That is the failure this worksheet exists to prevent.
 
-A flow that creates folders will eventually produce `Aug 26` beside someone's
-`August 2026`. Both look right. Half the submissions go to each, and nobody
-notices for a month — at which point there is no way to tell which folder a
-given base was told to use.
+---
 
-When the folder cannot be matched, `Fallback_Policy = FIND_OR_ROOT` puts the
-file at the Monthly Data Call root with `Needs_Filing = TRUE` and a
-`Filing_Note` saying what was looked for. Admin shows the count. **A submission
-that lands somewhere findable beats one that fails** — the base did their part,
-and the mess is ours to clean up, visibly.
+## 5. Discovery is still outstanding for production
 
-`FIND_OR_FAIL` exists in the vocabulary for a destination where a stray file at
-root would be worse than a failed upload. No R1 row uses it.
+The four production rows have never been walked. `PROVISION-WITHOUT-POWERSHELL.md`
+covers running a discovery pass against them.
 
-## Fail closed
-
-EOM-02 refuses to write when any of these is true:
-
-| Condition | Error |
-|---|---|
-| No destination row for the portfolio and domain | `DESTINATION_NOT_CONFIGURED` |
-| `Active_Flag` is FALSE | `DESTINATION_NOT_CONFIGURED` |
-| `Verified_By` is blank | `DESTINATION_NOT_VERIFIED` |
-| `Site_URL` is blank | `CONFIGURATION_REQUIRED` |
-
-All three gates default to "no", so a destination nobody has walked cannot
-receive a file by accident. None of these errors shows the user a path, a site
-URL or a connector message.
-
-## Cloud
-
-The SharePoint tenant is `usaf.dps.mil`; Teams resolves to
-`dod.teams.microsoft.us`. This is the **DoD** cloud — **not GCC High**. Every
-GCC High endpoint in a document dated before 31 Aug 2026 is wrong for this
-deployment.
-
-```
-Maker   make.apps.appsplatform.us
-Flow    flow.appsplatform.us
-Admin   admin.appsplatform.us
-```
-
-`MF_TenantCloud` is `UsGovDod`, and the provisioning scripts take
-`-TenantCloud UsGovDod`.
-
-Confirm the Power Platform environment is in the **same tenant** as the
-SharePoint sites. Same cloud does not guarantee same tenant, and a cross-tenant
-connection fails in a way that reads like a permissions problem for a week.
-
-## What this does to the security gap
-
-`docs/security-open-issue.md` is the open finding that the data layer does not
-enforce installation scope independently of the app.
-
-Four separate site collections make it **smaller, not larger**. A portfolio
-boundary is now a site boundary, and SharePoint enforces that natively without
-anyone building anything. What remains is installation scope *within* a
-portfolio site — a real problem, and a smaller one than it was.
-
-It is not closed. `security/security-manifest.yaml` keeps
-`data_layer_permissions_verified: false` until it is.
+This does not block the pilot: pilot routing goes to the automations team site,
+whose four rows are configured and need only their shared `Site_URL` bound and
+their folders verified as above.

@@ -16,6 +16,8 @@ Run it last, after the tests and after the commit, before the ZIP is built.
 from __future__ import annotations
 
 import csv
+import glob
+import hashlib
 import json
 import os
 import re
@@ -63,6 +65,95 @@ def live_files():
 def run(*args):
     return subprocess.run([sys.executable, *args], capture_output=True,
                           text=True, cwd=ROOT)
+
+
+def git(*args):
+    """Git, or None if it cannot answer. A provenance claim that cannot be
+    checked is not evidence, so the caller must fail closed on None rather
+    than treat silence as agreement."""
+    try:
+        r = subprocess.run(["git", *args], capture_output=True, text=True,
+                           cwd=ROOT, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def provenance():
+    """Every artifact, hash, tag and commit this release claims must be
+    resolvable HERE, at build time.
+
+    The alternative -- a report naming a ZIP, a checksum, a tag and a commit
+    that the machine reading it cannot resolve -- is indistinguishable from an
+    invented one. It reads as evidence and carries none. So each claim is
+    resolved or it is a stop condition; nothing is taken on the report's word.
+    """
+    report = read("FINAL_RELEASE_REPORT.md")
+
+    claimed_sha = re.search(r"SHA-256\s+([0-9a-f]{64})", report)
+    claimed_commit = re.search(r"commit\s+([0-9a-f]{40})", report)
+    check("report claims a SHA-256", bool(claimed_sha),
+          claimed_sha.group(1)[:16] + "..." if claimed_sha else "none found")
+    check("report claims a build commit", bool(claimed_commit),
+          claimed_commit.group(1)[:12] if claimed_commit else "none found")
+
+    if claimed_commit:
+        sha1 = claimed_commit.group(1)
+        resolved = git("cat-file", "-t", sha1)
+        check("the claimed commit exists in this repository",
+              resolved == "commit", resolved or "UNRESOLVABLE")
+        head = git("rev-parse", "HEAD")
+        check("HEAD is resolvable", bool(head), head[:12] if head else "no git")
+        if head and resolved == "commit":
+            same = head == sha1
+            if same:
+                check("the build commit is HEAD", True, "identical")
+            else:
+                diff = git("diff", "--stat", sha1, head) or ""
+                non_md = [ln for ln in diff.splitlines()
+                          if "|" in ln and not ln.strip().startswith(".md")
+                          and not ln.split("|")[0].strip().endswith(".md")]
+                check("HEAD differs from the build commit only in .md",
+                      not non_md,
+                      "; ".join(x.split("|")[0].strip() for x in non_md)
+                      or f"{len(diff.splitlines()) - 1} doc file(s)")
+
+    zips = glob.glob(os.path.join(ROOT, "dist", "*", "*.zip"))
+    check("exactly one built artifact is present", len(zips) == 1,
+          os.path.basename(zips[0]) if len(zips) == 1
+          else f"{len(zips)} found — build it before gating")
+    if len(zips) == 1 and claimed_sha:
+        with open(zips[0], "rb") as fh:
+            actual = hashlib.sha256(fh.read()).hexdigest()
+        check("the artifact hashes to the claimed SHA-256",
+              actual == claimed_sha.group(1),
+              actual[:16] + ("... matches" if actual == claimed_sha.group(1)
+                             else "... MISMATCH"))
+
+    sums = os.path.join(os.path.dirname(zips[0]), "SHA256SUMS.txt") if zips else ""
+    if sums and os.path.exists(sums):
+        body = open(sums, encoding="utf-8").read()
+        s_commit = re.search(r"commit\s+([0-9a-f]{40})", body)
+        s_sha = re.search(r"([0-9a-f]{64})\s+\S+\.zip", body)
+        check("SHA256SUMS names the same commit as the report",
+              bool(s_commit) and bool(claimed_commit)
+              and s_commit.group(1) == claimed_commit.group(1),
+              s_commit.group(1)[:12] if s_commit else "none")
+        check("SHA256SUMS names the same hash as the report",
+              bool(s_sha) and bool(claimed_sha)
+              and s_sha.group(1) == claimed_sha.group(1),
+              s_sha.group(1)[:16] + "..." if s_sha else "none")
+    else:
+        check("SHA256SUMS.txt accompanies the artifact", False,
+              "absent — the artifact has no provenance record")
+
+    tag = git("rev-parse", "v1.0.0^{commit}")
+    check("the release tag resolves locally", bool(tag),
+          tag[:12] if tag else "v1.0.0 does not resolve")
+    if tag and claimed_commit:
+        check("the tag points at the build commit",
+              tag == claimed_commit.group(1), tag[:12])
+
 
 
 def main():
@@ -185,6 +276,16 @@ def main():
     }
     check("one schema version everywhere",
           len(set(schema_versions.values())) == 1, str(schema_versions))
+
+    r = run(os.path.join(ROOT, "scripts", "classify_tests.py"))
+    check("every test class declares what it proves", r.returncode == 0,
+          " ".join(r.stdout.split()[-6:]) if r.returncode == 0
+          else "unclassified test class")
+
+    print()
+    print("PROVENANCE — every claim resolved here, or it is a stop condition")
+    print()
+    provenance()
 
     print()
     if FAILURES:

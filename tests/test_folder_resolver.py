@@ -267,25 +267,53 @@ class SeededDestinations(unittest.TestCase):
         roots = [r["Root_Folder"] for r in self.pilot()]
         self.assertEqual(len(set(roots)), 4)
 
-    def test_every_portfolio_has_exactly_one_active_destination(self):
-        # Two active rows for one portfolio is an ambiguous route.
-        active = [r for r in self.rows if r["Active_Flag"] == "TRUE"]
-        seen = [r["Portfolio_ID"] for r in active]
-        self.assertEqual(len(seen), len(set(seen)), "ambiguous routing")
-        self.assertEqual(len(seen), 4)
+    def test_no_row_ships_active_or_verified(self):
+        """POLICY, and it replaces the opposite assertion.
 
-    def test_the_pilot_rows_are_the_active_ones(self):
-        for r in self.pilot():
-            self.assertEqual(r["Active_Flag"], "TRUE", r["Destination_ID"])
-        for r in self.production():
+        This test used to require the four pilot rows to be ACTIVE and
+        VERIFIED. That encoded a decision that has since been reversed: the
+        repository is public, no site URL lives in source, and a row cannot be
+        honestly marked verified by anyone who has not walked the site. The old
+        test would have failed the correct configuration and argued for the
+        rejected one -- which is the whole hazard of a policy test.
+
+        Activation happens in the tenant, once an operator has walked the site
+        and bound its URL. See deployment/site-bindings.md.
+        """
+        for r in self.rows:
             self.assertEqual(r["Active_Flag"], "FALSE", r["Destination_ID"])
+            self.assertEqual(r["Verified_By"], "", r["Destination_ID"])
+            self.assertEqual(r["Verified_Date"], "", r["Destination_ID"])
 
-    def test_portfolio_two_keeps_its_odd_slug_on_the_record(self):
+    def test_no_row_carries_a_site_url(self):
+        # POLICY. Site_URL is bound at import from MF_Portfolio{n}_SiteURL or
+        # MF_PilotSite_SiteURL, and is blank in source on every row. A blank
+        # one makes EOM-02 fail closed with CONFIGURATION_REQUIRED, which is
+        # correct before binding.
+        for r in self.rows:
+            self.assertEqual(r["Site_URL"], "", r["Destination_ID"])
+
+    def test_one_row_per_portfolio_per_generation(self):
+        # Two rows for one portfolio in the same generation is an ambiguous
+        # route. Pilot and production are separate generations, so each may
+        # hold one row per portfolio; both together may not.
+        for group in (self.pilot(), self.production()):
+            seen = [r["Portfolio_ID"] for r in group]
+            self.assertEqual(len(seen), len(set(seen)), "ambiguous routing")
+            self.assertEqual(len(seen), 4)
+
+    def test_portfolio_two_keeps_its_irregularity_on_the_record(self):
         # Three work and one 404s is the worst failure shape available, so the
         # irregularity is written down where somebody debugging will find it.
+        # The note records THAT the slug is irregular without reproducing it --
+        # the slug itself now lives only in the operator's worksheet.
         p2 = next(r for r in self.production()
                   if r["Portfolio_ID"] == "PORTFOLIO 2")
-        self.assertIn("Legacy_Portfolio2", p2["Site_Note"])
+        note = p2["Site_Note"]
+        self.assertIn("ODD ONE", note)
+        self.assertIn("404s", note)
+        self.assertIn("Read it off the site", note)
+        self.assertNotIn("DAFMissionFeeding", note)
 
     def test_the_library_url_segment_is_recorded_separately(self):
         # A library displayed as "Documents" is "Shared Documents" in the URL.

@@ -71,8 +71,10 @@ now. After step 9 it is permanent.
 - `MF_App_Config.SchemaVersion` reads `5.0`. Every flow compares against this
   and terminates on a mismatch, so a wrong value here stops everything.
 - All 103 installations have `Generation_Enabled = FALSE`.
-- `MF_Document_Destination` holds **8 rows** — four `PILOT-P#-EOM`
-  (`Active_Flag TRUE`) and four `PORT#-EOM` (`Active_Flag FALSE`).
+- `MF_Document_Destination` holds **8 rows** — four `PILOT-P#-EOM` and four
+  `PORT#-EOM` — and **every one is `Active_Flag FALSE`, `Verified_By` blank,
+  `Verified_Date` blank**. Nothing ships pre-verified: `Verified_By` is a claim
+  that a person walked that site, and no one has. Activation happens in step 6.
 - **Every row's `Site_URL` is blank.** It is blank in source deliberately and
   is bound in step 6. A destination with a blank `Site_URL` fails closed.
 
@@ -120,8 +122,9 @@ source control**.
       exactly one portfolio — three work and one is a mystery.
 - [ ] Record **how the month folders inside FY26 are actually named**. EOM-02
       matches existing folders and never creates one.
-- [ ] Set `Site_URL`, `Verified_By`, `Verified_Date` and `Active_Flag = TRUE`
-      on `MF_Document_Destination` only for rows you actually walked.
+- [ ] Work `deployment/site-bindings.md` section 4 per row, then set
+      `Site_URL`, `Month_Folder_Pattern_Note`, `Verified_By`, `Verified_Date`
+      and `Active_Flag = TRUE` — **only** for rows you actually walked.
 
 **Verify:** no environment variable is left blank. A blank one does not error;
 it reads as empty and the flow writes nothing.
