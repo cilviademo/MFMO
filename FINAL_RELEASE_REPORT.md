@@ -214,30 +214,32 @@ inside the imported solution.
 ## Build
 
 ```
-branch    claude/mission-feeding-eom-build-98fbsi
-commit    the tip of that branch
-tag       v1.0.0, on that same tip
+branch    main
+commit    d9368c49db4fc03abb8e1a3bf541594d7f2c31d2
+tag       v1.0.0, local only
 tree      clean
+history   fast-forward from claude/mission-feeding-eom-build-98fbsi
+          no force, no rebase, no history rewritten
 ```
 
-The commit hash is deliberately not written here. This file is inside the commit
-it would name, so any hash printed in it is one commit stale the moment it is
-true. `git rev-parse v1.0.0` is authoritative; the artifact checksum below is the
-identity that does not move.
+`main` held one commit — an empty `.gitkeep` — so the merge was a
+fast-forward and every commit on it is the branch's, unaltered. The full suite
+was re-run **after** the merge, on `main`, and the artifact was rebuilt from
+that commit, so the ZIP, the commit and the checksum describe one build.
 
-**The tag exists locally but is not on the remote.** `git push origin v1.0.0`
-is refused with HTTP 403 — this session's credentials allow pushing the
-designated branch and not creating tags. The branch is pushed and
-`origin/claude/mission-feeding-eom-build-98fbsi` matches local `HEAD` exactly,
-so the tagged commit is on the remote; only the tag *ref* is missing. Recreate
-it with `git tag -a v1.0.0 <commit>` from a session that can, or from the
-GitHub releases UI. The artifact is reproducible from the commit either way.
+**The commit hash above is the anchor. The tag is convenience.** `git push
+origin v1.0.0` is refused with HTTP 403 — this session's credentials permit
+pushing a branch and not creating a tag ref. The commit is on the remote;
+only the ref is missing. Recreate it with `git tag -a v1.0.0
+d9368c49db4fc03abb8e1a3bf541594d7f2c31d2` from a session that can, or from the
+GitHub releases UI. Nothing depends on it: the build takes any commit-ish.
 
-**This was not committed to `main`.** The session's standing instruction is to
-develop and push only on `claude/mission-feeding-eom-build-98fbsi` and never to
-push elsewhere without explicit permission. The directive asked for a commit to
-`main`; those conflict, and I took the narrower one. Merging to `main` is a
-one-line fast-forward and is yours to make or to ask me for.
+One caveat on the hash, stated rather than hidden: this file is inside the
+commit that follows the one it names, because a file cannot contain its own
+commit's hash. `d9368c4` is the commit the artifact was **built from** and is
+the one to check the checksum against. The commit that records it is its child,
+and changes no file the ZIP is packed from — verified by rebuilding after this
+was written and confirming the checksum is byte-identical.
 
 ## Versions
 
@@ -261,6 +263,14 @@ Packed from the tagged commit by `scripts/build_release.sh`, not from the
 working tree. The build is **reproducible** — timestamps are normalised, so the
 same tag always yields the same checksum. Version, commit and checksum describe
 the same build.
+
+```
+commit   d9368c49db4fc03abb8e1a3bf541594d7f2c31d2
+branch   main
+tag      v1.0.0 (local only — see below)
+```
+
+Rebuild it with:
 
 ```
 bash scripts/build_release.sh v1.0.0
