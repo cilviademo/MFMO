@@ -48,7 +48,7 @@ exists to make that distinction explicit.
 |---|---|
 | Canvas app | 12 screens, 4 components, `.pa.yaml` |
 | Flows | 5 specifications — EOM-01, EOM-02, EOM-02b, EOM-03, EOM-04 |
-| Schema | 17 SharePoint lists, 284 columns, internal names fixed at creation |
+| Schema | 17 SharePoint lists, 286 columns, internal names fixed at creation |
 | Registry | 103 installations, 154 facilities, from the QRG |
 | Requirements | 13 rows, 8 active, authority and scope tracked separately |
 | Destinations | 4 rows, all unbound, unverified and inactive |

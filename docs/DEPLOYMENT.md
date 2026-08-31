@@ -43,8 +43,9 @@ pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud UsGovDod
 pwsh provisioning/Provision-MFOpsLists.ps1 -SiteUrl <site> -TenantCloud UsGovDod
 ```
 
-Expected: **17 lists, 282 columns**, plus the evidence library with versioning
-on.
+Expected: **17 lists, 286 columns**. There is no central evidence library —
+it was a second write target created on every provisioning run and it was
+removed; documents land in the portfolio destination and nowhere else.
 
 **Confirm the indexes were created.** The script verifies them and throws if
 one is missing. This is not a formality: SharePoint refuses to add an index to

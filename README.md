@@ -67,7 +67,7 @@ the real engine. Open it in a browser.
 ## Build state
 
 ```
-Schema version            5.0  (17 lists, 282 columns)   validated
+Schema version            5.0  (17 lists, 286 columns)   validated
 Requirement seed          13 rows, 8 active, authority and scope tracked apart
 Registry                  103 installations, 154 facilities, from the QRG
 Status engine             reference + Power Fx + prototype, held in agreement

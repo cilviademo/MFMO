@@ -165,9 +165,18 @@ FLOWS = [
                     "host": {"connectionName": "shared_sharepointonline",
                              "operationId": "OnNewFileV2",
                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"},
+                    # Deliberately UNBOUND. A SharePoint trigger watches one
+                    # site and one library, and there are four site
+                    # collections -- so any single binding shipped here is
+                    # coverage of one portfolio dressed as coverage of four.
+                    # Bound to Portfolio 1 the flow imports, activates, works,
+                    # and silently discovers nothing in Portfolios 2-4 until an
+                    # inspection asks. Blank fails loudly in the designer
+                    # instead, which is the only honest default for a template
+                    # that must be duplicated before it is correct.
                     "parameters": {
-                        "dataset": "@parameters('MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)')",
-                        "table": "Shared Documents",
+                        "dataset": "",
+                        "table": "",
                     },
                     "authentication": "@parameters('$authentication')",
                 },
@@ -240,8 +249,10 @@ FLOW_ENV_VARS = {
                         "mfops_MF_InstallationList", "mfops_MF_DestinationList"],
     "EOM02bLegacyIntake": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
                            "mfops_MF_UnmatchedList", "mfops_MF_SubmissionList",
-                           "mfops_MF_SecurityList",
-                           "mfops_MF_Portfolio1_SiteURL"],
+                           "mfops_MF_SecurityList"],
+    # No MF_Portfolio{n}_SiteURL here. The trigger site is set on each of the
+    # four duplicated copies at import, not declared once in the template --
+    # declaring one would name the portfolio this template does not belong to.
     "EOM03Reconciliation": ["mfops_MF_SharePointSiteURL", "mfops_MF_ConfigList",
                             "mfops_MF_ItemList", "mfops_MF_StatusList",
                             "mfops_MF_SubmissionList"],

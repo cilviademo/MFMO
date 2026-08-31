@@ -243,7 +243,7 @@ expect the first version to be wrong at a handful of bases.
 | `MF_Notification_Rule` | new list |
 | Food 2.0 / MAFFO / EOY placeholders inactive | `configuration/requirements.csv` |
 
-Schema is now **15 lists, 209 columns**.
+Schema is now **17 lists, 286 columns**.
 
 ---
 

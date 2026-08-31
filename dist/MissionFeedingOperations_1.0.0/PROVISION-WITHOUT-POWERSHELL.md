@@ -6,7 +6,7 @@ Three routes, best first.
 `scripts/gen_rest_payloads.py` has produced:
 
 ```
-provisioning/sharepoint-schema.json     17 lists, 284 columns, 89 indexes
+provisioning/sharepoint-schema.json     17 lists, 286 columns, 90 indexes
 provisioning/manual-column-sheet.csv    the same thing as a flat checklist
 ```
 
@@ -108,7 +108,7 @@ was created by hand and needs deleting and recreating.
 
 ## Route 2 — Hand-build in the UI
 
-Viable but slow: 284 columns. Use `manual-column-sheet.csv` as the checklist.
+Viable but slow: 286 columns. Use `manual-column-sheet.csv` as the checklist.
 
 **The one technique that matters.** SharePoint sets the internal name from
 whatever you type when the column is created, and it never changes afterwards.
@@ -124,7 +124,7 @@ Internal name stays `Installation_ID`. Skip step 1 and you are stuck with
 **Do not** create a column by typing a friendly name first.
 
 Order: create all 17 lists, then work list by list down the sheet, then set the
-89 indexes via List settings → Indexed columns.
+90 indexes via List settings → Indexed columns.
 
 If you take this route, do `MF EOM Item`, `MF EOM Submission`,
 `MF EOM Requirement`, `MF Installation` and `MF Facility` first. Those five run

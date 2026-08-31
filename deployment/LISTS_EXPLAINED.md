@@ -18,7 +18,7 @@ what happened.
 
 ## You don't create them manually
 
-`provisioning/Provision-MFOpsLists.ps1` creates all 17, adds all 250 columns
+`provisioning/Provision-MFOpsLists.ps1` creates all 17, adds all 286 columns
 with the exact internal names the formulas depend on, and sets the indexes.
 
 Building them by hand would take a day and produce internal column names that

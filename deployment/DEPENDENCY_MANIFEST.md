@@ -212,7 +212,7 @@ Three outcomes, in order of preference:
 
 **Never resolve this by editing `scripts/eom_schema.py` to match what is already
 on the site.** That would make the tenant the source of truth for a schema that
-17 lists, 284 columns, 5 flows and 12 screens are written against.
+17 lists, 286 columns, 5 flows and 12 screens are written against.
 
 ## What importing the ZIP does not do
 

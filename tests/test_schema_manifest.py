@@ -484,3 +484,67 @@ class ReportIndexTableMatchesTheSchema(unittest.TestCase):
                       self.report)
         self.assertIn(f"**{sum(v[1] for v in self.truth.values())}**",
                       self.report)
+
+
+class NoDocumentStatesAStaleTotal(unittest.TestCase):
+    """The column and index totals are transliterated into a dozen documents.
+
+    They went stale in eight of them at once -- the release report, the release
+    notes, the changelog, the dependency manifest, the correctness record, the
+    provisioning guide and the import checklist all said 284 columns and 89
+    indexes while the schema said 286 and 90. Nothing was wrong with any of
+    those sentences when they were written; they simply were not attached to
+    the thing they describe. This attaches them.
+    """
+
+    SKIP_DIRS = {".git", "node_modules", "__pycache__", "reference",
+                 "handoffs", "archive", "figma-build"}
+    # A three-digit count preceding "column" is a whole-schema total. Per-list
+    # counts are two digits, so they cannot collide.
+    COLUMNS = re.compile(r"\b(\d{3})\s+column")
+    # Per-list index counts top out at 13, so anything at or above 40 claiming
+    # to be a number of indexes is a whole-schema total.
+    INDEXES = re.compile(r"\b(\d{2,})\s+index(?:es|ed columns)\b")
+
+    def setUp(self):
+        self.columns = sum(len(l.columns) for l in S.LISTS)
+        self.indexes = sum(1 for l in S.LISTS for c in l.columns if c.indexed)
+
+    def _is_historical(self, line):
+        """A changelog entry for a superseded schema states that schema's
+        totals, and correcting it would be falsifying the record. Such a line
+        names the version it belongs to, so a stated version other than the
+        current one marks the claim as history rather than a stale fact."""
+        for m in re.finditer(r"schema version\s+(\d+\.\d+)", line, re.I):
+            if m.group(1) != S.SCHEMA_VERSION:
+                return True
+        return False
+
+    def _docs(self):
+        for base, dirs, files in os.walk(ROOT):
+            dirs[:] = [d for d in dirs if d not in self.SKIP_DIRS]
+            for f in files:
+                if f.endswith((".md", ".csv")):
+                    yield os.path.join(base, f)
+
+    def test_every_stated_total_matches_the_schema(self):
+        bad = []
+        for path in self._docs():
+            rel = os.path.relpath(path, ROOT)
+            with open(path, encoding="utf-8", errors="ignore") as fh:
+                text = fh.read()
+            lines = text.splitlines()
+            for m in self.COLUMNS.finditer(text):
+                line = text[:m.start()].count("\n") + 1
+                if self._is_historical(lines[line - 1]):
+                    continue
+                if int(m.group(1)) != self.columns:
+                    bad.append(f"{rel}:{line} says {m.group(1)} columns, "
+                               f"schema has {self.columns}")
+            for m in self.INDEXES.finditer(text):
+                n = int(m.group(1))
+                if n >= 40 and n != self.indexes:
+                    line = text[:m.start()].count("\n") + 1
+                    bad.append(f"{rel}:{line} says {n} indexes, "
+                               f"schema has {self.indexes}")
+        self.assertEqual(bad, [], "\n".join(bad))

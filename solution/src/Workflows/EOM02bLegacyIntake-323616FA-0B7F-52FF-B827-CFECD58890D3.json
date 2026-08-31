@@ -57,13 +57,6 @@
           "metadata": {
             "schemaName": "mfops_MF_SecurityList"
           }
-        },
-        "MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)": {
-          "defaultValue": "",
-          "type": "String",
-          "metadata": {
-            "schemaName": "mfops_MF_Portfolio1_SiteURL"
-          }
         }
       },
       "triggers": {
@@ -76,8 +69,8 @@
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
             },
             "parameters": {
-              "dataset": "@parameters('MF_Portfolio1_SiteURL (mfops_MF_Portfolio1_SiteURL)')",
-              "table": "Shared Documents"
+              "dataset": "",
+              "table": ""
             },
             "authentication": "@parameters('$authentication')"
           },

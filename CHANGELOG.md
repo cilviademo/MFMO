@@ -89,7 +89,7 @@ term, held to the Python predicate by test.
 * `scripts/release_gate.py` — the 18 stop conditions. Exit 1 blocks the build.
 * `scripts/routing_dryrun.py` — all four site collections, seven failure paths,
   proving no folder is created and no fallback rises above its approved root.
-* `docs/SHAREPOINT_SCHEMA_MANIFEST.md` — internal names for 17 lists and 284
+* `docs/SHAREPOINT_SCHEMA_MANIFEST.md` — internal names for 17 lists and 286
   columns, reconciled against every formula and flow in the three positions
   where a wrong name reads blank instead of erroring.
 * `deployment/DEPENDENCY_MANIFEST.md` — 66 destination-side resources, each
@@ -134,7 +134,7 @@ which is the worst failure shape there is: three work and one is a mystery.
 **All four root folder names differ**, two with sort prefixes no rule derives.
 And **this is the DoD cloud, not GCC High**.
 
-New list `MF_Document_Destination` (17 lists, 282 columns), one row per
+New list `MF_Document_Destination` (17 lists, 286 columns), one row per
 portfolio, every one shipping `Site_URL` blank, `Verified_By` blank and
 `Active_Flag` FALSE. EOM-02 fails closed on all three.
 `deployment/site-bindings.md` is the walkthrough, and it is now a required

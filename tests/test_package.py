@@ -424,3 +424,44 @@ class TheDependencyManifestIsUsable(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LegacyIntakeShipsUnbound(unittest.TestCase):
+    """EOM-02b is a template, and the package must not disguise that.
+
+    A SharePoint trigger watches ONE site and ONE library. The four portfolios
+    are four separate site collections, so no single instance can cover them.
+    Shipping it bound to Portfolio 1 would import, activate, run, and discover
+    nothing in Portfolios 2-4 -- partial coverage that looks exactly like full
+    coverage until an inspection asks. It ships unbound so the designer shows
+    an unset field, and it is duplicated once per portfolio at import.
+    """
+
+    def setUp(self):
+        path = os.path.join(
+            ROOT, "solution", "src", "Workflows",
+            "EOM02bLegacyIntake-323616FA-0B7F-52FF-B827-CFECD58890D3.json")
+        with open(path, encoding="utf-8") as fh:
+            self.flow = json.load(fh)
+        self.trigger = self.flow["properties"]["definition"]["triggers"][
+            "SharePointFileCreated"]
+
+    def test_the_trigger_names_no_site_and_no_library(self):
+        params = self.trigger["inputs"]["parameters"]
+        self.assertEqual(params["dataset"], "")
+        self.assertEqual(params["table"], "")
+
+    def test_it_does_not_single_out_one_portfolio(self):
+        body = json.dumps(self.flow)
+        for n in (1, 2, 3, 4):
+            self.assertNotIn(f"MF_Portfolio{n}_SiteURL", body,
+                             "the legacy intake template must not bind to a "
+                             "single portfolio site")
+
+    def test_the_import_checklist_says_to_deploy_it_four_times(self):
+        for rel in (os.path.join("dist", "MissionFeedingOperations_1.0.0",
+                                 "IMPORT_CHECKLIST.md"),):
+            with open(os.path.join(ROOT, rel), encoding="utf-8") as fh:
+                text = " ".join(fh.read().split())
+            self.assertIn("EOM-02b", text)
+            self.assertRegex(text, r"(?i)four (times|copies|instances)")
