@@ -1,9 +1,15 @@
 # Solution packaging
 
+> **The contents of `src/` are the solution ENVELOPE, not a complete solution.**
+> There is no `.msapp` and no flow `definition.json` here, because the Power
+> Platform build has not started. A ZIP packed from this folder declares
+> components it does not contain and **will not import**. See
+> `dist/MissionFeedingOperations_1.0.0/README.md`.
+
 `MissionFeedingOperations`, unmanaged source. The unpacked XML here is the
 source of truth for the solution *envelope* — its components, version and
 connection references. The app itself lives in `canvas-app/src` as `.pa.yaml`
-and the flows in `flows/*/definition.json`.
+and the flows are specified in `flows/*/definition.md`.
 
 **No Pipelines.** Releases are a ZIP plus a git tag, and rollback is importing
 the previous ZIP from `dist/`. See `docs/government-environment-mode.md`.
@@ -15,7 +21,7 @@ the previous ZIP from `dist/`. See `docs/government-environment-mode.md`.
 bash tests/run_tests.sh
 
 # pack (requires PAC CLI; see the fallback below if it is not authorized)
-pac solution pack --zipfile dist/MissionFeedingOperations_v0.6.0.zip \
+pac solution pack --zipfile dist/MissionFeedingOperations_1.0.0.zip \
     --folder solution/src --packagetype Managed
 ```
 
@@ -42,7 +48,7 @@ parameterised in `Customizations.xml` and supplied at import time by a
 deployment settings file:
 
 ```bash
-pac solution import --path dist/MissionFeedingOperations_v0.6.0.zip \
+pac solution import --path dist/MissionFeedingOperations_1.0.0.zip \
     --settings-file solution/deployment-settings.json
 ```
 
@@ -59,11 +65,9 @@ which ships disabled. If the Outlook connector is unavailable, leave its
 connection id empty: EOM-04 records what it would have sent to `MF_EOM_Audit`
 instead, which is what you read for a full cycle before enabling it anyway.
 
-`mfops_teams` is declared for escalation and is not used in R1.
-
 ## Versioning
 
-`Solution.xml` carries `<Version>`, currently `0.6.0`. Bump it with the
+`Solution.xml` carries `<Version>`, currently `1.0.0`. Bump it with the
 release, matching `MF_App_Config.AppVersion` and the git tag. The release
 ladder is in `docs/government-environment-mode.md`.
 
