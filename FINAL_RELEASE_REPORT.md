@@ -15,7 +15,7 @@ assembled in Studio.
 | List | Columns | Indexed | | List | Columns | Indexed |
 |---|---:|---:|---|---|---:|---:|
 | MF_EOM_Item | 32 | **13** | | MF_App_Event_Log | 13 | 6 |
-| MF_EOM_Submission | 33 | **13** | | MF_Facility | 20 | 5 |
+| MF_EOM_Submission | 33 | **13** | | MF_Facility | 19 | 5 |
 | MF_Security_Mapping | 20 | 8 | | MF_Installation | 18 | 4 |
 | MF_EOM_Status | 39 | 8 | | MF_EOM_Requirement | 23 | 4 |
 | MF_Unmatched_File | 13 | 4 | | MF_EOM_Audit | 9 | 4 |

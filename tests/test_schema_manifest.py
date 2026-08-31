@@ -445,3 +445,42 @@ class OneCurrentSubmissionPerItem(unittest.TestCase):
                    for c in S.LISTS_BY_NAME["MF_EOM_Submission"].columns}
         self.assertTrue(by_name["Is_Current"].indexed)
         self.assertTrue(by_name["Is_Current"].required)
+
+
+class ReportIndexTableMatchesTheSchema(unittest.TestCase):
+    """The report states a per-list index count. It is a claim about the
+    provisioning payloads, and BUILD_INSTRUCTION.md asks for it before those
+    payloads are considered final -- so it is held to the schema, not typed."""
+
+    TABLE_ROW = re.compile(
+        r"\|\s*(MF_[A-Za-z_]+)\s*\|\s*\**(\d+)\**\s*\|\s*\**(\d+)\**\s*\|")
+
+    def setUp(self):
+        self.report = read(os.path.join(ROOT, "FINAL_RELEASE_REPORT.md"))
+        self.truth = {l.name: (len(l.columns),
+                               sum(1 for c in l.columns if c.indexed))
+                      for l in S.LISTS}
+
+    def test_every_list_appears_with_the_right_counts(self):
+        stated = {m.group(1): (int(m.group(2)), int(m.group(3)))
+                  for m in self.TABLE_ROW.finditer(self.report)
+                  if m.group(1) in self.truth}
+        self.assertEqual(set(stated), set(self.truth),
+                         "the report's index table is missing a list")
+        for name in sorted(self.truth):
+            self.assertEqual(stated[name], self.truth[name],
+                             f"{name}: report states {stated[name]}, schema "
+                             f"says {self.truth[name]}")
+
+    def test_no_list_exceeds_the_sharepoint_index_cap(self):
+        # 20 per list. Over the cap the provisioning run fails partway and
+        # leaves the list half-configured, and an index cannot be added at all
+        # once a list passes 5,000 items.
+        for name, (_, indexed) in sorted(self.truth.items()):
+            self.assertLessEqual(indexed, 20, f"{name} has {indexed} indexes")
+
+    def test_the_totals_are_stated_correctly(self):
+        self.assertIn(f"**{sum(v[0] for v in self.truth.values())}**",
+                      self.report)
+        self.assertIn(f"**{sum(v[1] for v in self.truth.values())}**",
+                      self.report)
