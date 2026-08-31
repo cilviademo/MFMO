@@ -1,16 +1,24 @@
 # MissionFeedingOperations 1.0.0 — release folder
 
-> ## THIS ZIP IS NOT YET AN IMPORTABLE SOLUTION
+> ## PARTIAL — flows and configuration, no canvas app
 >
-> `MissionFeedingOperations_1.0.0.zip` contains the solution **envelope** —
-> `Solution.xml` and `Customizations.xml` — and nothing else. There is no
-> `.msapp` and no flow `definition.json`, because **the Power Platform build
-> has not started**.
+> `MissionFeedingOperations_1.0.0.zip` is a real unmanaged solution containing
+> **five cloud flows, three connection references and eighteen environment
+> variables**. Import it.
 >
-> The envelope declares a canvas app and five flows it does not contain, so
-> importing it will fail on the missing components. That is not a defect in the
-> package; it is the state of the programme, and calling it anything else would
-> be the exact failure this release was consolidated to prevent.
+> **It contains no canvas app and no placeholder for one.** The `.msapp` format
+> is owned by Studio and mid-transition; a hand-authored file it rejects on
+> open would fail the import with an error naming an internal file and
+> explaining nothing.
+>
+> Create the app **inside this solution after importing it** — it inherits the
+> connection references and environment variables the moment it exists. See
+> `CANVAS_APP_ASSEMBLY.md`.
+>
+> **The flows are wired but their bodies are not implemented.** Each carries its
+> real trigger, its connection bindings, its environment variables and the
+> schema guard, and each names the specification it must be built from. All five
+> import disabled, which the deployment procedure requires anyway.
 
 ## What this folder is for
 
@@ -19,7 +27,10 @@ checksummed, tag-traceable snapshot of the solution envelope at 1.0.0.
 
 | File | What it is |
 |---|---|
-| `MissionFeedingOperations_1.0.0.zip` | The solution envelope, packed from tag `v1.0.0` |
+| `MissionFeedingOperations_1.0.0.zip` | The solution, packed from tag `v1.0.0` |
+| `CANVAS_APP_ASSEMBLY.md` | How to build the app inside the imported solution |
+| `PREFLIGHT.md` | The four decisions and the read-only discovery script to run first |
+| `PROVISION-WITHOUT-POWERSHELL.md` | The Power Automate route, for when module installs are blocked |
 | `SHA256SUMS.txt` | Checksum. The version, the commit and this checksum describe one build |
 | `RELEASE_NOTES.md` | What is in the release and what ships switched off |
 | `KNOWN_LIMITATIONS.md` | What does not work yet, stated plainly |
@@ -31,17 +42,22 @@ checksummed, tag-traceable snapshot of the solution envelope at 1.0.0.
 **Deployment documentation sits beside the ZIP, not inside it.** The ZIP
 contains only what Power Platform import expects.
 
-## How this becomes an importable solution
+## Order of work
 
-1. Provision the lists — `provisioning/Provision-MFOpsLists.ps1`. **This is not
-   part of the import and never will be.**
-2. Author the canvas app in the maker portal from `canvas-app/src/*.pa.yaml`.
-3. Build the five flows from `flows/*/definition.md`. They are specifications,
-   deliberately not fabricated JSON.
-4. Export the solution, unmanaged, and `pac canvas unpack` the `.msapp`.
-5. **If the exported YAML disagrees with `canvas-app/src`, the committed YAML
-   wins** and the app is corrected, not the source.
-6. Re-tag and rebuild this folder from the new tag.
+1. **`PREFLIGHT.md`** — four decisions, and one read-only discovery script whose
+   output fills in the four site bindings.
+2. **Provision the lists.** `provisioning/Provision-MFOpsLists.ps1`, or
+   `PROVISION-WITHOUT-POWERSHELL.md` if module installs are blocked, which is
+   normal on `.mil`. **This is not part of the import and never will be.**
+3. **Import this ZIP.** Flows arrive disabled; leave them.
+4. **Build the app** — `CANVAS_APP_ASSEMBLY.md`. It inherits the solution's
+   connection references and environment variables.
+5. **Build the flow bodies** from `flows/*/definition.md`, enabling them one at
+   a time in the order in `POST_IMPORT_CHECKLIST.md`.
+6. **Export unmanaged**, `pac canvas unpack` the `.msapp`, and compare against
+   `canvas-app/src`. **If they disagree the committed YAML wins** and the app is
+   corrected, not the source.
+7. Re-tag and rebuild this folder from the new tag.
 
 ## Traceability
 

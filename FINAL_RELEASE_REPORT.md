@@ -2,18 +2,75 @@
 
 ## Result
 
-**READY WITH DEPLOYMENT-SIDE REQUIREMENTS** — for **DEV or PILOT only.**
+**PARTIAL** — a real solution ZIP containing the flows, environment variables
+and connection references, with the canvas app assembled in Studio.
 
-Not BLOCKED: all 18 stop conditions clear. Not READY without qualification: the
-Power Platform build has not started, so the artifact in `dist/` is the
-solution **envelope** and is not yet importable, and 16 destination-side
-resources must already exist before any of this runs.
+**READY WITH DEPLOYMENT-SIDE REQUIREMENTS**, for **DEV or PILOT only.**
+
+### What the ZIP contains
+
+Hand-authored against the documented schemas:
+
+| | |
+|---|---|
+| `[Content_Types].xml` | at the archive root, where import expects it |
+| `Other/Solution.xml` | manifest, 26 root components |
+| `Other/Customizations.xml` | 5 workflows, 3 connection references, 18 environment variable definitions |
+| `Workflows/*.json` | five cloud flows, each with its real trigger |
+
+Every flow carries its **real trigger**, its **real connection reference
+bindings**, its **environment-variable parameters** and the
+schema-compatibility guard that terminates on `CONFIGURATION_REQUIRED` before
+any write. All five import **disabled**, which is what the deployment procedure
+requires anyway.
+
+**The body of each flow is not implemented.** The logic is specified in
+`flows/*/definition.md` and was not invented to fill a JSON file — a flow whose
+body was guessed would import cleanly and do the wrong thing, which is worse
+than one that is obviously unfinished. Each flow's first action is a Compose
+naming its specification and saying so.
+
+### What the ZIP deliberately does not contain
+
+**No `.msapp`, and no placeholder for one.**
+
+The canvas app's internal format is owned by Studio, `pac canvas pack` is being
+deprecated, and the source format is mid-transition. A hand-authored file with
+the right extension that Studio rejects on open would fail the import with an
+error naming an internal file and explaining nothing — and whoever is holding it
+would spend an afternoon assuming the tenant was at fault.
+
+`scripts/build_release.sh` **refuses to build** if a `.msapp` appears in the
+solution tree, and `tests/test_package.py` fails if the manifest declares a
+canvas app component the package does not contain.
+
+`CANVAS_APP_ASSEMBLY.md` covers creating the app **inside the imported
+solution**, where it inherits these connection references and environment
+variables the moment it exists: data sources, formula paste order, the four
+components before the twelve screens, the container hierarchy, and a
+twelve-item smoke test.
+
+### Confidence, stated plainly
+
+The XML and flow-definition schemas are documented and stable, and every file
+is well-formed, cross-referenced and free of any baked destination. **It has not
+been import-tested against a tenant** — PAC CLI cannot authenticate here. That
+is item N1 in `docs/TEST_MATRIX.md` and it is not reported as passing.
+
+If the import does reject something, it will be a manifest detail in
+`Customizations.xml`, not a corrupt binary, and the error will name the element.
+
+### The one thing this does not become
+
+Not BLOCKED: all 18 stop conditions clear. Not FULL: the canvas app is not in
+the package and will not be until it is built in Studio. Not SOURCE: the flows,
+connection references and environment variables are real and importable.
 
 ## Build
 
 ```
 branch    claude/mission-feeding-eom-build-98fbsi
-commit    91c18d2e9891c4a073d76f41409bf092fcb34870
+commit    d0833bbaf2bd2557a4e676c05d1f42f0464cc67a
 tag       v1.0.0
 tree      clean
 ```
@@ -47,7 +104,7 @@ Checked by the release gate. Any drift blocks the build.
 
 ```
 dist/MissionFeedingOperations_1.0.0/MissionFeedingOperations_1.0.0.zip
-SHA-256  a79d208c4100d3c9c7644688d048912c115db628541e6171d9b3a473c6c6078e
+SHA-256  a646731f2b2cc72879f39bc83c6e4110b5f7ed1adbb369482d1eaf78ba9aa497
 ```
 
 Packed from the tagged commit by `scripts/build_release.sh`, not from the
@@ -65,31 +122,25 @@ recorded hash, and need another commit — it never converges. A build output th
 names its own commit cannot live inside that commit. Rebuild it from the tag;
 the bytes are identical every time.
 
-**It contains the solution envelope only** — `Solution.xml` and
-`Customizations.xml`. There is no `.msapp` and no flow `definition.json`,
-because the canvas app has not been authored in Power Apps and the flows have
-not been built. The envelope declares components it does not contain, so
-importing it will fail on the missing components.
-
-That is the state of the programme, not a defect in the package. Calling it an
-importable solution would be the exact failure this consolidation was run to
-prevent. `dist/MissionFeedingOperations_1.0.0/README.md` says so on its first
-line.
+See **Result** above for exactly what is in it and what is not.
 
 ## Tests
 
 | | |
 |---|---|
-| Unit tests | **346 passed**, 0 failed |
+| Unit tests | **361 passed**, 0 failed |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
-| Pre-release security scan | **PASS**, 3 warnings |
+| Pre-release security scan | **PASS**, 4 warnings |
 | Routing dry run, four sites | **PASS** — 4 happy paths, 7 failure paths |
 | EOM-01 dry run | 32 rows across the 5-base pilot |
 | Release gate | **NOT BLOCKED** — 18 stop conditions |
 | **NOT TESTABLE LOCALLY** | **10 items**, each with an owner, in `docs/TEST_MATRIX.md` |
 
-The three warnings are placeholder accounts in `security-mapping.sample.csv`,
-which is what that file is for. They only load with `-IncludeSampleData`.
+Three warnings are placeholder accounts in `security-mapping.sample.csv`, which
+is what that file is for; they only load with `-IncludeSampleData`. The fourth
+is a `.dps.mil` URL inside `tests/test_hardening.py` — the specimen the test
+uses to prove the leak rule fires. Both carry inline exceptions with reasons,
+reported on every run.
 
 No result is inferred. Nothing NOT TESTABLE LOCALLY is reported as passing.
 

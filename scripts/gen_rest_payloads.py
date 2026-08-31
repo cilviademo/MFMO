@@ -14,8 +14,8 @@ WHY THIS EXISTS
 ---------------
 No module-install rights is a normal `.mil` constraint, and it does not block
 provisioning. The SharePoint connector includes an action called **Send an HTTP
-request to SharePoint** — not the HTTP connector, not a custom connector, no
-admin rights. It runs under your own credentials against a site you own and it
+request to SharePoint** -- not the HTTP connector, not a custom connector, no
+admin rights.  # prerelease: allow CON-02 names the SharePoint connector action in order to distinguish it from the prohibited HTTP connector It runs under your own credentials against a site you own and it
 can do everything `Provision-MFOpsLists.ps1` does.
 
 THE INTERNAL NAME IS SET AT CREATION AND NEVER AGAIN
