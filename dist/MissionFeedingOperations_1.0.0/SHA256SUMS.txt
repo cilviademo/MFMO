@@ -2,10 +2,10 @@
 
 version  1.0.0
 tag      v1.0.0
-commit   9797589702cbb02bcc9a83ae70424e42dc0b0502
+commit   137d0b83788897e4b3fd11408c8af3119e6cda4c
 built    from the tagged commit via git archive
 
-a15755728c5e366b0276ddd7ba4cb99edd166fb13a09d20dde1235d6377454e3  MissionFeedingOperations_1.0.0.zip
+43dd1b6b29b42825e98f195f344d50a1f0ee0b7b1a03bb972e49e476017541a1  MissionFeedingOperations_1.0.0.zip
 279f1e21ac4b46fc8f09ba6fafe721be1e175d06fd4f8c90f00671a17aad4881  DEPENDENCY_MANIFEST.md
 4dd9745585f8404868b0258b6ee04449beb13c69b15cb48b93935a27cb09de88  IMPORT_CHECKLIST.md
 f9ac029f353f437b9b413b878250594ee4e9027d5ead7b44dbaf535192377bc2  KNOWN_LIMITATIONS.md
