@@ -102,10 +102,15 @@ inside the imported solution.
 
 ```
 branch    claude/mission-feeding-eom-build-98fbsi
-commit    d0833bbaf2bd2557a4e676c05d1f42f0464cc67a
-tag       v1.0.0
+commit    the tip of that branch
+tag       v1.0.0, on that same tip
 tree      clean
 ```
+
+The commit hash is deliberately not written here. This file is inside the commit
+it would name, so any hash printed in it is one commit stale the moment it is
+true. `git rev-parse v1.0.0` is authoritative; the artifact checksum below is the
+identity that does not move.
 
 **The tag exists locally but is not on the remote.** `git push origin v1.0.0`
 is refused with HTTP 403 — this session's credentials allow pushing the
