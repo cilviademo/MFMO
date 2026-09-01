@@ -63,6 +63,15 @@ if len(msapps) == 1:
              if re.search(r"cmp[A-Za-z]+", os.path.basename(n))}
     row("16 screens", len(app_names) == 16, f"{len(app_names)} found")
     row("6 components", len(comps) == 6, f"{len(comps)} found")
+    # The wrapper app is created with a default blank screen. Path A replaces
+    # Src/ wholesale; if a default screen survives, the replacement was not
+    # complete and the app opens on an unstyled blank page instead of the
+    # design (FIGMA_CANVAS_PARITY.md - visual source must survive assembly).
+    default_screens = [os.path.basename(n) for n in inner.namelist()
+                       if re.match(r"^Screen\d+\.pa\.yaml$",
+                                   os.path.basename(n.replace("\\", "/")))]
+    row("No default Screen1 survives", not default_screens,
+        default_screens or "Src/ fully replaced")
 
     required = [l.title for l in S.LISTS]
     missing = [r for r in required if r not in app_sources]

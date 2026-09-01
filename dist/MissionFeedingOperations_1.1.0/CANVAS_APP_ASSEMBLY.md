@@ -51,13 +51,53 @@ mid-assembly costs a re-export; discovered here it costs a minute.
 7. **Open the app for edit once.** Microsoft's packer states on every run that
    a SourceCode-packed app is validated by that open. Add any data source
    still missing, resolve zero errors, run the **Accessibility Checker**,
-   save, **publish**, and **re-export** — **the platform's re-export is the
-   canonical Canvas-inclusive artifact**, stronger evidence than anything
-   assembled locally. Then promote it:
+   then run the **visual validation gate** below — the one check no script
+   here can perform — and only then save, **publish**, and **re-export** —
+   **the platform's re-export is the canonical Canvas-inclusive artifact**,
+   stronger evidence than anything assembled locally. Then promote it:
 
        scripts/validate_final_export.sh <re-exported>.zip
 
    No further Studio work, ever.
+
+### The Studio-open visual validation gate
+
+Every automated check proves the source can only draw from the approved
+design (`docs/FIGMA_CANVAS_PARITY.md`); **whether Studio actually renders
+that design is NOT TESTABLE LOCALLY and is verified here, by you, once.**
+With the app open for edit, compare against the approved reference
+(`docs/mf-operations-prototype.html`, or `reference/figma-build/` run
+locally) and confirm each line. If the render substantially diverges from
+the reference, **stop — do not publish**; that divergence blocks the
+release exactly as a failing test would.
+
+- **Structure** — all 16 screens listed in the tree view, in the
+  `_EditorState` order, and **no default `Screen1`** anywhere. A blank
+  white default screen means Src/ replacement was incomplete: stop.
+- **No default styling survives** — no Power Apps default-blue buttons, no
+  default white screen fills, no default `Label1` typography. Every screen
+  paints the off-white `#FAF9F8` ground; buttons carry the `#0F548C`
+  accent; borders are 1px hairlines, not defaults.
+- **Status chips** — on `scrMyPackage` or `scrOverview`, all six states
+  render with label + icon + tinted fill + 1px border, and **amber
+  (orange-brown) is visibly not yellow (gold)**. If those two chips look
+  like the same colour, something replaced the tokens: stop.
+- **Navigation** — a base-scoped test identity sees exactly
+  Home / My Package / Calendar with Submit as a button, not a tab; an
+  AFSVC identity sees Overview / Installations / Exceptions / Review /
+  Calendar / Activity / Admin.
+- **Density and layout** — tables read as tables (the Figma information
+  density), not as sparse cards; resize the preview to tablet width (1024
+  and 768) and confirm the AutoLayout containers reflow without clipping.
+- **Zero external fetches** — the app renders with no missing-image
+  placeholders and no font fallback flash; it depends on nothing outside
+  its data sources.
+
+Record the outcome (a sentence per line above is enough) in the import
+worksheet or the PR that promotes the re-export. Post-publish screenshots,
+if captured for the record, go under `artifacts/canvas-render/` with
+synthetic data only — never real installation names, identities, or .mil
+URLs.
 
 This path was dry-run end to end here — unpack, swap, pack, re-zip,
 validate: 16 screens, 5 workflows, no literal URLs — against a simulated

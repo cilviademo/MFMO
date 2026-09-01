@@ -37,7 +37,10 @@ DEF = re.compile(
     r"(:\s*[A-Za-z_][A-Za-z0-9_]*)?\s*=", re.M)
 # Ours: MF_Anything, gblAnything, colAnything -- col must be followed by an
 # upper-case letter, or the word "collects" in a comment reads as a reference.
-OURS = re.compile(r"\b(MF_[A-Za-z0-9_]*|gbl[A-Z][A-Za-z0-9_]*|col[A-Z][A-Za-z0-9_]*)")
+# clr* joined the pattern after scrExceptions shipped referencing clrAccent,
+# which no formula file defined -- the one token class this regex was blind to.
+OURS = re.compile(r"\b(MF_[A-Za-z0-9_]*|gbl[A-Z][A-Za-z0-9_]*"
+                  r"|col[A-Z][A-Za-z0-9_]*|clr[A-Z][A-Za-z0-9_]*)")
 
 
 def strip_strings(text):

@@ -325,6 +325,53 @@ file *count*, which cannot catch that. It asserts a **named list** now.
 With it fixed: **1,829 formulas across 27 files, no syntax errors** under
 Microsoft.PowerFx.
 
+## Design fidelity — Figma → Canvas
+
+The vendored Figma package (`reference/figma-build/`) is the **visual**
+source of truth, the canvas source the **functional** one, and Studio the
+platform authority. The contract between them is now machine-checked:
+`configuration/figma-canvas-map.json` maps every Figma screen file and
+component to its real canvas counterpart with a parity verdict (PASS /
+MINOR DRIFT / PLATFORM SUBSTITUTION / FAIL — FAIL blocks release, and there
+are none), `scripts/check_design_parity.py` enforces it in the suite, and
+`docs/FIGMA_CANVAS_PARITY.md` narrates every deviation with its rationale.
+
+What the gate proves mechanically: all 19 colour tokens match the approved
+values byte-for-byte and are defined exactly once in `App.Formulas.fx`; no
+screen or component contains a colour literal; every screen paints the token
+ground (default Power Apps styling is treated as functional design drift);
+base navigation is exactly Home / My Package / Calendar with **Submit as a
+primary action, not a tab**; the status chip carries label + icon + 1px
+status border + radius 2; amber and yellow can never be merged; no runtime
+fetch exists anywhere in the app source; and the map covers every screen and
+component with real identifiers only. The gate is proven fallible in the
+suite — it caught an unmapped screen on its first run.
+
+Fixes this pass made to the source, found by holding it against the Figma
+package: `clrAccent` was referenced but defined nowhere (Studio would have
+shown the error at open); three navigation entries encoded tabs the approved
+design never had (Submit, Request access, Unmatched — all reached by
+action or row, never navigation); the chip radius was 4 against the spec's
+2; two labels drifted in casing.
+
+Approved deviations, recorded rather than silently resolved: the
+amber/yellow inks deviate from the Figma CSS **because the Figma CSS
+predates the accessibility fix** — the shipped pair is 41° apart in hue and
+ΔE2000 25.1 where the prototype's pair measured 1.16:1 (`docs/accessibility.md`
+is the arbiter); nav badge-count chips are omitted (a count query per tab
+per paint against >2,000-row lists); AccessManagement has no canvas screen
+because grant administration belongs in the SharePoint list — Power Apps
+`Visible` is not a security boundary and the open issue stays open.
+
+**No claim of pixel-perfection is made.** How Studio renders is NOT TESTABLE
+LOCALLY; the Studio-open visual validation gate in `CANVAS_APP_ASSEMBLY.md`
+(structure, no default styling, six distinct chips, navigation shape,
+density at 1024/768, zero external fetches) is where a human confirms the
+render before publish, and substantial divergence there blocks the release
+exactly as a failing test would. `validate_final_export.sh` additionally
+fails any assembled ZIP in which a default `Screen1` survived Src/
+replacement.
+
 ## Provisioning, and the threshold that was conflated
 
 `gen_rest_payloads.py` now emits an explicit index **operation** per indexed
@@ -428,7 +475,7 @@ returns the right answer against real data. But it moves 3,652 lines of canvas
 source from *entirely unverified* to *parses under the real engine*, which is
 the largest single reduction in this release's unknowns.
 
-## Test classification — what 453 passing tests actually prove
+## Test classification — what 530 passing tests actually prove
 
 **A suite written against the generator that produced the artifact can pass in
 full while the tests and the generator share one wrong premise.** Counting tests
@@ -439,10 +486,10 @@ fails the release gate — a new test cannot join the total unlabelled.
 
 | Kind | Tests | Share | What a pass means |
 |---|---:|---:|---|
-| **BEHAVIOURAL** | 191 | 42% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
-| **STRUCTURAL** | 145 | 32% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
-| **POLICY** | 117 | 25% | A settled decision stays applied. These outlive the decisions they encode. |
-| **TOTAL** | **453** | | |
+| **BEHAVIOURAL** | 239 | 45% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
+| **STRUCTURAL** | 157 | 29% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
+| **POLICY** | 134 | 25% | A settled decision stays applied. These outlive the decisions they encode. |
+| **TOTAL** | **530** | | |
 
 ### Three POLICY tests encoded the decision this round reversed
 
@@ -763,7 +810,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **526 passed**, 0 failed — 239 behavioural, 153 structural, 134 policy |
+| Unit tests | **530 passed**, 0 failed — 239 behavioural, 157 structural, 134 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |

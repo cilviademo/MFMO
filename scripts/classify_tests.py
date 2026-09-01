@@ -78,6 +78,7 @@ CLASSIFICATION = {
         "TheApprovedScreenSetIsPresent":    (P, "the approved screen set, named"),
         "TheSourceIsRealYaml":              (B, "every source file run through a real YAML parser; ten had never passed one"),
         "TheMsappSourceIsFreshAndValid":    (B, "the generated dialect regenerated, schema-validated, and the validator proven non-vacuous"),
+        "TheDesignParityGateHolds":         (S, "the Figma parity map and the canvas source agree, and the gate is proven fallible"),
     },
     "test_flow_expression": {
         "TheInterpreterIsStrict":        (B, "the interpreter itself tested on cases with known answers"),

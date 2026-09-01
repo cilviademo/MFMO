@@ -240,10 +240,35 @@ def walk_archives():
                 yield os.path.join(base, f)
 
 
+def _scanned_tree_digests():
+    """SHA-256 of every file the scan's walks can reach, plus the fixture
+    specimens. An archive entry BYTE-IDENTICAL to one of these is a verbatim
+    packaging of a file whose verdict the flat scan already owns -- its
+    inline exception markers included, which whole-entry matching cannot see.
+    Identical bytes, identical verdict. Anything modified, renamed-with-new-
+    content, or foreign (donor scaffolding, platform output, planted residue)
+    matches nothing here and is scanned in full."""
+    import hashlib
+    digests = set()
+    skip = {".git", "node_modules", "__pycache__", "dist"}
+    for base, dirs, files in os.walk(ROOT):
+        dirs[:] = [d for d in dirs if d not in skip]
+        for f in files:
+            p = os.path.join(base, f)
+            try:
+                with open(p, "rb") as fh:
+                    digests.add(hashlib.sha256(fh.read()).hexdigest())
+            except OSError:
+                continue
+    return digests
+
+
 def scan_archives():
     """Apply every content rule to every entry of every tracked archive."""
+    import hashlib
     import zipfile
     hits = []
+    tree = _scanned_tree_digests()
     for path in walk_archives():
         rel = os.path.relpath(path, ROOT)
         try:
@@ -255,7 +280,10 @@ def scan_archives():
             continue
         with z:
             for entry in z.namelist():
-                text = z.read(entry).decode("utf-8", "ignore")
+                blob = z.read(entry)
+                if hashlib.sha256(blob).hexdigest() in tree:
+                    continue  # verbatim copy of an already-scanned file
+                text = blob.decode("utf-8", "ignore")
                 for rid, sev, pat, msg in RULES:
                     m = re.search(pat, text)
                     if m:

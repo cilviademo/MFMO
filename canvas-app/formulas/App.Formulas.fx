@@ -261,17 +261,25 @@ colNavigation =
             { key: "home",     label: "Home",           screen: "scrHome",              flag: "",                need: "all"    },
             // Was pointed at scrInstallation, the single-installation detail
             // screen, because no package screen existed yet. It does now.
-            { key: "package",  label: "My package",     screen: "scrMyPackage",         flag: "",                need: "all"    },
+            { key: "package",  label: "My Package",     screen: "scrMyPackage",         flag: "",                need: "all"    },
             { key: "overview", label: "Overview",       screen: "scrOverview",          flag: "",                need: "qc"     },
             { key: "installs", label: "Installations",  screen: "scrInstallations",     flag: "",                need: "qc"     },
             { key: "except",   label: "Exceptions",     screen: "scrExceptions",        flag: "",                need: "qc"     },
-            { key: "upload",   label: "Submit",         screen: "scrUpload",            flag: "EOM_UPLOAD",      need: "write"  },
+            // Submit is a PRIMARY ACTION, not a tab: BASE_TABS in the Figma
+            // build is exactly Home / My Package / Calendar, and every row
+            // action on scrHome and scrMyPackage already carries the item to
+            // scrUpload. A fourth tab was navigation drift.
             { key: "review",   label: "Review",         screen: "scrReview",            flag: "EOM_QC",          need: "qc"     },
-            { key: "unmatch",  label: "Needs classification", screen: "scrUnmatched",   flag: "EOM_UNMATCHED",   need: "qc"     },
+            // Classification is reached from the Exceptions screen's rows
+            // (btnClassify -> scrUnmatched); a parallel tab duplicated it.
             { key: "calendar", label: "Calendar",       screen: "scrCalendar",          flag: "EOM_CALENDAR",    need: "all"    },
-            { key: "activity", label: "Activity",       screen: "scrActivity",          flag: "",                need: "all"    },
-            { key: "access",   label: "Request access",  screen: "scrAccessRequest",     flag: "EOM_ACCESS_REQUEST", need: "all" },
-            { key: "admin",    label: "Requirements",   screen: "scrAdminRequirements", flag: "EOM_ADMIN_REQS",  need: "admin"  },
+            // Activity is an AFSVC workspace tab (approved AFSVC set:
+            // Overview, Review, Installations, Exceptions, Activity, Admin).
+            { key: "activity", label: "Activity",       screen: "scrActivity",          flag: "",                need: "qc"     },
+            // Request access is a BUTTON on scrNoAccess in the approved
+            // design (NoAccess.tsx and ScopeUnresolved.tsx both reach it that
+            // way), never a tab. The screen stays; the tab goes.
+            { key: "admin",    label: "Admin",          screen: "scrAdminRequirements", flag: "EOM_ADMIN_REQS",  need: "admin"  },
             { key: "diag",     label: "Diagnostics",    screen: "scrDiagnostics",       flag: "EOM_DIAGNOSTICS", need: "dev"    }
         ),
         (IsBlank(flag) || MF_IsFeatureOn(flag))
@@ -289,7 +297,8 @@ colNavigation =
 // --- colour tokens -------------------------------------------------------
 // Declared once. No screen may use a colour literal. Every ratio is verified by
 // tests/test_design_tokens.py and recorded in docs/accessibility.md.
-clrStatusBlue    = ColorValue("#0F548C");   clrStatusBlueBg   = ColorValue("#EFF6FC");
+clrStatusBlue    = ColorValue("#0F548C");
+clrStatusBlueBg  = ColorValue("#EFF6FC");
 
 // AMBER AND YELLOW ARE THE WHOLE POINT OF SIX STATES, and they were 1.16:1
 // apart until this was fixed -- two near-identical browns telling a DFAC
@@ -304,12 +313,22 @@ clrStatusBlue    = ColorValue("#0F548C");   clrStatusBlueBg   = ColorValue("#EFF
 // BETWEEN them is only 1.06:1 and cannot usefully be raised -- see
 // docs/accessibility.md -- so hue does the separating and the label and the
 // icon do the guaranteeing. Neither chip is ever colour alone.
-clrStatusAmber   = ColorValue("#944800");   clrStatusAmberBg  = ColorValue("#FFF3E6");
-clrStatusYellow  = ColorValue("#5A5800");   clrStatusYellowBg = ColorValue("#FDFAE0");
+clrStatusAmber   = ColorValue("#944800");
+clrStatusAmberBg = ColorValue("#FFF3E6");
+clrStatusYellow  = ColorValue("#5A5800");
+clrStatusYellowBg = ColorValue("#FDFAE0");
 
-clrStatusRed     = ColorValue("#A4262C");   clrStatusRedBg   = ColorValue("#FDF3F4");
-clrStatusGreen   = ColorValue("#0E700E");   clrStatusGreenBg = ColorValue("#F1FAF1");
-clrStatusGray    = ColorValue("#424242");   clrStatusGrayBg  = ColorValue("#F5F5F5");
+clrStatusRed     = ColorValue("#A4262C");
+clrStatusRedBg   = ColorValue("#FDF3F4");
+clrStatusGreen   = ColorValue("#0E700E");
+clrStatusGreenBg = ColorValue("#F1FAF1");
+clrStatusGray    = ColorValue("#424242");
+clrStatusGrayBg  = ColorValue("#F5F5F5");
+// The Figma --accent token. Was referenced by scrExceptions and DEFINED
+// NOWHERE -- an undefined token the reference checker missed because its
+// regex did not cover clr* names. Studio would have shown the error; the
+// parity pass caught it first.
+clrAccent        = ColorValue("#0F548C");
 clrText          = ColorValue("#242424");
 clrTextSecondary = ColorValue("#616161");
 clrSurface       = ColorValue("#FFFFFF");

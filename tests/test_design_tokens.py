@@ -722,3 +722,71 @@ class TheMsappSourceIsFreshAndValid(unittest.TestCase):
                    ROOT, "canvas-app", "donor", "*.msapp"))]
         self.assertEqual(raw, [], "the raw donor carries the residue and "
                                   "must never be tracked again")
+
+
+class TheDesignParityGateHolds(unittest.TestCase):
+    """The Figma -> Canvas parity contract, enforced and non-vacuous.
+
+    configuration/figma-canvas-map.json is the machine contract between the
+    vendored Figma package (visual truth) and the canvas source (functional
+    truth); scripts/check_design_parity.py is the gate. Two things are proven
+    here: the gate passes on the real tree, and it is capable of failing --
+    a gate that cannot fail verifies nothing (the packer taught us that).
+    """
+
+    def _load_module(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "check_design_parity",
+            os.path.join(ROOT, "scripts", "check_design_parity.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_the_gate_passes_on_the_real_tree(self):
+        import subprocess
+        r = subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts",
+                                          "check_design_parity.py")],
+            capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("DESIGN PARITY: PASS", r.stdout)
+
+    def test_token_drift_is_caught(self):
+        import json
+        mod = self._load_module()
+        mapping = json.loads(open(os.path.join(
+            ROOT, "configuration", "figma-canvas-map.json")).read())
+        # Approve a value the source does not have: the gate must object.
+        mapping["tokens"]["map"]["clrStatusAmber"]["canvas"] = "#FF0000"
+        mod.failures.clear()
+        mod.check_tokens(mapping)
+        self.assertTrue(any("clrStatusAmber" in f for f in mod.failures),
+                        mod.failures)
+
+    def test_a_fail_parity_row_blocks(self):
+        import json
+        mod = self._load_module()
+        mapping = json.loads(open(os.path.join(
+            ROOT, "configuration", "figma-canvas-map.json")).read())
+        mapping["screens"][0]["parity"] = "FAIL"
+        screens = {f[:-len(".pa.yaml")] for f in os.listdir(
+            os.path.join(ROOT, "canvas-app", "src", "Screens"))}
+        comps = {f[:-len(".pa.yaml")] for f in os.listdir(
+            os.path.join(ROOT, "canvas-app", "src", "Components"))}
+        mod.failures.clear()
+        mod.check_map(mapping, screens, comps)
+        self.assertTrue(any("FAIL blocks release" in f for f in mod.failures),
+                        mod.failures)
+
+    def test_a_smuggled_tab_is_caught(self):
+        mod = self._load_module()
+        mapping = {"navigation": {"base_tabs": ["Home", "My Package",
+                                                "Calendar", "Submit"],
+                                  "afsvc_tabs": []}}
+        screens = {"scrHome"}
+        mod.failures.clear()
+        mod.check_nav(mapping, screens)
+        # The real nav does not contain Submit, so approving it must mismatch.
+        self.assertTrue(mod.failures, "an altered approved tab set must not "
+                                      "silently pass")

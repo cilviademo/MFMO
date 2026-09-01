@@ -77,10 +77,10 @@ ComponentDefinitions:
             BorderThickness: =1
             BorderColor: =MF_StatusColor(MF_Status(cmpStatusBadge.FinalStatus).code)
             Fill: =MF_StatusBackground(MF_Status(cmpStatusBadge.FinalStatus).code)
-            RadiusTopLeft: =4
-            RadiusTopRight: =4
-            RadiusBottomLeft: =4
-            RadiusBottomRight: =4
+            RadiusTopLeft: =2
+            RadiusTopRight: =2
+            RadiusBottomLeft: =2
+            RadiusBottomRight: =2
             # The whole chip is one announceable unit, so the reader does not
             # hear the icon and the label as two separate things.
             AccessibleLabel: |

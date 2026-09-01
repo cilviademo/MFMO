@@ -1,0 +1,110 @@
+{
+  "$comment": "FIGMA -> CANVAS parity map. Every identifier is real: tsx files exist in reference/figma-build/src/screens (or components/ui.tsx), canvas names exist in canvas-app/src. Verified by scripts/check_design_parity.py, narrated in docs/FIGMA_CANVAS_PARITY.md. Parity values: PASS | MINOR DRIFT | PLATFORM SUBSTITUTION | FAIL. FAIL blocks release.",
+  "visual_source": "reference/figma-build",
+  "functional_source": "canvas-app/src",
+  "screens": [
+    {
+      "figma": "Launch.tsx",
+      "canvas": "App",
+      "parity": "PLATFORM SUBSTITUTION",
+      "note": "The Figma launch/dispatch screen is App.StartScreen evaluating MF_StartScreen in canvas. Power Apps renders its own loading state before StartScreen resolves; a hand-built splash screen would add a frame the platform already provides."
+    },
+    {
+      "figma": "ConfigRequired.tsx",
+      "canvas": "scrMaintenance",
+      "parity": "MINOR DRIFT",
+      "note": "The kill switch (MaintenanceMode) blocks exactly as the Figma screen does. A schema-version mismatch deliberately does NOT block: users keep read access to their own status and MF_SchemaMismatchDetail renders on scrDiagnostics. Functional decision recorded in canvas-app/formulas/App.Formulas.fx."
+    },
+    {
+      "figma": "ScopeUnresolved.tsx",
+      "canvas": "scrNoAccess",
+      "parity": "MINOR DRIFT",
+      "note": "One canvas screen covers both no-mapping and unresolved-scope; both states resolve to the same operator action (fix the MF Security Mapping row) and both offer the request-access route, exactly as the two Figma screens do."
+    },
+    { "figma": "NoAccess.tsx", "canvas": "scrNoAccess", "parity": "PASS", "note": "Request access is a button here, never a navigation tab - matching the approved design." },
+    { "figma": "RequestAccess.tsx", "canvas": "scrAccessRequest", "parity": "PASS", "note": "Reached only from scrNoAccess, as in the Figma flow." },
+    { "figma": "BaseHome.tsx", "canvas": "scrHome", "parity": "PASS", "note": "" },
+    { "figma": "MyPackage.tsx", "canvas": "scrMyPackage", "parity": "PASS", "note": "" },
+    { "figma": "Submit.tsx", "canvas": "scrUpload", "parity": "PASS", "note": "Primary action, not a tab: BASE_TABS is exactly Home / My Package / Calendar and colNavigation matches." },
+    { "figma": "Calendar.tsx", "canvas": "scrCalendar", "parity": "PASS", "note": "" },
+    { "figma": "AFSVCOverview.tsx", "canvas": "scrOverview", "parity": "PASS", "note": "" },
+    {
+      "figma": "ReviewQueue.tsx",
+      "canvas": "scrReview",
+      "parity": "MINOR DRIFT",
+      "note": "Queue and detail are one canvas screen (gallery plus detail pane) instead of two Figma screens. Same information, one fewer navigation hop; density preserved."
+    },
+    {
+      "figma": "Review.tsx",
+      "canvas": "scrReview",
+      "parity": "MINOR DRIFT",
+      "note": "See ReviewQueue.tsx - the detail pane of the combined screen."
+    },
+    { "figma": "InstallationWorkspace.tsx", "canvas": "scrInstallation", "parity": "PASS", "note": "scrInstallations is the list level above it (the Installations tab); scrInstallation is the workspace itself." },
+    {
+      "figma": "AccessManagement.tsx",
+      "canvas": null,
+      "parity": "PLATFORM SUBSTITUTION",
+      "note": "Grant administration happens in the SharePoint list UI for MF Security Mapping, not in the canvas app. Power Apps Visible/Filter is not a security boundary (docs/security-open-issue.md, OPEN); an in-app grants editor would imply an authority the app does not have."
+    },
+    { "figma": "AdminHealth.tsx", "canvas": "scrDiagnostics", "parity": "PASS", "note": "Developer-flagged (EOM_DIAGNOSTICS)." },
+    { "figma": "EmptyState.tsx", "canvas": "cmpEmptyState", "parity": "PASS", "note": "A reusable canvas component rather than a screen; instantiated wherever a list can be empty." }
+  ],
+  "canvas_only_screens": [
+    { "canvas": "scrExceptions", "origin": "directive nav (AFSVC: Overview/Review/Installations/Exceptions/Activity/Admin); design narrative in reference/figma-build/imports/pasted_text/mission-feeding-ops-design.md", "note": "Not in figma-build PM_TABS; the directive nav supersedes it." },
+    { "canvas": "scrActivity", "origin": "directive nav (Activity)", "note": "Audit trail destination; not in figma-build PM_TABS." },
+    { "canvas": "scrUnmatched", "origin": "reached from scrExceptions rows, never a tab", "note": "Classification workspace." },
+    { "canvas": "scrInstallations", "origin": "figma-build PM_TABS 'Installations' tab; the list level above InstallationWorkspace.tsx, which has no dedicated tsx of its own", "note": "Rows navigate to scrInstallation." },
+    { "canvas": "scrAdminRequirements", "origin": "the Admin tab's content (requirement catalogue administration)", "note": "figma-build's admin tab shows platform health; the canvas Admin tab edits requirements and scrDiagnostics carries health." },
+    { "canvas": "scrMaintenance", "origin": "kill-switch landing (also maps ConfigRequired.tsx)", "note": "" }
+  ],
+  "components": [
+    { "figma": "ui.tsx:StatusChip", "canvas": "cmpStatusBadge", "parity": "MINOR DRIFT", "note": "1px status border, radius 2, label+icon, never colour alone - all per spec. Chip is 32px tall against Figma's ~20px: minimum touch target wins over visual scale (accessibility > visual). Border colour follows the status text token rather than Figma's separate border tokens, which were designed against the pre-fix amber/yellow inks; docs/accessibility.md is the arbiter." },
+    { "figma": "ui.tsx:MetricCard", "canvas": "cmpMetricCard", "parity": "PASS", "note": "" },
+    { "figma": "ui.tsx:MetricRow", "canvas": "cmpMetricStrip", "parity": "PASS", "note": "" },
+    { "figma": "ui.tsx:FilterBar", "canvas": "cmpFilterToolbar", "parity": "PASS", "note": "" },
+    { "figma": "ui.tsx:ItemRow", "canvas": "cmpEOMItem", "parity": "PASS", "note": "" },
+    { "figma": "EmptyState.tsx", "canvas": "cmpEmptyState", "parity": "PASS", "note": "" }
+  ],
+  "navigation": {
+    "base_tabs": ["Home", "My Package", "Calendar"],
+    "base_primary_action": "Submit (scrUpload)",
+    "afsvc_tabs": ["Overview", "Installations", "Exceptions", "Review", "Calendar", "Activity", "Admin"],
+    "note": "base_tabs equals figma-build BASE_TABS exactly. afsvc_tabs follows the directive's approved AFSVC experience (adds Exceptions and Activity to figma-build's PM_TABS). Nav badge-count chips from figma-build are omitted: MINOR DRIFT - a live count on every tab means N delegable count queries on every screen paint; the queue screens themselves carry the counts."
+  },
+  "tokens": {
+    "note": "Canvas values are authoritative post-accessibility-fix values; figma values recorded where they differ. docs/accessibility.md holds the ratios.",
+    "map": {
+      "clrSurfaceAlt": { "canvas": "#FAF9F8", "figma": "#FAF9F8", "figma_var": "--bg" },
+      "clrSurface": { "canvas": "#FFFFFF", "figma": "#FFFFFF", "figma_var": "--surface" },
+      "clrBorder": { "canvas": "#D1D1D1", "figma": "#D1D1D1", "figma_var": "--border" },
+      "clrText": { "canvas": "#242424", "figma": "#242424", "figma_var": "--text" },
+      "clrTextSecondary": { "canvas": "#616161", "figma": "#616161", "figma_var": "--secondary" },
+      "clrAccent": { "canvas": "#0F548C", "figma": "#0F548C", "figma_var": "--accent" },
+      "clrStatusBlue": { "canvas": "#0F548C", "figma": "#0F548C", "figma_var": "--status-open-text" },
+      "clrStatusBlueBg": { "canvas": "#EFF6FC", "figma": "#EFF6FC", "figma_var": "--status-open-bg" },
+      "clrStatusAmber": { "canvas": "#944800", "figma": "#8A5300", "figma_var": "--status-late-text", "deviation": "APPROVED - accessibility re-tint; the Figma CSS predates the amber/yellow separation fix (docs/accessibility.md)" },
+      "clrStatusAmberBg": { "canvas": "#FFF3E6", "figma": "#FFF4E5", "figma_var": "--status-late-bg", "deviation": "APPROVED - same re-tint" },
+      "clrStatusYellow": { "canvas": "#5A5800", "figma": "#6B4C00", "figma_var": "--status-review-text", "deviation": "APPROVED - accessibility re-tint" },
+      "clrStatusYellowBg": { "canvas": "#FDFAE0", "figma": "#FEFCE8", "figma_var": "--status-review-bg", "deviation": "APPROVED - same re-tint" },
+      "clrStatusRed": { "canvas": "#A4262C", "figma": "#A4262C", "figma_var": "--status-overdue-text" },
+      "clrStatusRedBg": { "canvas": "#FDF3F4", "figma": "#FDF3F4", "figma_var": "--status-overdue-bg" },
+      "clrStatusGreen": { "canvas": "#0E700E", "figma": "#0E700E", "figma_var": "--status-accepted-text" },
+      "clrStatusGreenBg": { "canvas": "#F1FAF1", "figma": "#F1FAF1", "figma_var": "--status-accepted-bg" },
+      "clrStatusGray": { "canvas": "#424242", "figma": "#484848", "figma_var": "--status-na-text", "deviation": "APPROVED - minor darkening for contrast on the gray chip" },
+      "clrStatusGrayBg": { "canvas": "#F5F5F5", "figma": "#F5F5F5", "figma_var": "--status-na-bg" },
+      "clrFocus": { "canvas": "#0F6CBD", "figma": null, "figma_var": null, "deviation": "Fluent focus ring; no Figma counterpart" }
+    }
+  },
+  "typography": {
+    "figma_design_font": "Inter (design substitute only; @import removed from index.css intentionally)",
+    "production_font": "Segoe UI (Power Apps native; Segoe UI Variable on Windows 11+)",
+    "parity": "PASS",
+    "note": "No substitution needed: the production font the Figma package names is what Power Apps renders natively. Text ramp maps Body->Body1, Caption->Caption1, Subtitle->Subtitle1 in scripts/gen_msapp_source.py."
+  },
+  "assets": {
+    "runtime_fetches": "none - no CDN, Google Fonts, Figma CDN, or Azure Blob dependency anywhere in the canvas source or msapp",
+    "images_required": [],
+    "note": "AFSVC-Shield.png in the Figma package is unused by the approved screens; nothing is embedded."
+  }
+}
