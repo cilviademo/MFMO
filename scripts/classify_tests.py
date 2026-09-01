@@ -76,6 +76,8 @@ CLASSIFICATION = {
         "TheCanvasSourceIsExtractable":     (B, "the extractor run over the real source, block scalars included"),
         "CanvasChecksAreWired":             (B, "both canvas audits executed, and proven to fail on a planted violation"),
         "TheApprovedScreenSetIsPresent":    (P, "the approved screen set, named"),
+        "TheSourceIsRealYaml":              (B, "every source file run through a real YAML parser; ten had never passed one"),
+        "TheMsappSourceIsFreshAndValid":    (B, "the generated dialect regenerated, schema-validated, and the validator proven non-vacuous"),
     },
     "test_flow_expression": {
         "TheInterpreterIsStrict":        (B, "the interpreter itself tested on cases with known answers"),

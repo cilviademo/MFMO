@@ -560,11 +560,25 @@ class TheAssemblyRunbookIsCurrent(unittest.TestCase):
                     self.assertIn(f, self.text,
                                   f"{f} has no row in the runbook")
 
-    def test_it_says_the_session_runs_once(self):
+    def test_it_promises_no_recurring_studio_work(self):
         flat = " ".join(self.text.split())
-        self.assertRegex(flat, r"(?i)this session runs ONCE")
-        self.assertRegex(flat, r"(?i)the exported ZIP carries the app|"
-                               r"exported\s+ZIP carries the app")
+        self.assertRegex(flat, r"(?i)No further Studio work")
+        self.assertRegex(flat, r"(?i)the re-export is the final")
+
+    def test_the_three_paths_are_ranked_and_honest(self):
+        flat = " ".join(self.text.split())
+        self.assertIn("Path A", flat)
+        self.assertIn("assemble_full_solution.sh", flat)
+        self.assertIn("Path B", flat)
+        # Path B must carry its own caveat, verbatim in spirit: never opened
+        # by Studio, no fabricated component metadata.
+        self.assertRegex(flat, r"(?i)never been opened by Studio")
+        self.assertIn("Path C", flat)
+
+    def test_the_data_source_count_is_consistent(self):
+        flat = " ".join(self.text.split())
+        self.assertIn("add the 19 data sources listed in step 2", flat)
+        self.assertIn("add the 19 data sources, in this order", flat)
 
     def test_it_keeps_the_round_trip_check(self):
         flat = " ".join(self.text.split())

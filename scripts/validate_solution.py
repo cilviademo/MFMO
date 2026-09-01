@@ -92,7 +92,22 @@ def read(path):
 
 
 def app_files():
+    """The SOURCE files. Two canvas-app subtrees are deliberately not here:
+
+    msapp-src/  is GENERATED from the source by gen_msapp_source.py, which
+                inlines Delegation.fx into App.Formulas -- so every approved
+                query would re-appear "outside Delegation.fx" and fail its own
+                rule. The generated tree is held to the source by the
+                freshness test in test_design_tokens.py, and to Microsoft's
+                published schema by validate_msapp_source.py.
+    donor/      a vendored BINARY Studio app (see donor/README.md), full of
+                GUIDs by construction. The BUILT artifact is swept harder by
+                build_msapp.py, which fails on any commercial-cloud string.
+    """
     for path in glob.glob(os.path.join(ROOT, "canvas-app", "**", "*"), recursive=True):
+        rel = os.path.relpath(path, os.path.join(ROOT, "canvas-app"))
+        if rel.startswith(("msapp-src", "donor")):
+            continue
         if os.path.isfile(path) and path.endswith((".pa.yaml", ".fx")):
             yield path
 
@@ -146,6 +161,12 @@ def check_no_hard_coded_environment():
     for top in searched:
         for path in glob.glob(os.path.join(ROOT, top, "**", "*"), recursive=True):
             if not os.path.isfile(path):
+                continue
+            # Binary Studio artifacts (the vendored donor) and the GENERATED
+            # msapp-src dialect are out of source scope -- see app_files().
+            rel_ca = os.path.relpath(path, os.path.join(ROOT, "canvas-app"))
+            if path.endswith(".msapp") or (top == "canvas-app"
+                    and rel_ca.startswith(("msapp-src", "donor"))):
                 continue
             for i, line in enumerate(read(path).splitlines(), 1):
                 rel = os.path.relpath(path, ROOT)

@@ -120,6 +120,76 @@ tenant:
   expression treated a null final call as "no deadline" and left the item amber
   forever instead of going red — the wrong answer in the safe-looking direction.
 
+## The canvas app is now BUILT, not pasted
+
+The user asked for the full import ZIP to be producible without a human
+rebuild. That is now true to within one ten-minute platform step, and the
+line that remains is drawn exactly where fabrication would begin.
+
+### What was established, by experiment, with Microsoft's own tools
+
+- `pac canvas pack --layout SourceCode` **validates nothing**: fed a
+  structurally broken YAML file and a nonexistent control type, it reported
+  "Packing succeeded" both times. Every pack success below is therefore
+  backed by independent validation, never by the packer's word.
+- The modern msapp format (MSAppStructureVersion 2.4.0) carries the app's
+  YAML source INSIDE it, marked `LoadFromYaml: true`. The `.msapr` reference
+  archive the packer requires was reverse-engineered to its exact contract
+  (`MsaprHeaderJson` via reflection over Microsoft's own Persistence library,
+  run under the .NET runtime assembled from NuGet) and then bypassed entirely
+  in favour of a genuine one.
+- A genuine Studio-built 2.4.0 app (Microsoft's ALM test asset, MIT, vendored
+  with its hash pinned) **round-trips byte-perfectly** through unpack + pack:
+  22 of 22 entries identical.
+
+### The built artifact
+
+`dist/canvas/MissionFeedingOperations.msapp` — 38 entries, 24 of them this
+repository's screens/components/App yaml, packed by `pac canvas pack` against
+the donor's scaffolding, **neutralised entry by entry** (the donor's
+Properties.json named a commercial Dataverse dev instance; its data-source
+metadata, control trees and analysis results are stripped; identity is fresh
+and deterministic). The build FAILS on donor-hash drift, on round-trip
+divergence, and on any commercial-cloud string in the output.
+
+**It has never been opened by Studio**, and Microsoft's packer prints on
+every run that a source-packed app is validated by that open. That sentence
+ships with the artifact.
+
+### The full ZIP: `scripts/assemble_full_solution.sh`
+
+A CanvasApp solution component needs metadata only the platform mints at
+export. So the wrapper is the operator's: import Artifact 1, create ONE blank
+canvas app in the solution (adding the 19 data sources while there), export —
+ten minutes — then one command swaps the blank app's content for this
+repository's, keeping THEIR identity and THEIR environment's data-source
+metadata, and validates the result. **Dry-run here end to end** against a
+simulated export: unpack, swap, pack, re-zip, `validate_solution.py --export`
+green — 16 screens, 5 workflows, no literal URLs.
+
+What is deliberately NOT done: authoring the CanvasApp component metadata
+myself. R2 of the build directive names that fabrication and says refuse; it
+is the difference between an artifact whose every byte has a provenance and
+one that merely looks like it does.
+
+### Source truth got harder on the way
+
+Getting the source through a real YAML parser and Microsoft's published
+pa.yaml v3 schema — neither had ever run against it — found:
+
+| Defect | Where | Why nothing caught it |
+|---|---|---|
+| **Ten of twenty-two files were not valid YAML** — inline formulas carrying record literals (`=[{{ Period: gblOpenPeriod }}]`) | 8 screens, 2 components | every prior check was regex-based; none parsed YAML. Studio would have rejected the paste an hour into the operator's session |
+| `Children:` nested inside `Properties:` | scrMaintenance | same |
+| `DataType: Date` (schema: `DateAndTime`) | cmpStatusBadge ×2 | schema never enforced |
+| `Default:` on Output properties (schema forbids; the formula belongs in Properties) | cmpStatusBadge, cmpMetricCard | schema never enforced |
+
+All fixed in the source of truth; a YAML-parse test and the schema validation
+now run in the suite, and the validator was calibrated against Studio's own
+output (the published control ENUM lags Studio — the genuine app fails it 20
+times — so the enum check is relaxed to the schema's own pattern and
+everything else stays strict).
+
 ## The approved screen set is complete
 
 Four screens were absent against the approved UX. They are present, wired to

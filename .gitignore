@@ -16,6 +16,10 @@
 dist/*/*.zip
 dist/*/SHA256SUMS.txt
 *.msapp
+# EXCEPT the vendored donor -- a Microsoft MIT test asset the msapp build
+# takes its format scaffolding from. See canvas-app/donor/README.md. The
+# BUILT msapp in dist/canvas/ stays ignored like every other build output.
+!canvas-app/donor/*.msapp
 solution/bin/
 solution/obj/
 provisioning/schema.generated.json

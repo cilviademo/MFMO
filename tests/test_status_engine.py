@@ -387,6 +387,8 @@ class TestTransliterationsAgree(unittest.TestCase):
         # Status is calculated, never chosen.
         for dirpath, _dirs, files in os.walk(os.path.join(ROOT, "canvas-app")):
             for name in files:
+                if name.endswith(".msapp"):
+                    continue     # binary; the vendored donor -- see donor/README.md
                 with open(os.path.join(dirpath, name), encoding="utf-8") as fh:
                     self.assertNotIn("ColorPicker", fh.read(), name)
 
@@ -400,6 +402,8 @@ class TestTransliterationsAgree(unittest.TestCase):
         offenders = []
         for dirpath, _dirs, files in os.walk(os.path.join(ROOT, "canvas-app")):
             for name in files:
+                if name.endswith(".msapp"):
+                    continue     # binary; the vendored donor -- see donor/README.md
                 rel = os.path.relpath(os.path.join(dirpath, name), ROOT)
                 if banned.search(read(rel)):
                     offenders.append(rel)

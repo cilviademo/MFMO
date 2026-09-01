@@ -422,8 +422,17 @@ class TestNoHardCodedEnvironment(unittest.TestCase):
     def _files(self):
         for top in self.SEARCHED:
             for path in glob.glob(os.path.join(ROOT, top, "**", "*"), recursive=True):
-                if os.path.isfile(path):
-                    yield path
+                if not os.path.isfile(path):
+                    continue
+                # The vendored donor is a BINARY Studio-built app (see
+                # canvas-app/donor/README.md). Every msapp is full of GUIDs by
+                # construction -- they are its control identities, not a
+                # hard-coded environment. The BUILT msapp is swept separately
+                # and harder by scripts/build_msapp.py, which fails the build
+                # on any commercial-cloud string.
+                if path.endswith(".msapp"):
+                    continue
+                yield path
 
     def test_no_sharepoint_or_powerbi_urls(self):
         pattern = re.compile(r"https://[\w.-]*(sharepoint\.(com|us)|app\.powerbi\.com)", re.I)

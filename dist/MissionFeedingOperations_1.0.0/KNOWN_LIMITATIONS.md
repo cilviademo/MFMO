@@ -51,20 +51,24 @@ Exceptions screen exists to make that visible.
 
 ---
 
-## NOT IN THE BOX — the canvas app
+## NOT IN THE BOX — the canvas app (but no longer hand-built)
 
-Artifact 1 contains **no canvas app**, and the reason is architectural rather
-than a judgement call: `pac canvas pack` cannot originate an app from YAML.
-Both of its layouts require a seed artifact that only Studio or an
-authenticated environment can mint. `CANVAS_APP_ASSEMBLY.md` carries the CLI
-output that establishes this.
+Artifact 1 contains no canvas app: a CanvasApp solution component needs
+metadata only the platform mints at export, and fabricating it is the one
+thing this project refuses.
 
-The source is complete — 16 screens, 6 components, 4 formula files, 1,829
-formulas, all of which parse under Microsoft's own Power Fx engine. What is
-missing is one Studio session, and after it the exported ZIP carries the app
-permanently.
+What changed: the app is now **built from source by Microsoft's own
+toolchain**. `dist/canvas/MissionFeedingOperations.msapp` is packed by
+`pac canvas pack` from source that a real YAML parser and Microsoft's
+published pa.yaml v3 schema both accept, and it round-trips byte-identically.
+`scripts/assemble_full_solution.sh` merges that content into the operator's
+own exported solution — their identity, their environment's scaffolding — and
+the result validated end to end in a dry run.
 
----
+**Still true and stated on every build:** the packed app has never been opened
+by Power Apps Studio, and Microsoft's packer itself says a source-packed app
+is validated by that open. One open, save, publish, re-export — that is the
+whole remaining Studio surface.
 
 ## NOT TESTABLE LOCALLY
 

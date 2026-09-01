@@ -603,3 +603,114 @@ class TheApprovedScreenSetIsPresent(unittest.TestCase):
             blob = " ".join(by_file[rel])
             self.assertRegex(blob, r"MF_[A-Za-z]+\(|'MF [A-Za-z ]+'",
                              f"{scr} touches no list and no helper")
+
+
+class TheSourceIsRealYaml(unittest.TestCase):
+    """Every .pa.yaml file must parse with a real YAML parser.
+
+    TEN of the twenty-two source files did not, for the whole life of this
+    repository -- inline formulas carrying record literals (`=[{ Period:
+    gblOpenPeriod }]`) contain ': ', which a plain YAML scalar cannot. The
+    regex-based tests read them happily; Studio's parser would have rejected
+    the paste on the spot, an hour into the operator's session. Every checker
+    before this one was blind to it because none of them parsed YAML.
+    """
+
+    def test_every_source_file_parses(self):
+        import yaml
+        bad = []
+        for base, _d, files in os.walk(os.path.join(ROOT, "canvas-app", "src")):
+            for f in sorted(files):
+                if f.endswith(".pa.yaml"):
+                    p = os.path.join(base, f)
+                    try:
+                        yaml.safe_load(open(p, encoding="utf-8"))
+                    except yaml.YAMLError as exc:
+                        bad.append(f"{os.path.relpath(p, ROOT)}: {exc}")
+        self.assertEqual(bad, [], "\n".join(bad))
+
+    def test_children_are_never_nested_inside_properties(self):
+        # scrMaintenance shipped with Children indented under Properties. The
+        # regex tests could not see nesting; a YAML parser can.
+        import yaml
+        for base, _d, files in os.walk(os.path.join(ROOT, "canvas-app", "src")):
+            for f in sorted(files):
+                if not f.endswith(".pa.yaml"):
+                    continue
+                doc = yaml.safe_load(open(os.path.join(base, f),
+                                          encoding="utf-8"))
+                for screens in (doc or {}).get("Screens", {}).values():
+                    props = (screens or {}).get("Properties") or {}
+                    self.assertNotIn("Children", props, f)
+
+
+class TheMsappSourceIsFreshAndValid(unittest.TestCase):
+    """canvas-app/msapp-src is GENERATED from canvas-app/src and validated
+    against Microsoft's published pa.yaml v3 schema.
+
+    The generator exists because `pac canvas pack` validates NOTHING -- fed a
+    structurally broken file and a nonexistent control type, it reported
+    "Packing succeeded" both times. So schema validation lives here, and the
+    calibration standard is Studio's own output: the genuine donor app must
+    pass the same validator this enforces.
+    """
+
+    def _run(self, script, *args):
+        import subprocess
+        return subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts", script), *args],
+            capture_output=True, text=True, cwd=ROOT)
+
+    def test_the_generated_source_is_fresh(self):
+        import subprocess, tempfile, filecmp
+        live = os.path.join(ROOT, "canvas-app", "msapp-src")
+        with tempfile.TemporaryDirectory() as td:
+            backup = os.path.join(td, "msapp-src")
+            import shutil
+            shutil.copytree(live, backup)
+            try:
+                r = self._run("gen_msapp_source.py")
+                self.assertEqual(r.returncode, None if False else 0,
+                                 r.stdout + r.stderr)
+                diff = filecmp.dircmp(live, backup)
+                stale = []
+                def walk(dc):
+                    stale.extend(dc.diff_files)
+                    stale.extend(dc.left_only)
+                    stale.extend(dc.right_only)
+                    for sub in dc.subdirs.values():
+                        walk(sub)
+                walk(diff)
+                self.assertEqual(stale, [],
+                                 "msapp-src is stale; run gen_msapp_source.py")
+            finally:
+                shutil.rmtree(live)
+                shutil.copytree(backup, live)
+
+    def test_it_passes_the_official_schema(self):
+        r = self._run("validate_msapp_source.py")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("No violations", r.stdout)
+
+    def test_the_validator_is_not_vacuous(self):
+        # It must fail on the class of defect it exists for.
+        import tempfile, shutil
+        src = os.path.join(ROOT, "canvas-app", "msapp-src", "Src")
+        with tempfile.TemporaryDirectory() as td:
+            broken = os.path.join(td, "Src")
+            shutil.copytree(src, broken)
+            with open(os.path.join(broken, "scrHome.pa.yaml"), "a") as fh:
+                fh.write("\nScreens:\n  dup: {Properties: {Children: 1}}\n")
+            r = self._run("validate_msapp_source.py",
+                          os.path.join(ROOT, "canvas-app", "pa.schema.yaml"),
+                          broken)
+            self.assertEqual(r.returncode, 1, r.stdout)
+
+    def test_the_donor_is_the_vendored_bytes(self):
+        import hashlib
+        p = os.path.join(ROOT, "canvas-app", "donor",
+                         "AlmTestApp-asManyEntitiesAsPossible.msapp")
+        h = hashlib.sha256(open(p, "rb").read()).hexdigest()
+        self.assertEqual(
+            h,
+            "08a80c3d2686ddbd9acd18774cc66a35ae3059d89e80d22444aef94a5598baf9")

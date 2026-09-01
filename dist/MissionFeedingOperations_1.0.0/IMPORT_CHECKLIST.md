@@ -153,42 +153,30 @@ three portfolios with nothing to report.
 
 ---
 
-## 8. Build the canvas app
+## 8. Build the canvas app — no pasting
 
-The ZIP contains no `.msapp`, and the reason is architectural rather than a
-judgement call: **`pac canvas pack` cannot originate an app from YAML.** Both
-of its layouts need a seed artifact that only Studio or an authenticated
-environment can mint. `CANVAS_APP_ASSEMBLY.md` shows the CLI output proving it.
+The app is **built from source by Microsoft's own toolchain**; what remains
+for a person is platform-minted identity and one validation open.
 
-The source is complete and real: 12 screens, 4 components, 4 formula files,
-**1,300 formulas, all of which parse under Microsoft's own Power Fx engine.**
-What is missing is the seed, and you can make one in a minute.
+- [ ] In the imported solution: **New → App → Canvas (tablet)**, name it
+      **Mission Feeding Operations**, add the 19 data sources listed in
+      `CANVAS_APP_ASSEMBLY.md`, save. Build nothing.
+- [ ] **Export the solution**, then on a machine with the Power Platform CLI:
 
-- [ ] In the target environment, create a **blank canvas app** named
-      `Mission Feeding Operations` and save it. That is the seed.
-- [ ] Install the Power Platform CLI on a machine that can reach the
-      environment, then:
+      scripts/assemble_full_solution.sh <your-export>.zip
 
-      pac auth create --environment <url> --cloud UsGovDod
-      pac canvas list                       # find the seed app id
-      scripts/build_canvas.sh <app-id> MissionFeedingOperations.msapp
+      This swaps the blank app's content for the repository's 16 screens,
+      6 components and 1,800+ formulas — keeping YOUR app identity and YOUR
+      environment's data-source metadata — and validates the result. The whole
+      pipeline was dry-run here end to end.
+- [ ] Import the assembled `MissionFeedingOperations_1.1.0.zip`.
+- [ ] **Open the app for edit once** — Microsoft's packer states this open IS
+      the validation for a source-packed app — then save, publish, and
+      **re-export**. The re-export is the permanent artifact; no Studio work
+      ever again.
 
-      This downloads the seed, overlays every screen and component from the
-      repository, and packs a real `.msapp`.
-- [ ] **Open the packed app for edit in Studio before doing anything else.**
-      Microsoft's packer prints this warning itself; a SourceCode-packed app is
-      not considered validated until Studio has opened it.
-- [ ] Add the `.msapp` to the solution, then re-export the solution so the ZIP
-      carries the app, the flows and the bindings together.
-
-If the CLI is not available on the network, fall back to pasting the formula
-files in Studio in this order — App.Formulas, StatusEngine, Delegation,
-Cascade — because later files reference earlier ones.
-
-**Verify:** the app opens, `gblSchemaMatches` is true, and no delegation
-warning appears on any gallery.
-
----
+Fallback with no CLI anywhere: `CANVAS_APP_ASSEMBLY.md` Path C, the paste
+runbook.
 
 ## 9. Enable EOM-01 only, and run it twice
 
