@@ -8,6 +8,12 @@ assembled in Studio.
 
 **READY WITH DEPLOYMENT-SIDE REQUIREMENTS**, for **DEV or PILOT only.**
 
+**This culmination is RELEASE V1** — the programme label wrapping Artifact 1
+(1.0.0), the canvas source and parity contract, the REFERENCE msapp, and the
+Path A assembly pipeline (which mints the 1.1.0 candidate tenant-side). The
+internal version numbers are load-bearing and are not renumbered by the V1
+label; `RELEASE_NOTES.md` carries the mapping.
+
 ## Per-list index counts
 
 Generated from `scripts/eom_schema.py` by the same code that emits the

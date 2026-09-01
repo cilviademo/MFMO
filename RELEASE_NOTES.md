@@ -1,6 +1,14 @@
-# Mission Feeding Operations — R1
+# Mission Feeding Operations — RELEASE V1
 
-**Version 1.0.0 · Schema 5.0 · DoD cloud (`UsGovDod`)**
+**Programme release V1 · Schema 5.0 · DoD cloud (`UsGovDod`)**
+
+**V1 is the programme label for this culmination.** It does not renumber
+the internal artifacts — their numbers are load-bearing: Artifact 1 is
+**1.0.0** by build provenance, and the assembled canvas candidate is
+**1.1.0** because the version bump is one of the assembler's nine gates.
+V1 wraps them: Artifact 1 + canvas source + assembly pipeline + REFERENCE
+msapp + the Figma parity contract + runbooks. Read 1.0.0/1.1.0 as parts
+of V1, not as contradicting it.
 
 Automates the End-of-Month document requirement, discovery, classification,
 versioning, QC and common operational picture for Air Force mission feeding
@@ -11,20 +19,18 @@ not occurred and the data-layer scope issue is open.
 
 ---
 
-## Two artifacts, and they are not the same kind of thing
+## Four artifacts, and they are not the same kind of thing
 
-**Artifact 1 — `MissionFeedingOperations_1.0.0.zip`, the backend.**
-Built from a tag by `scripts/build_release.sh`, reproducibly. Five flows,
-24 environment variables, 3 connection references, solution metadata.
-**Canvas app present in solution: NO — see Artifact 2.**
-Its provenance is the commit: the same tag always yields the same bytes.
+| Artifact | What it is |
+|---|---|
+| **Artifact 1** — `MissionFeedingOperations_1.0.0.zip` | Backend bootstrap: 5 flows (disabled), 24 blank env vars, 3 connection refs. **Canvas app: NO, by design.** Built reproducibly from a tag by `scripts/build_release.sh`; same tag, same bytes. |
+| **`MissionFeedingOperations_REFERENCE_ONLY.msapp`** | Sanitized engineering artifact: schema-validated source packed by pac 2.11.2 over neutralised scaffolding. **Never a deployment artifact.** |
+| **Assembled 1.1.0 candidate** | Produced tenant-side by `assemble_full_solution.sh` from the operator's own wrapper export, through nine fail-closed gates. A candidate, not the release. |
+| **Platform re-export** | Studio's own export after import → open → zero errors → Accessibility Checker → publish. **The canonical DEV/PILOT release artifact**, promoted only by `validate_final_export.sh`. |
 
-**Artifact 2 — `MissionFeedingOperations_1.1.0.zip`, the full solution.**
-Exported from Studio by the operator after one assembly session
-(`CANVAS_APP_ASSEMBLY.md`). Everything in Artifact 1 plus one CanvasApp
-component with the 16 approved screens.
-**Its provenance is different in kind and must not be reported as the same.**
-It is hashed *after* validation, not before:
+V1 ships the first two plus the means to produce the last two. The
+re-export's provenance is different in kind and must not be reported as
+the same. It is hashed *after* validation, not before:
 
 ```
 python3 scripts/validate_solution.py --export MissionFeedingOperations_1.1.0.zip
@@ -88,7 +94,8 @@ exists to make that distinction explicit.
 
 | | |
 |---|---|
-| Canvas app | 12 screens, 4 components, `.pa.yaml` |
+| Canvas app | 16 screens, 6 components, `.pa.yaml` + generated Studio-dialect source, plus the REFERENCE `.msapp` |
+| Design parity | `configuration/figma-canvas-map.json` + `docs/FIGMA_CANVAS_PARITY.md`, machine-checked against the vendored Figma build |
 | Flows | 5 specifications — EOM-01, EOM-02, EOM-02b, EOM-03, EOM-04 |
 | Schema | 17 SharePoint lists, 286 columns, internal names fixed at creation |
 | Registry | 103 installations, 154 facilities, from the QRG |
@@ -113,12 +120,13 @@ None of these is an incomplete build. Each is a decision.
 ## What is verified, and what is not
 
 ```
-346 unit tests                      OK
- 14 solution validations            0 warnings, 0 failures
-    pre-release security scan       PASS, 3 warnings
+530 unit tests                      OK  (239 behavioural / 157 structural / 134 policy)
+    solution validation             0 failures
+    pre-release security scan       PASS, 4 warnings (each explained in the report)
+    design parity gate              PASS (16 screens, 6 components, 19 tokens)
     routing dry run, four sites     PASS
-    EOM-01 dry run                  32 rows across the 5-base pilot
-    release gate, 18 stop conditions NOT BLOCKED
+    EOM-01 expectation              737 rows across the pilot window (verified in-tenant)
+    release gate                    NOT BLOCKED — every stop condition clears
 ```
 
 **Ten things are NOT TESTABLE LOCALLY** and are listed with an owner in
@@ -126,6 +134,19 @@ None of these is an incomplete build. Each is a decision.
 PAC CLI validation, solution import, the Power Apps Accessibility Checker, real
 SharePoint writes, tenant DLP, and **the real month folder naming on each of the
 four sites**.
+
+## Open by design — pilot validation items, not missing build work
+
+These are intentionally unresolved locally and move to the tenant:
+actual import/open behaviour; real SharePoint writes; EOM-01 runtime in
+the tenant; EOM-02 upload/routing against the real sites; EOM-02b
+post-import duplication and binding; the actual Studio render (the
+Studio-open visual gate in `CANVAS_APP_ASSEMBLY.md` is the decisive
+human checkpoint); Accessibility Checker results; tenant DLP and
+security enforcement; installation-level data isolation.
+
+Repository status: **READY FOR PATH A ASSEMBLY.** The successful pilot
+outcome is **DEV/PILOT RELEASE CANDIDATE**. Neither is rounded up.
 
 ## Known limitations
 
