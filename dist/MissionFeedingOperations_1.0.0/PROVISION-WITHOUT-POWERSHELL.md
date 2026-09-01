@@ -1,16 +1,67 @@
 # Provisioning without PowerShell
 
-No module install rights is a normal .mil constraint and it does not block you.
-Three routes, best first.
+**PowerShell is unavailable on the target network.** This is the route.
 
-`scripts/gen_rest_payloads.py` has produced:
+Everything here is generated from `scripts/eom_schema.py` by
+`scripts/gen_rest_payloads.py`. Regenerate rather than hand-edit:
 
 ```
-provisioning/sharepoint-schema.json     17 lists, 286 columns, 90 indexes
-provisioning/manual-column-sheet.csv    the same thing as a flat checklist
+python3 scripts/gen_rest_payloads.py
 ```
+
+| File | What it is |
+|---|---|
+| `provisioning/sharepoint-schema.json` | 17 lists, 286 columns, 90 indexes. Per list: the create payload, one payload per field with the internal name passed as `Title`, an explicit index operation per indexed column, and what uniqueness SharePoint actually enforces. |
+| `provisioning/whatif-report.md` | What every call would do, in order, before any of them run. The irreversible ones are marked. |
+| `provisioning/manual-column-sheet.csv` | The same thing as a checklist, for creating columns by hand. |
+
+## Read the WhatIf report first
+
+Provisioning is the one step in this deployment with an unrepairable failure in
+it. SharePoint refuses to add an index once a list passes **5,000 items**, and
+`MF EOM Item` passes that in the first quarter. The WhatIf report marks every
+list that will cross it.
+
+Two thresholds are involved and conflating them is how an index gets skipped:
+
+| | Rows | What happens past it |
+|---|---:|---|
+| Delegation ceiling | 2,000 | A non-delegable query returns the first page **and reports success**. A client limit. |
+| List view threshold | 5,000 | An index can never be added. A server limit, and permanent. |
+
+## The route: Send an HTTP request to SharePoint
+
+Provisioning runs from a Power Automate flow using the **SharePoint
+connector's** own *Send an HTTP request to SharePoint* action. That is the
+SharePoint connector, not the prohibited HTTP connector — a different connector
+entirely. `prerelease_scan.py` rule `CON-02` was tightened to know the
+difference rather than being told to skip this file, because a file-level
+exemption would also have silenced a real HTTP connector added here later.
+
+For each list, in the order the JSON gives them:
+
+1. `POST _api/web/lists` with `createPayload`
+2. `POST .../fields` once per entry in `fields`, with that entry's `payload`
+3. `MERGE` once per entry in `indexOperations` — **do not skip these and do not
+   defer them**
+
+## Then verify, because "the run said OK" is not evidence
+
+A run can create a list, most of its columns and none of its indexes, and
+report success throughout. Export the tenant's real list schemas to JSON and
+compare:
+
+```
+python3 scripts/verify_provisioning.py <tenant-export.json>
+```
+
+It fails on a missing list, a missing column, and — hardest — an index missing
+from a list projected past 5,000 rows. It is **NOT TESTABLE LOCALLY** against a
+real tenant; `tests/fixtures/tenant-schema-*.json` prove the comparison, not
+the tenant.
 
 ---
+
 
 ## Route 1 — Power Automate (recommended)
 

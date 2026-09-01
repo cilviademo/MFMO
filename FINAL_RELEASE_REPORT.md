@@ -120,6 +120,98 @@ tenant:
   expression treated a null final call as "no deadline" and left the item amber
   forever instead of going red — the wrong answer in the safe-looking direction.
 
+## The approved screen set is complete
+
+Four screens were absent against the approved UX. They are present, wired to
+real lists and flows rather than decorated:
+
+| Screen | What it answers | Query |
+|---|---|---|
+| `scrMyPackage` | the state of everything this period | `MF_PackageForPeriod` — delegates on `Reporting_Period` + scope |
+| `scrOverview` | AFSVC landing: shape, then what needs me | `MF_VisibleItems` narrowed on `Final_Status`, `Requirement_ID`, `Portfolio_ID`, all indexed |
+| `scrInstallations` | the list; `scrInstallation` stays the detail | `MF_InstallationsInScope`, rollup over the already-scoped registry |
+| `scrExceptions` | three problems, three owners, never one number | `MF_UnmatchedQueue`, `MF_NeedsFilingQueue`, `MF_CorrectionsPastDue` |
+
+Two components, added only where they remove duplication across two or more
+screens: `cmpMetricStrip` and `cmpFilterToolbar`. The toolbar emits **values**
+and touches no data source — a component that ran the query would decide
+delegation for screens it cannot see. Four other candidates would have been
+used once and were skipped.
+
+**The metrics are semantic, never colour.** Amber covers both "the base owes a
+correction" and "AFSVC owes a review", so counting by colour would put two
+different people's work in one number.
+
+### Two audits, both proven against a planted violation
+
+| | Catches | Why it has to exist |
+|---|---|---|
+| `canvas_reference_check.py` | a data source, screen, component, flow or formula that does not exist | A wrong list name does **not** error in a canvas app. It renders an empty gallery, which reads as "nothing due". |
+| `canvas_delegation_check.py` | a predicate on a non-indexed column of a high-volume list | A non-delegable `Filter` returns the **first 500 rows and reports success**. |
+
+Both are wired into the suite, and both were verified by planting a violation
+and watching them fail rather than by reading their output once.
+
+### Two predicates reported, not rounded up
+
+`MF EOM Item.Requirement_Scope` and `MF Calendar Event.Scope_Type` are
+unindexed columns inside an `OR`, behind indexed leading predicates. SharePoint
+can *usually* resolve those through the leading index, and usually is not a
+word this build accepts — whether the optimiser uses the index across an OR
+spanning an unindexed column cannot be established without a list of over 5,000
+items on the real tenant.
+
+**No index was added.** That is a schema change and the schema is a settled
+authority; `MF_EOM_Item` has 13 of 20 if the owner decides otherwise.
+
+### A defect in the previous round's work
+
+The formula extractor never saw `Delegation.fx` — its regex did not handle
+`Name(a: Text): Table =`, so **the file that decides whether every query
+delegates contributed zero formulas and was never parsed**, while the total
+looked healthy because the other twenty files made it up. The test asserted a
+file *count*, which cannot catch that. It asserts a **named list** now.
+
+With it fixed: **1,829 formulas across 27 files, no syntax errors** under
+Microsoft.PowerFx.
+
+## Provisioning, and the threshold that was conflated
+
+`gen_rest_payloads.py` now emits an explicit index **operation** per indexed
+column rather than a flag for the operator to translate, plus what uniqueness
+SharePoint actually enforces — a composite key is a flow-side check, and saying
+so stops an operator assuming the list protects something it does not.
+
+`provisioning/whatif-report.md` lists every call before any of them run, with
+the irreversible ones marked.
+
+**A defect found while writing it.** The report's "irreversible after 5,000
+rows" column was driven by a flag called `crossesDelegationCeiling` that tested
+`> 5000`. Two different limits had been conflated:
+
+| | Rows | Cost of crossing it |
+|---|---:|---|
+| Delegation ceiling | 2,000 | a query returns the first page and reports success |
+| List view threshold | 5,000 | an index can **never** be added |
+
+They are separate flags now, and the irreversible one is **inclusive**: a list
+projected at exactly 5,000 crosses it on its next row. Three lists were marked
+"no" that should have read "YES".
+
+`scripts/verify_provisioning.py` compares a tenant export against the schema
+and fails on a missing list, a missing column, or an index missing from a
+high-volume list. **"The provisioning run said OK" is not evidence** — a run can
+create a list, most of its columns and none of its indexes and report success
+throughout.
+
+## CON-02 tightened, not exempted
+
+"Send an HTTP request to SharePoint" is an action of the **SharePoint**
+connector and is the provisioning route this deployment depends on. A negative
+lookahead teaches the rule the difference. A file-level exemption would also
+have silenced a real HTTP connector added to that file later, which is the
+finding the rule exists for. Warnings: **4**, down from 6.
+
 ## The canvas app — what changed this round
 
 **The `.msapp` question is settled, and not by judgement.** I obtained
@@ -444,7 +536,7 @@ inside the imported solution.
 
 ```
 branch    main
-commit    9b971712fe592b6ee788642c68db7317cce64c2f
+commit    d33501b790606d620e04bf36a500ec917e290cbb
 tag       v1.0.0, local only
 tree      clean
 history   fast-forward from claude/mission-feeding-eom-build-98fbsi
@@ -460,7 +552,7 @@ that commit, so the ZIP, the commit and the checksum describe one build.
 origin v1.0.0` is refused with HTTP 403 — this session's credentials permit
 pushing a branch and not creating a tag ref. The commit is on the remote;
 only the ref is missing. Recreate it with `git tag -a v1.0.0
-9b971712fe592b6ee788642c68db7317cce64c2f` from a session that can, or from the
+d33501b790606d620e04bf36a500ec917e290cbb` from a session that can, or from the
 GitHub releases UI. Nothing depends on it: the build takes any commit-ish.
 
 One caveat on the hash, stated rather than hidden: this file is inside the
@@ -494,7 +586,7 @@ same tag always yields the same checksum. Version, commit and checksum describe
 the same build.
 
 ```
-commit   9b971712fe592b6ee788642c68db7317cce64c2f
+commit   d33501b790606d620e04bf36a500ec917e290cbb
 branch   main
 tag      v1.0.0 (local only — see below)
 ```
@@ -521,7 +613,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **457 passed**, 0 failed — 195 behavioural, 145 structural, 117 policy |
+| Unit tests | **493 passed**, 0 failed — 211 behavioural, 151 structural, 131 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |
