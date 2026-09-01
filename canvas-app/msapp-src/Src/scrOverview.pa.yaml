@@ -28,7 +28,10 @@ Screens:
             Set(locSearch, ""),
             Set(locStatus, Blank()),
             Set(locRequirement, Blank()),
-            Set(locPortfolio, Blank())
+            Set(locPortfolio, Blank()),
+            // Arriving at the manager's own landing screen ends the base-user
+            // preview - it must never linger invisibly across the PM surface.
+            Set(gblPreviewInst, Blank())
         )
 
     Children:
@@ -90,6 +93,38 @@ Screens:
                         OnChange: =Set(locPeriod, Self.Selected.Period)
                         AccessibleLabel: ="Reporting period"
                         LayoutMinWidth: =160
+                        TabIndex: =0
+
+                  # --- Preview as a base user (EOM_PREVIEW_AS) ---------------
+                  # View-only: sets gblPreviewInst and lands on the base Home.
+                  # Never an identity change - the flow authenticates the real
+                  # caller regardless, and scrUpload refuses while previewing.
+                  - drpPreviewInst:
+                      Control: ComboBox
+                      Properties:
+                        Items: =MF_MyInstallations
+                        DisplayFields: =["Installation_Name"]
+                        SearchFields: =["Installation_Name"]
+                        SelectMultiple: =false
+                        InputTextPlaceholder: ="Preview an installation..."
+                        Visible: =gblCanQC && MF_IsFeatureOn("EOM_PREVIEW_AS")
+                        AccessibleLabel: ="Installation to preview as a base user"
+                        LayoutMinWidth: =220
+                        TabIndex: =0
+                  - btnPreviewAs:
+                      Control: Button
+                      Variant: Secondary
+                      Properties:
+                        Text: ="Preview as base user"
+                        Visible: =gblCanQC && MF_IsFeatureOn("EOM_PREVIEW_AS")
+                        DisplayMode: |
+                          =If(IsBlank(drpPreviewInst.Selected.Installation_ID),
+                              DisplayMode.Disabled, DisplayMode.Edit)
+                        AccessibleLabel: ="Open the base user view of the selected installation, read only"
+                        OnSelect: |
+                          =Set(gblPreviewInst, drpPreviewInst.Selected.Installation_ID);
+                           Set(locSelectedItem, Blank());
+                           Navigate(scrHome, ScreenTransition.None)
                         TabIndex: =0
 
             - conBody:

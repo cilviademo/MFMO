@@ -481,7 +481,7 @@ returns the right answer against real data. But it moves 3,652 lines of canvas
 source from *entirely unverified* to *parses under the real engine*, which is
 the largest single reduction in this release's unknowns.
 
-## Test classification — what 530 passing tests actually prove
+## Test classification — what 536 passing tests actually prove
 
 **A suite written against the generator that produced the artifact can pass in
 full while the tests and the generator share one wrong premise.** Counting tests
@@ -492,10 +492,10 @@ fails the release gate — a new test cannot join the total unlabelled.
 
 | Kind | Tests | Share | What a pass means |
 |---|---:|---:|---|
-| **BEHAVIOURAL** | 239 | 45% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
+| **BEHAVIOURAL** | 239 | 44% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
 | **STRUCTURAL** | 157 | 29% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
-| **POLICY** | 134 | 25% | A settled decision stays applied. These outlive the decisions they encode. |
-| **TOTAL** | **530** | | |
+| **POLICY** | 140 | 26% | A settled decision stays applied. These outlive the decisions they encode. |
+| **TOTAL** | **536** | | |
 
 ### Three POLICY tests encoded the decision this round reversed
 
@@ -816,7 +816,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **530 passed**, 0 failed — 239 behavioural, 157 structural, 134 policy |
+| Unit tests | **536 passed**, 0 failed — 239 behavioural, 157 structural, 140 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |

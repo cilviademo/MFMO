@@ -7,6 +7,7 @@ EOM_CALENDAR,Calendar view,TRUE,TRUE,BASE_USER,2026-09-01,Every expected item is
 EOM_ACCESS_REQUEST,Request access to another installation,TRUE,TRUE,BASE_USER,2026-09-01,Exception path to the GAL-derived model. Requests expire.
 EOM_ADMIN_REQS,Requirements admin,TRUE,TRUE,PORTFOLIO_MANAGER,2026-09-01,Additionally requires Can_Edit_Requirements
 EOM_ON_BEHALF,Submit on behalf of another location,TRUE,TRUE,PORTFOLIO_MANAGER,2026-09-01,Additionally requires Can_Submit_On_Behalf
+EOM_PREVIEW_AS,Preview as a base user,TRUE,TRUE,PORTFOLIO_MANAGER,2026-09-01,View-only; additionally requires Can_QC. Never an identity change - scrUpload refuses while previewing and EOM-02 authenticates the real caller regardless
 EOM_ADD_CONDITIONAL,Add a conditional requirement for this period,TRUE,TRUE,BASE_USER,2026-09-01,The 1119-1 is field feeding and is never auto-generated; the base or reviewer adds it when it applies
 EOM_BULK_ACCEPT,Bulk accept in the review queue,FALSE,TRUE,PORTFOLIO_MANAGER,,Explicit multi-select only. Never a select-all button.
 EOM_DIAGNOSTICS,Diagnostics screen,FALSE,TRUE,DEVELOPER,,Developer surface. Never enable in prod. Additionally requires Developer_Flag.

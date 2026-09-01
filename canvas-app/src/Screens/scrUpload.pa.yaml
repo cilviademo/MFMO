@@ -24,14 +24,23 @@ Screens:
     Properties:
       Fill: =clrSurfaceAlt
       OnVisible: |
-        =Concurrent(
-            Set(locUploadError, ""),
-            Set(locUploadBusy, false),
-            Set(locUploadResult, Blank()),
-            // Arriving from a gallery row pre-declares everything. Arriving
-            // from the nav declares nothing and the user picks.
-            Set(locItem, locSelectedItem),
-            Set(locOnBehalf, false)
+        =// The base-user preview (EOM_PREVIEW_AS) is VIEW-ONLY. Every
+         // submission path in the app lands here, so this one refusal covers
+         // them all. It is a UX guard, not the control: EOM-02 authenticates
+         // the real caller server-side regardless of what any screen allows.
+         If( !IsBlank(gblPreviewInst),
+            Notify("Preview is read-only. Exit the preview to submit.",
+                   NotificationType.Warning);
+            Back(),
+            Concurrent(
+                Set(locUploadError, ""),
+                Set(locUploadBusy, false),
+                Set(locUploadResult, Blank()),
+                // Arriving from a gallery row pre-declares everything. Arriving
+                // from the nav declares nothing and the user picks.
+                Set(locItem, locSelectedItem),
+                Set(locOnBehalf, false)
+            )
         )
 
     Children:

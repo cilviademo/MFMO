@@ -684,6 +684,15 @@ App:
                   false )
           );
 
+      // What a BASE USER owes, independent of who is looking. The base-user preview
+      // (EOM_PREVIEW_AS) must not filter through MF_IsMyAction: the previewing
+      // manager holds Can_QC, which would leak reviewer-owned items into a list the
+      // real base user would never see - a preview that shows the wrong list teaches
+      // the wrong lesson.
+      MF_IsBaseAction(FinalStatus: Text): Boolean =
+          With( { p: MF_Status(FinalStatus) },
+              p.actionRequired && p.actionOwner = "Facility" );
+
       // ---- Cascade.fx ------------------------------------------------
       // =============================================================================
       // Cascade.fx — the cascading reference-data sources.
@@ -994,6 +1003,36 @@ App:
           Filter( MF_VisibleItems(Period),
                   Action_Required = true,
                   Action_Owner = "Reviewer" );
+
+      // -----------------------------------------------------------------------------
+      // Preview as a base user (EOM_PREVIEW_AS, view-only).
+      //
+      // A portfolio manager already READS every installation in scope, so rendering
+      // one installation through the base-user screens discloses nothing new — this
+      // is a presentation override, never an identity or permission change. The
+      // preview NEVER submits: scrUpload refuses while gblPreviewInst is set, and
+      // EOM-02 takes the caller's identity from the flow's authenticated context
+      // regardless, so even a bypassed guard could not forge a submitter.
+      //
+      // These mirror MF_MyWork / MF_WaitingOnOthers / MF_PackageForPeriod exactly,
+      // but scope through MF_ItemsForInstallation — the same indexed, delegable
+      // query scrInstallation already uses — instead of the viewer's own mapping.
+      // gblPreviewInst is a Set variable (named formulas cannot read those), so the
+      // installation arrives as an argument from the call site.
+      // -----------------------------------------------------------------------------
+      MF_PreviewMyWork(InstallationId: Text, Period: Text): Table =
+          SortByColumns(
+              Filter( MF_ItemsForInstallation(InstallationId, Period),
+                      Action_Required = true ),
+              "Effective_Due_Date", SortOrder.Ascending );
+
+      MF_PreviewWaiting(InstallationId: Text, Period: Text): Table =
+          Filter( MF_ItemsForInstallation(InstallationId, Period),
+                  Action_Required = true,
+                  Action_Owner = "Reviewer" );
+
+      MF_PreviewPackage(InstallationId: Text, Period: Text): Table =
+          MF_ItemsForInstallation(InstallationId, Period);
 
       // The review queue. QC_Status and Is_Current are both indexed.
       MF_ReviewQueue(): Table =

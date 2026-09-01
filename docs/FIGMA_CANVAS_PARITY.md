@@ -132,6 +132,16 @@ the map; the deviations worth reading:
 Information density is preserved: the AFSVC tables are galleries with the
 Figma column sets, not simplified cards.
 
+One **canvas-only addition** postdates the Figma package: the base-user
+preview (`EOM_PREVIEW_AS`, a programme request). A manager picks an
+installation on `scrOverview` and sees `scrHome`/`scrMyPackage`/
+`scrCalendar` exactly as that base's user would — base nav rail, base
+work lists, a blue PREVIEW banner — strictly read-only (`scrUpload`
+refuses while previewing). It adds no screen, no component, and no
+colour outside the token set, so every parity guarantee above still
+holds; the prototype's own "Simulate CAC identity" test harness is its
+design ancestor.
+
 ## 5. Components
 
 6 canvas components ↔ the Figma component inventory. The one with real

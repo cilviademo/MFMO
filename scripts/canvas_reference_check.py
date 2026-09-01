@@ -83,6 +83,16 @@ def defined_formulas():
     for f in sorted(os.listdir(FX)):
         if f.endswith(".fx"):
             names |= _names(os.path.join(FX, f))
+    # Globals created at runtime with Set() are definitions too. Every
+    # Set(gblX, ...) anywhere in the screen source declares gblX app-wide;
+    # a gbl* name that appears in no .fx file AND in no Set() is still an
+    # undefined reference and still fails below.
+    set_def = re.compile(r"Set\(\s*(gbl[A-Z][A-Za-z0-9_]*)\s*,")
+    for base, _dirs, files in os.walk(SRC):
+        for f in files:
+            if f.endswith(".pa.yaml"):
+                with open(os.path.join(base, f), encoding="utf-8") as fh:
+                    names |= set(set_def.findall(fh.read()))
     return names
 
 

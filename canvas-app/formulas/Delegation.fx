@@ -201,6 +201,36 @@ MF_WaitingOnOthers(Period: Text): Table =
             Action_Required = true,
             Action_Owner = "Reviewer" );
 
+// -----------------------------------------------------------------------------
+// Preview as a base user (EOM_PREVIEW_AS, view-only).
+//
+// A portfolio manager already READS every installation in scope, so rendering
+// one installation through the base-user screens discloses nothing new — this
+// is a presentation override, never an identity or permission change. The
+// preview NEVER submits: scrUpload refuses while gblPreviewInst is set, and
+// EOM-02 takes the caller's identity from the flow's authenticated context
+// regardless, so even a bypassed guard could not forge a submitter.
+//
+// These mirror MF_MyWork / MF_WaitingOnOthers / MF_PackageForPeriod exactly,
+// but scope through MF_ItemsForInstallation — the same indexed, delegable
+// query scrInstallation already uses — instead of the viewer's own mapping.
+// gblPreviewInst is a Set variable (named formulas cannot read those), so the
+// installation arrives as an argument from the call site.
+// -----------------------------------------------------------------------------
+MF_PreviewMyWork(InstallationId: Text, Period: Text): Table =
+    SortByColumns(
+        Filter( MF_ItemsForInstallation(InstallationId, Period),
+                Action_Required = true ),
+        "Effective_Due_Date", SortOrder.Ascending );
+
+MF_PreviewWaiting(InstallationId: Text, Period: Text): Table =
+    Filter( MF_ItemsForInstallation(InstallationId, Period),
+            Action_Required = true,
+            Action_Owner = "Reviewer" );
+
+MF_PreviewPackage(InstallationId: Text, Period: Text): Table =
+    MF_ItemsForInstallation(InstallationId, Period);
+
 // The review queue. QC_Status and Is_Current are both indexed.
 MF_ReviewQueue(): Table =
     SortByColumns(

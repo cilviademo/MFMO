@@ -790,3 +790,67 @@ class TheDesignParityGateHolds(unittest.TestCase):
         # The real nav does not contain Submit, so approving it must mismatch.
         self.assertTrue(mod.failures, "an altered approved tab set must not "
                                       "silently pass")
+
+
+class PreviewAsBaseUserIsViewOnly(unittest.TestCase):
+    """EOM_PREVIEW_AS: a manager may LOOK through a base user's screens,
+    never ACT through them.
+
+    The preview is a presentation narrowing of a scope the manager already
+    reads. These tests pin the three properties that make it safe: the flag
+    row exists and says view-only; the single submission screen refuses
+    while a preview is active (every submission path lands on scrUpload);
+    and every preview query routes through MF_ItemsForInstallation -- the
+    same delegable, indexed query the installation workspace uses -- so
+    preview can never widen what the viewer reads.
+    """
+
+    def _read(self, *parts):
+        with open(os.path.join(ROOT, *parts), encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_the_flag_row_exists_and_is_view_only(self):
+        import csv
+        with open(os.path.join(ROOT, "configuration", "feature-flags.csv"),
+                  encoding="utf-8") as fh:
+            rows = {r["Feature_Key"]: r for r in csv.DictReader(fh)}
+        self.assertIn("EOM_PREVIEW_AS", rows)
+        self.assertIn("View-only", rows["EOM_PREVIEW_AS"]["Notes"])
+
+    def test_upload_refuses_while_previewing(self):
+        text = self._read("canvas-app", "src", "Screens", "scrUpload.pa.yaml")
+        onvis = text.split("OnVisible:")[1].split("Children:")[0]
+        self.assertIn("gblPreviewInst", onvis,
+                      "scrUpload.OnVisible must guard the preview")
+        self.assertIn("Back()", onvis)
+        # The guard comes BEFORE the normal setup, not after it.
+        self.assertLess(onvis.index("gblPreviewInst"),
+                        onvis.index("Concurrent"))
+
+    def test_entry_is_flag_gated_and_qc_gated(self):
+        text = self._read("canvas-app", "src", "Screens", "scrOverview.pa.yaml")
+        self.assertIn('MF_IsFeatureOn("EOM_PREVIEW_AS")', text)
+        self.assertRegex(text,
+                         r'Visible: =gblCanQC && MF_IsFeatureOn\("EOM_PREVIEW_AS"\)')
+
+    def test_every_preview_query_narrows_through_the_installation_query(self):
+        deleg = self._read("canvas-app", "formulas", "Delegation.fx")
+        for fn in ("MF_PreviewMyWork", "MF_PreviewWaiting", "MF_PreviewPackage"):
+            body = deleg.split(fn + "(")[1]
+            self.assertIn("MF_ItemsForInstallation", body[:400],
+                          f"{fn} must reuse the vetted installation query")
+
+    def test_preview_never_touches_the_submission_payload(self):
+        # gblPreviewInst may appear on view surfaces and the upload guard,
+        # never inside the EOM02_Submission.Run() call.
+        text = self._read("canvas-app", "src", "Screens", "scrUpload.pa.yaml")
+        run = text[text.index("EOM02_Submission"):]
+        run = run[:run.index(")")] if ")" in run else run
+        self.assertNotIn("gblPreviewInst", run)
+
+    def test_preview_ends_on_the_managers_landing_screen(self):
+        text = self._read("canvas-app", "src", "Screens", "scrOverview.pa.yaml")
+        onvis = text.split("OnVisible:")[1].split("Children:")[0]
+        self.assertIn("Set(gblPreviewInst, Blank())", onvis,
+                      "a lingering invisible preview would misattribute "
+                      "everything the manager reads next")

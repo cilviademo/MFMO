@@ -114,13 +114,18 @@ exists to make that distinction explicit.
 * **Every flow imports off.** Enable them in the order in `docs/DEPLOYMENT.md`.
 * **AI Builder and document-content classification are FALSE and have no code
   path.**
+* **`EOM_PREVIEW_AS` ships ON for portfolio managers with `Can_QC`.** A
+  manager can open any in-scope installation through the base user's own
+  screens, read-only — the submit screen refuses while previewing, and the
+  flow authenticates the real caller regardless. Turn the flag off to
+  remove the affordance entirely.
 
 None of these is an incomplete build. Each is a decision.
 
 ## What is verified, and what is not
 
 ```
-530 unit tests                      OK  (239 behavioural / 157 structural / 134 policy)
+536 unit tests                      OK  (239 behavioural / 157 structural / 140 policy)
     solution validation             0 failures
     pre-release security scan       PASS, 4 warnings (each explained in the report)
     design parity gate              PASS (16 screens, 6 components, 19 tokens)

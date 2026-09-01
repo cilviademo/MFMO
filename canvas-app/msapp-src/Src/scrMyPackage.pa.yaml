@@ -78,8 +78,14 @@ Screens:
                         # denominator is the reporting failure this build exists
                         # to prevent, and "12 accepted" means nothing until the
                         # reader knows twelve of what.
-                        Text: =MF_ScopeQualifier() & " - " & locPeriod
-                        Color: =clrTextSecondary
+                        Text: |
+                          =If( !IsBlank(gblPreviewInst),
+                              "PREVIEW - " &
+                              LookUp('MF Installation', Installation_ID = gblPreviewInst).Installation_Name &
+                              " as a base user. Read-only",
+                              MF_ScopeQualifier() ) & " - " & locPeriod
+                        Color: =If(IsBlank(gblPreviewInst), clrTextSecondary, clrStatusBlue)
+                        FontWeight: =If(IsBlank(gblPreviewInst), FontWeight.Normal, FontWeight.Semibold)
                         TabIndex: =-1
                   - btnBack:
                       Control: Button
@@ -194,7 +200,10 @@ Screens:
                       Control: Gallery
                       Variant: galleryVertical
                       Properties:
-                        Items: =MF_PackageForPeriod(locPeriod)
+                        Items: |
+                          =If( IsBlank(gblPreviewInst),
+                              MF_PackageForPeriod(locPeriod),
+                              MF_PreviewPackage(gblPreviewInst, locPeriod) )
                         TemplateSize: =56
                         FillPortions: =1
                         AccessibleLabel: ="Every requirement for this period"

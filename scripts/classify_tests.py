@@ -79,6 +79,7 @@ CLASSIFICATION = {
         "TheSourceIsRealYaml":              (B, "every source file run through a real YAML parser; ten had never passed one"),
         "TheMsappSourceIsFreshAndValid":    (B, "the generated dialect regenerated, schema-validated, and the validator proven non-vacuous"),
         "TheDesignParityGateHolds":         (S, "the Figma parity map and the canvas source agree, and the gate is proven fallible"),
+        "PreviewAsBaseUserIsViewOnly":      (P, "the preview ruling: a manager looks through base screens, never acts through them"),
     },
     "test_flow_expression": {
         "TheInterpreterIsStrict":        (B, "the interpreter itself tested on cases with known answers"),

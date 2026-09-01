@@ -57,6 +57,18 @@ Screens:
                       Properties:
                         Text: ="Calendar"
                         TabIndex: =-1
+                  - lblPreviewScope:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Visible: =!IsBlank(gblPreviewInst)
+                        Text: |
+                          ="PREVIEW - " &
+                           LookUp('MF Installation', Installation_ID = gblPreviewInst).Installation_Name &
+                           " as a base user. Read-only"
+                        Color: =clrStatusBlue
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
                   - cmbPeriod:
                       Control: ComboBox
                       Properties:
@@ -187,8 +199,11 @@ Screens:
                               Filter('MF Calendar Event',
                                      Active_Flag = true,
                                      Scope_Type = "Enterprise"
-                                         || Scope_ID = gblMyInstallation
-                                         || Scope_ID = gblMyPortfolio),
+                                         // The base-user preview narrows to the
+                                         // previewed installation; otherwise
+                                         // the viewer's own scope applies.
+                                         || Scope_ID = If(IsBlank(gblPreviewInst), gblMyInstallation, gblPreviewInst)
+                                         || (IsBlank(gblPreviewInst) && Scope_ID = gblMyPortfolio)),
                               "Event_Date", SortOrder.Ascending
                           )
                         TemplateSize: =56

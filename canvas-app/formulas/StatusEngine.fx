@@ -293,3 +293,12 @@ MF_IsMyAction(FinalStatus: Text): Boolean =
             "Admin",    gblCanEditReqs,
             false )
     );
+
+// What a BASE USER owes, independent of who is looking. The base-user preview
+// (EOM_PREVIEW_AS) must not filter through MF_IsMyAction: the previewing
+// manager holds Can_QC, which would leak reviewer-owned items into a list the
+// real base user would never see - a preview that shows the wrong list teaches
+// the wrong lesson.
+MF_IsBaseAction(FinalStatus: Text): Boolean =
+    With( { p: MF_Status(FinalStatus) },
+        p.actionRequired && p.actionOwner = "Facility" );
