@@ -71,7 +71,7 @@ cleanly and fails on the first real day.
 
 Read, in order:
 
-1. `deployment/DEPENDENCY_MANIFEST.md` — **66 destination-side resources.
+1. `deployment/DEPENDENCY_MANIFEST.md` — **72 destination-side resources.
    16 MUST ALREADY EXIST. Importing the ZIP creates none of them.**
 2. `deployment/site-bindings.md` — the four site collections, and the ten
    minutes of somebody's time that everything downstream depends on.
