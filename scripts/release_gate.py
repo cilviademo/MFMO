@@ -110,9 +110,19 @@ def provenance():
                 check("the build commit is HEAD", True, "identical")
             else:
                 diff = git("diff", "--stat", sha1, head) or ""
+                # The child-commit allowance covers documentation AND the one
+                # designated distribution copy, MAIN_DOWNLOAD.zip at the repo
+                # root: a packaged snapshot of the operator bundle for
+                # easy download from GitHub. Nothing in any build reads it,
+                # the archive scanner sweeps its every entry, and it is
+                # rebuilt as the LAST step of a release round so its
+                # contents match the tree that carries it. Widening this
+                # allowance any further defeats the provenance rule.
+                ALLOWED_DIST = {"MAIN_DOWNLOAD.zip"}
                 non_md = [ln for ln in diff.splitlines()
                           if "|" in ln and not ln.strip().startswith(".md")
-                          and not ln.split("|")[0].strip().endswith(".md")]
+                          and not ln.split("|")[0].strip().endswith(".md")
+                          and ln.split("|")[0].strip() not in ALLOWED_DIST]
                 check("HEAD differs from the build commit only in .md",
                       not non_md,
                       "; ".join(x.split("|")[0].strip() for x in non_md)

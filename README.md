@@ -1,5 +1,13 @@
 # MissionFeedingOperations
 
+**📦 MAIN DOWNLOAD: [`MAIN_DOWNLOAD.zip`](MAIN_DOWNLOAD.zip)** — the complete
+self-contained operator bundle (Artifact 1 import ZIP, REFERENCE msapp,
+canvas source, provisioning package, all checklists and worksheets,
+`SHA256SUMS.txt`). This is the package; unzip it and start with its
+`STATUS.md` and `IMPORT_CHECKLIST.md`. It is a snapshot of
+`dist/MissionFeedingOperations_1.1.0/`, rebuilt as the last step of every
+release round by `scripts/build_main_download.sh`.
+
 A government-compatible, source-controlled Power Platform solution. Release 1
 is the End-of-Month document requirement, discovery, reconciliation,
 versioning, QC and COP workflow for Air Force mission feeding.
