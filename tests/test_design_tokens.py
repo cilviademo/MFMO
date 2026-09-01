@@ -484,15 +484,35 @@ class TheCanvasSourceIsExtractable(unittest.TestCase):
         import canvas_formulas
         self.items = list(canvas_formulas.all_formulas())
 
-    def test_it_finds_formulas_in_every_source_file(self):
-        files = {i[0] for i in self.items}
-        # 12 screens + 4 components + App + 4 .fx files
-        self.assertEqual(len(files), 21 - 1, sorted(files))
+    def test_every_expected_file_contributes(self):
+        """A NAMED list, not a total.
+
+        The first version of this asserted a file COUNT, and the count was
+        right while `Delegation.fx` contributed zero formulas -- the regex did
+        not handle its `Name(a: Text): Table =` signatures. So the file that
+        decides whether every query delegates was never parsed, and the total
+        looked healthy because the other twenty made it up. A count cannot
+        catch that. A list can.
+        """
+        found = {i[0] for i in self.items}
+        for rel in ("canvas-app/formulas/App.Formulas.fx",
+                    "canvas-app/formulas/StatusEngine.fx",
+                    "canvas-app/formulas/Delegation.fx",
+                    "canvas-app/formulas/Cascade.fx",
+                    "canvas-app/src/App.pa.yaml"):
+            self.assertIn(rel, found)
+        for d, ext in (("Screens", ".pa.yaml"), ("Components", ".pa.yaml")):
+            here = os.path.join(ROOT, "canvas-app", "src", d)
+            for f in os.listdir(here):
+                if f.endswith(ext):
+                    rel = f"canvas-app/src/{d}/{f}"
+                    self.assertIn(rel, found,
+                                  f"{rel} contributed no formulas at all")
 
     def test_it_finds_a_realistic_number_of_formulas(self):
         # 1,300 at the time of writing. A floor, not an equality: adding a
         # control should not fail this, gutting the extractor should.
-        self.assertGreater(len(self.items), 1000)
+        self.assertGreater(len(self.items), 1300)
 
     def test_block_scalars_are_captured_whole(self):
         # The multi-line `Key: |` form carries the OnStart and every OnSelect.
@@ -509,3 +529,77 @@ class TheCanvasSourceIsExtractable(unittest.TestCase):
         src = read(os.path.join(ROOT, "scripts", "check_powerfx.py"))
         self.assertIn("SKIPPED", src)
         self.assertIn("An unavailable checker is not a passing one", src)
+
+
+class CanvasChecksAreWired(unittest.TestCase):
+    """The two canvas audits run as part of the suite, and fail it.
+
+    A checker nobody runs is documentation. These two exist because the
+    failures they catch are silent in a canvas app: a wrong list name renders
+    an empty gallery, and a non-delegable query returns the first 500 rows and
+    reports success. Neither surfaces as an error at run time.
+    """
+
+    def _run(self, script):
+        import subprocess
+        return subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts", script)],
+            capture_output=True, text=True, cwd=ROOT)
+
+    def test_every_reference_resolves(self):
+        r = self._run("canvas_reference_check.py")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_every_query_delegates(self):
+        r = self._run("canvas_delegation_check.py")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_the_delegation_check_reports_rather_than_rounding_up(self):
+        # Two predicates sit on unindexed columns inside an OR behind indexed
+        # leading predicates. That is genuinely uncertain without a >5,000-item
+        # list on the real tenant, and the checker must say so rather than
+        # print a clean pass.
+        r = self._run("canvas_delegation_check.py")
+        self.assertIn("NOT VERIFIABLE LOCALLY", r.stdout)
+        self.assertIn("That is a report, not a pass", r.stdout)
+
+
+class TheApprovedScreenSetIsPresent(unittest.TestCase):
+    """POLICY. The approved set, named.
+
+    A count would pass while a screen was missing and another duplicated.
+    """
+
+    APPROVED = {
+        "scrHome", "scrMyPackage", "scrOverview", "scrInstallations",
+        "scrExceptions", "scrUpload", "scrReview", "scrInstallation",
+        "scrCalendar", "scrActivity", "scrAdminRequirements", "scrUnmatched",
+        "scrDiagnostics", "scrMaintenance", "scrNoAccess", "scrAccessRequest",
+    }
+
+    def test_the_screen_set_is_exactly_the_approved_set(self):
+        here = os.path.join(ROOT, "canvas-app", "src", "Screens")
+        found = {f[:-len(".pa.yaml")] for f in os.listdir(here)
+                 if f.endswith(".pa.yaml")}
+        self.assertEqual(found, self.APPROVED)
+
+    def test_scrupload_keeps_its_name(self):
+        # The UX calls it Submit. Renaming a settled source is churn, and the
+        # repo name is the one every formula and test already uses.
+        self.assertTrue(os.path.exists(os.path.join(
+            ROOT, "canvas-app", "src", "Screens", "scrUpload.pa.yaml")))
+
+    def test_the_new_screens_each_read_a_real_source_or_flow(self):
+        # Wire, do not decorate. A screen that renders without touching data
+        # is a mock-up that passes every structural test.
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import canvas_formulas
+        by_file = {}
+        for rel, _l, _p, text in canvas_formulas.all_formulas():
+            by_file.setdefault(rel, []).append(text)
+        for scr in ("scrMyPackage", "scrOverview", "scrInstallations",
+                    "scrExceptions"):
+            rel = f"canvas-app/src/Screens/{scr}.pa.yaml"
+            blob = " ".join(by_file[rel])
+            self.assertRegex(blob, r"MF_[A-Za-z]+\(|'MF [A-Za-z ]+'",
+                             f"{scr} touches no list and no helper")

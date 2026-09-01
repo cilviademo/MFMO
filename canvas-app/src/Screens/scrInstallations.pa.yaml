@@ -1,0 +1,219 @@
+# =============================================================================
+# scrInstallations — the list. scrInstallation (singular) is the detail.
+#
+# The two are deliberately different screens with names one letter apart, and
+# that is worth stating: renaming either would be churn against a settled
+# source, and the plural/singular pair matches the URL-shaped mental model the
+# rest of the app uses.
+#
+# ROLLUP RUNS OVER A BOUNDED SET. MF_MyInstallations is already scope-filtered,
+# and is at most the 103-row registry -- usually one row for a base user. The
+# per-installation counts inside MF_InstallationsInScope each delegate on
+# Installation_ID and Reporting_Period.
+# =============================================================================
+
+Screens:
+  scrInstallations:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Concurrent(
+            Set(locSearch, ""),
+            Set(locSelectedInstallation, Blank())
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =0
+            TabIndex: =-1
+          Children:
+
+            - btnSkipToContent:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Skip to main content"
+                  Height: =If(Self.Focus, 32, 1)
+                  Opacity: =If(Self.Focus, 1, 0)
+                  OnSelect: =SetFocus(galInstallations)
+                  AccessibleLabel: ="Skip to main content"
+                  TabIndex: =0
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =16
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  BorderThickness: =1
+                  BorderColor: =clrBorder
+                  TabIndex: =-1
+                Children:
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Installations"
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+                  - lblScope:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =MF_ScopeQualifier() & " - " & locPeriod
+                        Color: =clrTextSecondary
+                        TabIndex: =-1
+
+            - conBody:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =12
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - toolbarFilters:
+                      Control: Component
+                      ComponentName: cmpFilterToolbar
+                      Properties:
+                        ShowPortfolio: =gblScopeType = "Enterprise"
+                        OnFilterChange: =Set(locSelectedInstallation, Blank())
+
+                  - lblCount:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: |
+                          =With(
+                              { n: CountRows(galInstallations.AllItems) },
+                              Text(n) & If(n = 1, " installation", " installations") &
+                              " you can see"
+                          )
+                        Color: =clrTextSecondary
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+                  - galInstallations:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        # The search and portfolio tests run in memory over the
+                        # already-scoped registry, which is bounded and small.
+                        # That is stated rather than left to be discovered.
+                        Items: |
+                          =Filter(
+                              MF_InstallationsInScope(locPeriod),
+                              IsBlank(locSearch) || StartsWith(Installation_Name, locSearch),
+                              IsBlank(locPortfolio) || Portfolio_ID = locPortfolio
+                          )
+                        TemplateSize: =72
+                        FillPortions: =1
+                        AccessibleLabel: ="Installations in your scope"
+                        TabIndex: =0
+                      Children:
+                        - rowInstallation:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =12
+                              PaddingLeft: =12
+                              PaddingRight: =12
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              Fill: =clrSurface
+                              TabIndex: =-1
+                            Children:
+                              - lblName:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: =ThisItem.Installation_Name
+                                    Color: =clrText
+                                    FillPortions: =3
+                                    TabIndex: =-1
+                              - lblComponent:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    # ANG matters: DAFMAN 34-131 7.14.5 routes
+                                    # ANG inventory to NGB/A1X, so the component
+                                    # is not decoration.
+                                    Text: =ThisItem.Component
+                                    Color: =clrTextSecondary
+                                    FillPortions: =1
+                                    TabIndex: =-1
+                              - lblRollup:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    # ALWAYS a fraction, never a bare count.
+                                    Text: |
+                                      =Text(ThisItem.Pkg_Accepted) & " of " & Text(ThisItem.Pkg_Total) & " accepted"
+                                    Color: =clrTextSecondary
+                                    FillPortions: =2
+                                    TabIndex: =-1
+                              - lblOpen:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: |
+                                      =If(ThisItem.Pkg_Open = 0,
+                                          "nothing open",
+                                          Text(ThisItem.Pkg_Open) & " open")
+                                    Color: =If(ThisItem.Pkg_Open > 0, clrStatusAmber, clrTextSecondary)
+                                    FontWeight: =If(ThisItem.Pkg_Open > 0, FontWeight.Semibold, FontWeight.Normal)
+                                    FillPortions: =2
+                                    TabIndex: =-1
+                              - lblNotOnboarded:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    # An installation with generation off reads
+                                    # as NOT YET ONBOARDED, never as compliant
+                                    # and never as having nothing due. Without
+                                    # this it sits silently at 0 of 0.
+                                    Text: ="not onboarded"
+                                    Visible: =!ThisItem.Generation_Enabled
+                                    Color: =clrStatusGray
+                                    FillPortions: =1
+                                    TabIndex: =-1
+                              - btnOpen:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: ="Open"
+                                    FillPortions: =1
+                                    AccessibleLabel: ="Open " & ThisItem.Installation_Name
+                                    OnSelect: |
+                                      =Set(locSelectedInstallation, ThisItem.Installation_ID);
+                                       Navigate(scrInstallation, ScreenTransition.None)
+                                    TabIndex: =0
+
+                  - emptyInstallations:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =CountRows(galInstallations.AllItems) = 0
+                        Title: ="No installations to show"
+                        Body: |
+                          =If(
+                              !IsBlank(locSearch) || !IsBlank(locPortfolio),
+                              "No installations match the filters you have set. Use Reset to clear them.",
+                              "Your access does not cover any installation yet. If that is wrong, request access."
+                          )

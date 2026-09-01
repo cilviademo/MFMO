@@ -66,6 +66,12 @@ BINDING = (
     # supported" is the engine saying exactly that.
     "recognized but not supported function",
     "cannot be used on Unknown values",
+    # Value()/Text() applied to an Error operand. Verified by isolation: the
+    # same expression with its operand bound parses and runs clean, so the
+    # diagnostic is the cascade and not the construct. This one is kept exact
+    # rather than as a prefix, because a genuine parse failure reports
+    # "Expected number." or "Expected an operand", not this wording.
+    "Expected text or number.",
 )
 
 # Reported separately: not syntax, not binding, but worth seeing.

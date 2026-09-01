@@ -1,0 +1,306 @@
+# =============================================================================
+# scrExceptions — three problems, three sections, never one number.
+#
+# They are genuinely different failures with different owners, and rolling them
+# into one "exceptions" count would tell the reader nothing about what to do:
+#
+#   Unmatched files      a file exists that nobody has classified. Someone must
+#                        decide what it is -- or decide the requirement should
+#                        exist, which is a deliberate act elsewhere.
+#   Needs filing         a submission landed at the configured ROOT because no
+#                        month folder matched. NOTHING ERRORED. The document is
+#                        one level above where anyone looks for it, and this is
+#                        the only place that becomes visible.
+#   Corrections past due a reviewer returned something and the correction
+#                        suspense has passed. The base owns it.
+#
+# NEVER INVENT A REQUIREMENT. Nothing on this screen creates an MF EOM Item.
+# =============================================================================
+
+Screens:
+  scrExceptions:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: =Set(locExceptionTab, "unmatched")
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =0
+            TabIndex: =-1
+          Children:
+
+            - btnSkipToContent:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Skip to main content"
+                  Height: =If(Self.Focus, 32, 1)
+                  Opacity: =If(Self.Focus, 1, 0)
+                  OnSelect: =SetFocus(galUnmatched)
+                  AccessibleLabel: ="Skip to main content"
+                  TabIndex: =0
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =16
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  BorderThickness: =1
+                  BorderColor: =clrBorder
+                  TabIndex: =-1
+                Children:
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Exceptions"
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+                  - lblScope:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =MF_ScopeQualifier() & " - " & locPeriod
+                        Color: =clrTextSecondary
+                        TabIndex: =-1
+
+            # --- three tabs, each labelled with its OWN count ---------------
+            - conTabs:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutGap: =4
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  TabIndex: =-1
+                Children:
+                  - tabUnmatched:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Unmatched files (" & Text(CountRows(MF_UnmatchedQueue())) & ")"
+                        FontWeight: =If(locExceptionTab = "unmatched", FontWeight.Semibold, FontWeight.Normal)
+                        BorderThickness: =If(locExceptionTab = "unmatched", 2, 0)
+                        BorderColor: =clrAccent
+                        OnSelect: =Set(locExceptionTab, "unmatched")
+                        AccessibleLabel: ="Unmatched files tab"
+                        TabIndex: =0
+                  - tabFiling:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Needs filing (" & Text(CountRows(MF_NeedsFilingQueue())) & ")"
+                        FontWeight: =If(locExceptionTab = "filing", FontWeight.Semibold, FontWeight.Normal)
+                        BorderThickness: =If(locExceptionTab = "filing", 2, 0)
+                        BorderColor: =clrAccent
+                        OnSelect: =Set(locExceptionTab, "filing")
+                        AccessibleLabel: ="Needs filing tab"
+                        TabIndex: =0
+                  - tabCorrections:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Corrections past due (" & Text(CountRows(MF_CorrectionsPastDue(locPeriod))) & ")"
+                        FontWeight: =If(locExceptionTab = "corrections", FontWeight.Semibold, FontWeight.Normal)
+                        BorderThickness: =If(locExceptionTab = "corrections", 2, 0)
+                        BorderColor: =clrAccent
+                        OnSelect: =Set(locExceptionTab, "corrections")
+                        AccessibleLabel: ="Corrections past due tab"
+                        TabIndex: =0
+
+            - conBody:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =8
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  # --- 1. unmatched files ------------------------------------
+                  - galUnmatched:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        Visible: =locExceptionTab = "unmatched"
+                        Items: =MF_UnmatchedQueue()
+                        TemplateSize: =72
+                        FillPortions: =1
+                        AccessibleLabel: ="Files awaiting classification"
+                        TabIndex: =0
+                      Children:
+                        - rowUnmatched:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =12
+                              PaddingLeft: =12
+                              PaddingRight: =12
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              Fill: =clrSurface
+                              TabIndex: =-1
+                            Children:
+                              - lblFileName:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    # A FILENAME IS NEVER AUTHORITATIVE and is
+                                    # never a classification method. It is shown
+                                    # so a human can recognise the document, and
+                                    # for nothing else.
+                                    Text: =ThisItem.File_Name
+                                    Color: =clrText
+                                    FillPortions: =4
+                                    TabIndex: =-1
+                              - lblUploader:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: =ThisItem.Uploaded_By
+                                    Color: =clrTextSecondary
+                                    FillPortions: =3
+                                    TabIndex: =-1
+                              - lblSuggested:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: |
+                                      =If(IsBlank(ThisItem.Suggested_Installation_ID),
+                                          "no suggestion",
+                                          "suggests " & ThisItem.Suggested_Installation_ID)
+                                    Color: =clrTextSecondary
+                                    FillPortions: =2
+                                    TabIndex: =-1
+                              - btnClassify:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: ="Classify"
+                                    FillPortions: =1
+                                    AccessibleLabel: ="Classify " & ThisItem.File_Name
+                                    OnSelect: |
+                                      =Set(locUnmatched, ThisItem);
+                                       Navigate(scrUnmatched, ScreenTransition.None)
+                                    TabIndex: =0
+
+                  # --- 2. needs filing ---------------------------------------
+                  - galNeedsFiling:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        Visible: =locExceptionTab = "filing"
+                        Items: =MF_NeedsFilingQueue()
+                        TemplateSize: =72
+                        FillPortions: =1
+                        AccessibleLabel: ="Submissions filed at the root folder"
+                        TabIndex: =0
+                      Children:
+                        - rowFiling:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =12
+                              PaddingLeft: =12
+                              PaddingRight: =12
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              Fill: =clrSurface
+                              TabIndex: =-1
+                            Children:
+                              - lblFilingName:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: =ThisItem.File_Name
+                                    Color: =clrText
+                                    FillPortions: =4
+                                    TabIndex: =-1
+                              - lblFilingNote:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    # Why it fell back. Usually: no month folder
+                                    # matched inside FY26, because the naming on
+                                    # that site is not what was configured.
+                                    Text: =ThisItem.Filing_Note
+                                    Color: =clrStatusAmber
+                                    FillPortions: =4
+                                    TabIndex: =-1
+                              - lblFilingWhen:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: =Text(ThisItem.Uploaded_DateTime, "d mmm yyyy")
+                                    Color: =clrTextSecondary
+                                    FillPortions: =2
+                                    TabIndex: =-1
+
+                  # --- 3. corrections past due -------------------------------
+                  - galCorrections:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        Visible: =locExceptionTab = "corrections"
+                        Items: =MF_CorrectionsPastDue(locPeriod)
+                        TemplateSize: =80
+                        FillPortions: =1
+                        AccessibleLabel: ="Correction tickets past their suspense"
+                        TabIndex: =0
+                      Children:
+                        - rowCorrection:
+                            Control: Component
+                            ComponentName: cmpEOMItem
+                            Properties:
+                              Item: =ThisItem
+                              ShowScopeTarget: =true
+                              OnPrimaryAction: |
+                                =Set(locSelectedItem, ThisItem);
+                                 Navigate(scrUpload, ScreenTransition.None)
+
+                  # --- empty states, one per tab, each saying something -------
+                  - emptyUnmatched:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =locExceptionTab = "unmatched" && CountRows(galUnmatched.AllItems) = 0
+                        Title: ="No unclassified files"
+                        Body: |
+                          ="Every file discovered in the watched folders has been matched to a requirement " &
+                           "or dismissed. Files the app itself wrote never appear here."
+
+                  - emptyFiling:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =locExceptionTab = "filing" && CountRows(galNeedsFiling.AllItems) = 0
+                        Title: ="Nothing needs re-filing"
+                        Body: |
+                          ="Every submission landed in its month folder. When this list is not empty it means " &
+                           "a month folder could not be matched on that site, so the document went to the root " &
+                           "instead - nothing errors, which is why this list exists."
+
+                  - emptyCorrections:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =locExceptionTab = "corrections" && CountRows(galCorrections.AllItems) = 0
+                        Title: ="No overdue corrections"
+                        Body: |
+                          ="No returned document has passed its correction suspense in " & locPeriod & ". " &
+                           "Open corrections that are still within their suspense are on Overview, not here."

@@ -74,6 +74,8 @@ CLASSIFICATION = {
         "ColourIsNeverTheOnlyChannel":      (P, "accessibility ruling: text and icon accompany colour"),
         "NoCountIsReportedWithoutItsDenominator": (P, "the reporting ruling stays applied"),
         "TheCanvasSourceIsExtractable":     (B, "the extractor run over the real source, block scalars included"),
+        "CanvasChecksAreWired":             (B, "both canvas audits executed, and proven to fail on a planted violation"),
+        "TheApprovedScreenSetIsPresent":    (P, "the approved screen set, named"),
     },
     "test_flow_expression": {
         "TheInterpreterIsStrict":        (B, "the interpreter itself tested on cases with known answers"),

@@ -259,7 +259,12 @@ colNavigation =
     Filter(
         Table(
             { key: "home",     label: "Home",           screen: "scrHome",              flag: "",                need: "all"    },
-            { key: "package",  label: "My package",     screen: "scrInstallation",      flag: "",                need: "all"    },
+            // Was pointed at scrInstallation, the single-installation detail
+            // screen, because no package screen existed yet. It does now.
+            { key: "package",  label: "My package",     screen: "scrMyPackage",         flag: "",                need: "all"    },
+            { key: "overview", label: "Overview",       screen: "scrOverview",          flag: "",                need: "qc"     },
+            { key: "installs", label: "Installations",  screen: "scrInstallations",     flag: "",                need: "qc"     },
+            { key: "except",   label: "Exceptions",     screen: "scrExceptions",        flag: "",                need: "qc"     },
             { key: "upload",   label: "Submit",         screen: "scrUpload",            flag: "EOM_UPLOAD",      need: "write"  },
             { key: "review",   label: "Review",         screen: "scrReview",            flag: "EOM_QC",          need: "qc"     },
             { key: "unmatch",  label: "Needs classification", screen: "scrUnmatched",   flag: "EOM_UNMATCHED",   need: "qc"     },

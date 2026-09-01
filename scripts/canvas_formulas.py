@@ -69,8 +69,19 @@ def from_fx(path):
     for n, ln in enumerate(text.split("\n"), 1):
         kept.append("" if ln.lstrip().startswith("//") else ln)
     text = "\n".join(kept)
-    for m in re.finditer(r"^([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\))?\s*=\s*",
-                         text, re.M):
+    # Three shapes appear in the .fx files, and an earlier version of this
+    # regex matched only the first two -- so Delegation.fx, the file that
+    # decides whether every query delegates, contributed ZERO formulas and was
+    # never parsed. The count still looked healthy because the other files made
+    # it up. Hence test_every_expected_file_contributes below: a named list,
+    # not a total.
+    #
+    #     Name = expr;                       plain
+    #     Name(a: Text) = expr;              parameters
+    #     Name(a: Text): Table = expr;       parameters and a return type
+    for m in re.finditer(
+            r"^([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\))?\s*(:\s*[A-Za-z_][A-Za-z0-9_]*)?\s*=\s*",
+            text, re.M):
         start = m.end()
         depth, j, instr = 0, start, None
         while j < len(text):

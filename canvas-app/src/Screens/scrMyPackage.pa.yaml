@@ -1,0 +1,300 @@
+# =============================================================================
+# scrMyPackage — the whole period in one dense table.
+#
+# scrHome answers "what do I need to do?". This answers "what is the state of
+# everything?", which is the question a manager asks before a suspense and the
+# one an inspector asks afterwards. It is deliberately a TABLE, not cards: the
+# reader is scanning for the one row that is wrong, and cards make scanning
+# slower.
+#
+# Every row is an MF EOM Item for the viewer's scope and the selected period.
+# The query is MF_PackageForPeriod, which delegates on Reporting_Period plus
+# scope — both indexed. Nothing is collected.
+# =============================================================================
+
+Screens:
+  scrMyPackage:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: =Set(locSelectedItem, Blank())
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =0
+            TabIndex: =-1
+          Children:
+
+            - btnSkipToContent:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Skip to main content"
+                  Height: =If(Self.Focus, 32, 1)
+                  Opacity: =If(Self.Focus, 1, 0)
+                  OnSelect: =SetFocus(galPackage)
+                  AccessibleLabel: ="Skip to main content"
+                  TabIndex: =0
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =16
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  BorderThickness: =1
+                  BorderColor: =clrBorder
+                  TabIndex: =-1
+                Children:
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="My package"
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+                  - lblScope:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # The scope qualifier is stated, always. A count with no
+                        # denominator is the reporting failure this build exists
+                        # to prevent, and "12 accepted" means nothing until the
+                        # reader knows twelve of what.
+                        Text: =MF_ScopeQualifier() & " - " & locPeriod
+                        Color: =clrTextSecondary
+                        TabIndex: =-1
+                  - btnBack:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Back to home"
+                        OnSelect: =Navigate(scrHome, ScreenTransition.None)
+                        AccessibleLabel: ="Back to home"
+                        TabIndex: =0
+
+            - conBody:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =8
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - lblCount:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        # Both a screen-reader total and a truncation tell. A
+                        # virtualised gallery cannot announce its own size, and
+                        # a silently truncated query looks exactly like a small
+                        # one.
+                        Text: |
+                          =With(
+                              { n: CountRows(galPackage.AllItems) },
+                              Text(n) & If(n = 1, " requirement", " requirements") &
+                              If(MF_TruncationSuspected(galPackage.AllItems),
+                                 " - result may be truncated, report this", "")
+                          )
+                        Color: =If(MF_TruncationSuspected(galPackage.AllItems), clrStatusRed, clrTextSecondary)
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+                  # --- column headings -------------------------------------
+                  # A real header row, not a label pretending to be one. The
+                  # gallery below repeats this order exactly.
+                  - conHeadings:
+                      Control: GroupContainer
+                      Variant: horizontalAutoLayoutContainer
+                      Properties:
+                        LayoutGap: =12
+                        PaddingLeft: =12
+                        PaddingRight: =12
+                        PaddingTop: =8
+                        PaddingBottom: =8
+                        Fill: =clrSurface
+                        BorderThickness: =1
+                        BorderColor: =clrBorder
+                        TabIndex: =-1
+                      Children:
+                        - hdrRequirement:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Requirement"
+                              FontWeight: =FontWeight.Semibold
+                              FillPortions: =3
+                              TabIndex: =-1
+                        - hdrFrequency:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Frequency"
+                              FontWeight: =FontWeight.Semibold
+                              FillPortions: =1
+                              TabIndex: =-1
+                        - hdrSuspense:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Suspense"
+                              FontWeight: =FontWeight.Semibold
+                              FillPortions: =2
+                              TabIndex: =-1
+                        - hdrSubmitted:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Submitted"
+                              FontWeight: =FontWeight.Semibold
+                              FillPortions: =2
+                              TabIndex: =-1
+                        - hdrStatus:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="AFSVC status"
+                              FontWeight: =FontWeight.Semibold
+                              FillPortions: =2
+                              TabIndex: =-1
+                        - hdrAction:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Action"
+                              FontWeight: =FontWeight.Semibold
+                              FillPortions: =2
+                              TabIndex: =-1
+
+                  - galPackage:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        Items: =MF_PackageForPeriod(locPeriod)
+                        TemplateSize: =56
+                        FillPortions: =1
+                        AccessibleLabel: ="Every requirement for this period"
+                        TabIndex: =0
+                      Children:
+                        - rowPackage:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =12
+                              PaddingLeft: =12
+                              PaddingRight: =12
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              Fill: =clrSurface
+                              TabIndex: =-1
+                            Children:
+                              - colRequirement:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: |
+                                      =LookUp('MF EOM Requirement',
+                                              Requirement_ID = ThisItem.Requirement_ID
+                                             ).Requirement_Name
+                                    Color: =clrText
+                                    FillPortions: =3
+                                    TabIndex: =-1
+                              - colFrequency:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: |
+                                      =LookUp('MF EOM Requirement',
+                                              Requirement_ID = ThisItem.Requirement_ID
+                                             ).Frequency
+                                    Color: =clrTextSecondary
+                                    FillPortions: =1
+                                    TabIndex: =-1
+                              - colSuspense:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    # NOMINAL for reporting, effective in
+                                    # brackets when they differ. Leadership
+                                    # still sees "the 5th"; the base sees the
+                                    # duty day it actually lands on.
+                                    Text: |
+                                      =Text(ThisItem.Nominal_Due_Date, "d mmm") &
+                                       If(ThisItem.Due_Date_Adjusted,
+                                          " (" & Text(ThisItem.Effective_Due_Date, "ddd d mmm") & ")",
+                                          "")
+                                    Color: =clrTextSecondary
+                                    FillPortions: =2
+                                    TabIndex: =-1
+                              - colSubmitted:
+                                  Control: Text
+                                  Variant: Caption
+                                  Properties:
+                                    Text: |
+                                      =If(IsBlank(ThisItem.Initial_Submitted_DateTime),
+                                          "-",
+                                          Text(ThisItem.Initial_Submitted_DateTime, "d mmm"))
+                                    Color: =clrTextSecondary
+                                    FillPortions: =2
+                                    TabIndex: =-1
+                              - colStatus:
+                                  Control: Component
+                                  ComponentName: cmpStatusBadge
+                                  Properties:
+                                    # Text, icon and colour together. Colour is
+                                    # never the only channel.
+                                    Status: =ThisItem.Final_Status
+                                    StatusCode: =ThisItem.Status_Code
+                                    FillPortions: =2
+                              - colAction:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: |
+                                      =If(ThisItem.Action_Required && ThisItem.Action_Owner = "Facility",
+                                          "Submit",
+                                          If(ThisItem.Action_Required, "View", "View"))
+                                    Align: =Align.Left
+                                    FillPortions: =2
+                                    AccessibleLabel: |
+                                      ="Open " &
+                                       LookUp('MF EOM Requirement',
+                                              Requirement_ID = ThisItem.Requirement_ID
+                                             ).Requirement_Name
+                                    OnSelect: |
+                                      =Set(locSelectedItem, ThisItem);
+                                       Navigate(
+                                           If(
+                                               ThisItem.Final_Status = "RECEIVED_PENDING_QC" && gblCanQC,
+                                               scrReview,
+                                               scrUpload
+                                           ),
+                                           ScreenTransition.None
+                                       )
+                                    TabIndex: =0
+
+                  - emptyPackage:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =CountRows(galPackage.AllItems) = 0
+                        Title: ="No requirements for this period"
+                        Body: |
+                          ="Nothing has been generated for " & locPeriod & " in " & MF_ScopeQualifier() & ". " &
+                           "That is not the same as having nothing due: if this base is not yet onboarded, " &
+                           "generation is switched off for it. Check System Health or ask an administrator."

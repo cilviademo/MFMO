@@ -251,3 +251,94 @@ MF_ScopeQualifier(): Text =
     If( gblScopeType = "Facility",
         "Covers your facility and this installation's shared obligations, not the whole base.",
         "" );
+
+// =============================================================================
+// Helpers added for the approved screen set: scrMyPackage, scrOverview,
+// scrInstallations, scrExceptions.
+//
+// Every one of these starts from a query that delegates on indexed columns.
+// Where a predicate cannot delegate it is applied IN MEMORY over an
+// already-bounded result, and that is stated at the helper rather than left for
+// a reader to work out. The bound is always Reporting_Period plus scope, which
+// MF_VisibleItems has already applied server-side.
+// =============================================================================
+
+// One period's package for one installation, which is what scrMyPackage shows.
+// Delegates on Reporting_Period and Installation_ID, both indexed.
+MF_PackageForPeriod(Period: Text): Table =
+    SortByColumns(
+        MF_VisibleItems(Period),
+        "Effective_Due_Date", SortOrder.Ascending );
+
+// Counts for the scrOverview metric strip. Final_Status is indexed, so each of
+// these delegates; CountRows over a delegable Filter does not pull rows.
+//
+// The four metrics are SEMANTIC, never colour. Amber covers both "the base owes
+// a correction" and "AFSVC owes a review", so counting by colour would put two
+// different people's work in one number.
+MF_CountAccepted(Period: Text): Number =
+    CountRows(Filter(MF_VisibleItems(Period), Final_Status = "ACCEPTED"));
+
+MF_CountAwaitingReview(Period: Text): Number =
+    CountRows(Filter(MF_VisibleItems(Period), Final_Status = "RECEIVED_PENDING_QC"));
+
+MF_CountCorrections(Period: Text): Number =
+    CountRows(Filter(MF_VisibleItems(Period), Final_Status = "RETURNED"));
+
+MF_CountOverdue(Period: Text): Number =
+    CountRows(Filter(MF_VisibleItems(Period),
+                     Final_Status = "OVERDUE" || Final_Status = "NOT_SATISFIED"));
+
+// The installations this viewer may see, with their package rollup.
+// MF_MyInstallations is already scope-filtered in App.Formulas; the rollup runs
+// over that set, which is at most the 103-row registry and usually one row.
+MF_InstallationsInScope(Period: Text): Table =
+    SortByColumns(
+        AddColumns(
+            MF_MyInstallations,
+            "Pkg_Total",    CountRows(MF_ItemsForInstallation(Installation_ID, Period)),
+            "Pkg_Accepted", CountRows(Filter(MF_ItemsForInstallation(Installation_ID, Period),
+                                             Final_Status = "ACCEPTED")),
+            "Pkg_Open",     CountRows(Filter(MF_ItemsForInstallation(Installation_ID, Period),
+                                             Action_Required = true))
+        ),
+        "Installation_Name", SortOrder.Ascending );
+
+// EXCEPTIONS, three kinds. They are three different problems and must not read
+// as one number.
+
+// 1. Files the app did not write and nobody has classified.
+//    Resolution_Status is indexed. This is MF_UnmatchedQueue, reused.
+
+// 2. Submissions that landed at the configured root because no month folder
+//    matched. Is_Current and Needs_Filing are both indexed, so this delegates.
+//    Nothing errored when these were written -- that is exactly why they need
+//    a screen.
+MF_NeedsFilingQueue(): Table =
+    SortByColumns(
+        Filter( 'MF EOM Submission',
+                Is_Current = true,
+                Needs_Filing = true ),
+        "Uploaded_DateTime", SortOrder.Ascending );
+
+// 3. Correction tickets past their suspense.
+//    DELEGATION NOTE: Correction_Due is NOT an indexed column, so the date
+//    comparison cannot delegate. The Filter that reaches SharePoint is
+//    MF_VisibleItems (Reporting_Period + scope, all indexed) narrowed by
+//    Final_Status (indexed); the date test then runs in memory over that
+//    bounded result. Adding an index for Correction_Due would be a schema
+//    change and is not made here.
+MF_CorrectionsPastDue(Period: Text): Table =
+    Filter(
+        Filter( MF_VisibleItems(Period), Final_Status = "RETURNED" ),
+        !IsBlank(Correction_Due) && Correction_Due < Today() );
+
+MF_CorrectionsOpen(Period: Text): Table =
+    Filter( MF_VisibleItems(Period), Final_Status = "RETURNED" );
+
+// Total exceptions across all three kinds, for the tab labels. Each part is
+// counted from its own delegable query.
+MF_ExceptionCount(Period: Text): Number =
+    CountRows(MF_UnmatchedQueue())
+    + CountRows(MF_NeedsFilingQueue())
+    + CountRows(MF_CorrectionsPastDue(Period));

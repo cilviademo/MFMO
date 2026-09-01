@@ -524,13 +524,27 @@ class TestAppSource(unittest.TestCase):
     def _screens(self):
         return glob.glob(os.path.join(ROOT, "canvas-app", "src", "Screens", "*.pa.yaml"))
 
-    def test_the_screen_set_matches_the_navigation(self):
-        on_disk = {os.path.basename(p).replace(".pa.yaml", "") for p in self._screens()}
-        self.assertEqual(on_disk, {
-            "scrHome", "scrUpload", "scrInstallation", "scrReview", "scrUnmatched",
-            "scrActivity", "scrCalendar", "scrAccessRequest",
-            "scrAdminRequirements", "scrMaintenance", "scrNoAccess",
-            "scrDiagnostics"})
+    def test_every_navigation_target_exists(self):
+        """What this test's NAME says, which is not what it used to do.
+
+        It held a second literal copy of the screen set, so adding a screen
+        failed it for no reason and the approved set was asserted in two
+        places. `TheApprovedScreenSetIsPresent` owns the set now. This owns the
+        relationship: a nav entry pointing at a screen that does not exist is a
+        dead menu item, and it is not visible until someone clicks it.
+        """
+        on_disk = {os.path.basename(p).replace(".pa.yaml", "")
+                   for p in self._screens()}
+        fx = read("canvas-app", "formulas", "App.Formulas.fx")
+        nav = re.findall(r'screen:\s*"(scr[A-Za-z]+)"', fx)
+        self.assertGreater(len(nav), 8)
+        for target in nav:
+            self.assertIn(target, on_disk, f"nav points at missing {target}")
+        # Not every screen is in the menu: scrMaintenance and scrNoAccess are
+        # reached by the start-screen gate, and scrInstallation is the detail
+        # screen behind scrInstallations.
+        for detail in ("scrMaintenance", "scrNoAccess", "scrInstallation"):
+            self.assertIn(detail, on_disk)
         # History became Activity.
         self.assertNotIn("scrHistory", on_disk)
 
