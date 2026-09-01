@@ -112,6 +112,7 @@ CLASSIFICATION = {
         "TheDependencyManifestIsUsable":    (S, "the manifest covers what the package needs"),
         "LegacyIntakeShipsUnbound":         (P, "EOM-02b ships as an unbound template"),
         "ImportChecklistIsSequenced":       (P, "the import order and its gates are settled"),
+        "TheAssemblyRunbookIsCurrent":      (S, "the runbook's counts and the solution agree"),
     },
     "test_schema": {
         "TestSchemaItself":          (B, "schema invariants computed: nullability, index cap, key shape"),
@@ -120,6 +121,7 @@ CLASSIFICATION = {
         "TestNoHardCodedEnvironment":(P, "no environment literal in source"),
         "TestFlowSpecs":             (S, "flow specs and schema agree"),
         "TestAppSource":             (S, "app source and schema agree"),
+        "ProvisioningIsVerifiable":  (B, "the verifier run against a complete and a broken tenant fixture"),
     },
     "test_schema_manifest": {
         "ListsReferencedExist":            (S, "every list named anywhere exists in the schema"),

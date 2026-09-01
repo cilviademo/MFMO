@@ -5,6 +5,7 @@
     "description": "One row per installation",
     "volumeEstimate": 103,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -339,7 +340,60 @@
       "Portfolio_ID",
       "Generation_Enabled",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Generation_Enabled",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Generation_Enabled')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Installation_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Facility",
@@ -347,6 +401,7 @@
     "description": "One row per feeding facility",
     "volumeEstimate": 154,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -722,7 +777,71 @@
       "Operating_Model",
       "In_R1_Scope",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Facility_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Facility_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Operating_Model",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Operating_Model')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "In_R1_Scope",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('In_R1_Scope')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Facility_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_EOM_Requirement",
@@ -730,6 +849,7 @@
     "description": "One row per document requirement per operating model",
     "volumeEstimate": 200,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -1281,7 +1401,60 @@
       "Frequency",
       "Authority_Status",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Requirement_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Requirement_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Frequency",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Frequency')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Authority_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Authority_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Requirement_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_EOM_Item",
@@ -1289,6 +1462,7 @@
     "description": "One PERSISTENT row per expected submission per reporting period",
     "volumeEstimate": 250000,
     "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -1928,7 +2102,159 @@
       "Final_Status",
       "Status_Code",
       "Action_Required"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "EOM_Item_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('EOM_Item_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "EOM_Item_Key",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('EOM_Item_Key')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Facility_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Facility_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Reporting_Period",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Reporting_Period')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Requirement_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Requirement_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Authority_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Authority_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Effective_Due_Date",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Effective_Due_Date')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Effective_Final_Call_Date",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Effective_Final_Call_Date')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Final_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Final_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Status_Code",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Status_Code')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Action_Required",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Action_Required')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "EOM_Item_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_EOM_Submission",
@@ -1936,6 +2262,7 @@
     "description": "One row per uploaded file version",
     "volumeEstimate": 400000,
     "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -2615,14 +2942,168 @@
       "SharePoint_File_ID",
       "Is_Current",
       "QC_Status"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Submission_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Submission_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Submission_Request_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Submission_Request_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "EOM_Item_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('EOM_Item_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Uploaded_DateTime",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Uploaded_DateTime')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Classification_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Classification_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Destination_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Destination_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Is_Pilot",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Is_Pilot')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Needs_Filing",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Needs_Filing')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "SharePoint_Unique_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('SharePoint_Unique_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "SharePoint_File_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('SharePoint_File_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Is_Current",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Is_Current')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "QC_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('QC_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Submission_ID",
+        "Submission_Request_ID"
+      ],
+      "enforcedBySharePoint": false,
+      "note": "composite or unindexed -- enforced by the flow, never by the list"
+    }
   },
   {
     "listInternalKey": "MF_Unmatched_File",
     "listTitle": "MF Unmatched File",
     "description": "One row per file found in the FY folder that could not be resolved",
     "volumeEstimate": 5000,
-    "crossesDelegationCeiling": false,
+    "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -2877,14 +3358,68 @@
       "Portfolio_ID",
       "Discovered_DateTime",
       "Resolution_Status"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Unmatched_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Unmatched_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Discovered_DateTime",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Discovered_DateTime')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Resolution_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Resolution_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Unmatched_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Security_Mapping",
     "listTitle": "MF Security Mapping",
     "description": "One row per user per granted scope",
     "volumeEstimate": 5000,
-    "crossesDelegationCeiling": false,
+    "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -3298,7 +3833,104 @@
       "Facility_ID",
       "Expires_Date",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Security_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Security_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "UPN",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('UPN')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Scope_Type",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Scope_Type')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Facility_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Facility_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Expires_Date",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Expires_Date')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Security_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_EOM_Audit",
@@ -3306,6 +3938,7 @@
     "description": "One row per state change",
     "volumeEstimate": 1000000,
     "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -3523,7 +4156,60 @@
       "Entity_ID",
       "Action",
       "Action_DateTime"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Audit_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Audit_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Entity_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Entity_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Action",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Action')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Action_DateTime",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Action_DateTime')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Audit_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_App_Config",
@@ -3531,6 +4217,7 @@
     "description": "One row per configuration key",
     "volumeEstimate": 100,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -3664,7 +4351,38 @@
     "indexedFields": [
       "Config_Key",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Config_Key",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Config')/fields/getbyinternalnameortitle('Config_Key')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Config')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Config_Key"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Feature_Flags",
@@ -3672,6 +4390,7 @@
     "description": "One row per feature",
     "volumeEstimate": 100,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -3819,7 +4538,27 @@
     ],
     "indexedFields": [
       "Feature_Key"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Feature_Key",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Feature Flags')/fields/getbyinternalnameortitle('Feature_Key')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Feature_Key"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_App_Event_Log",
@@ -3827,6 +4566,7 @@
     "description": "One row per meaningful business event",
     "volumeEstimate": 2000000,
     "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -4124,7 +4864,82 @@
       "Installation_ID",
       "Event_Type",
       "Record_ID"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Event_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Event_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Event_DateTime",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Event_DateTime')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "User_UPN",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('User_UPN')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Event_Type",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Event_Type')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Record_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Record_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Event_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_EOM_Status",
@@ -4132,6 +4947,7 @@
     "description": "One flat row per EOM item \u2014 the canonical Power BI fact",
     "volumeEstimate": 250000,
     "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -4806,7 +5622,104 @@
       "Facility_ID",
       "Final_Status",
       "Status_Code"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Status_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Status_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "EOM_Item_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('EOM_Item_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Reporting_Period",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Reporting_Period')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Facility_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Facility_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Final_Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Final_Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Status_Code",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Status_Code')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Status_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Non_Duty_Day",
@@ -4814,6 +5727,7 @@
     "description": "One row per non-duty date",
     "volumeEstimate": 2000,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -4946,7 +5860,60 @@
       "Date",
       "Scope_ID",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Non_Duty_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Non_Duty_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Date",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Date')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Scope_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Scope_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Non_Duty_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Calendar_Event",
@@ -4954,6 +5921,7 @@
     "description": "One row per authored calendar entry",
     "volumeEstimate": 20000,
     "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -5224,14 +6192,68 @@
       "Event_Date",
       "Scope_ID",
       "Active_Flag"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Event_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Event_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Event_Date",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Event_Date')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Scope_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Scope_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Active_Flag",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Active_Flag')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Event_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Access_Request",
     "listTitle": "MF Access Request",
     "description": "One row per request for access to an installation the requester is not posted to",
     "volumeEstimate": 5000,
-    "crossesDelegationCeiling": false,
+    "crossesDelegationCeiling": true,
+    "crossesListViewThreshold": true,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -5456,7 +6478,60 @@
       "Requester_UPN",
       "Requested_Installation_ID",
       "Status"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Request_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Request_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Requester_UPN",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Requester_UPN')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Requested_Installation_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Requested_Installation_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Status",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Status')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Request_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Notification_Rule",
@@ -5464,6 +6539,7 @@
     "description": "One row per notification trigger",
     "volumeEstimate": 100,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -5677,7 +6753,49 @@
       "Rule_ID",
       "Trigger_Event",
       "Enabled"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Rule_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Notification Rule')/fields/getbyinternalnameortitle('Rule_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Trigger_Event",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Notification Rule')/fields/getbyinternalnameortitle('Trigger_Event')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Enabled",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Notification Rule')/fields/getbyinternalnameortitle('Enabled')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Rule_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   },
   {
     "listInternalKey": "MF_Document_Destination",
@@ -5685,6 +6803,7 @@
     "description": "One row per portfolio per document domain",
     "volumeEstimate": 20,
     "crossesDelegationCeiling": false,
+    "crossesListViewThreshold": false,
     "createPayload": {
       "__metadata": {
         "type": "SP.List"
@@ -5983,6 +7102,48 @@
       "Destination_ID",
       "Portfolio_ID",
       "Document_Domain"
-    ]
+    ],
+    "indexOperations": [
+      {
+        "field": "Destination_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Document Destination')/fields/getbyinternalnameortitle('Destination_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Portfolio_ID",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Document Destination')/fields/getbyinternalnameortitle('Portfolio_ID')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      },
+      {
+        "field": "Document_Domain",
+        "method": "MERGE",
+        "path": "_api/web/lists/getbytitle('MF Document Destination')/fields/getbyinternalnameortitle('Document_Domain')",
+        "payload": {
+          "__metadata": {
+            "type": "SP.Field"
+          },
+          "Indexed": true
+        }
+      }
+    ],
+    "uniqueKey": {
+      "columns": [
+        "Destination_ID"
+      ],
+      "enforcedBySharePoint": true,
+      "note": "single indexed column -- EnforceUniqueValues applies"
+    }
   }
 ]

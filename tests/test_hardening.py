@@ -245,8 +245,39 @@ class TheScanStillPasses(unittest.TestCase):
         hits, _ = SCAN.scan_content()
         warns = [h for h in hits
                  if h[0] == "WARN" and h[2] != "FINAL_RELEASE_REPORT.md"]
-        self.assertEqual(len(warns), 4,
+        # Named, not counted. Every remaining warning is a placeholder account
+        # in the sample security mapping, which loads only under
+        # -IncludeSampleData. If a warning appears anywhere else, this fails
+        # and someone reads it rather than adjusting a number.
+        for _sev, rid, rel, _line, _msg, _snip in warns:
+            self.assertEqual(rid, "IDN-01", f"{rid} in {rel}")
+            self.assertEqual(rel, "configuration/security-mapping.sample.csv")
+        self.assertEqual(len(warns), 3,
                          "\n".join(f"{h[1]} {h[2]}:{h[3]}" for h in warns))
+
+    def test_the_sharepoint_connector_action_does_not_trip_con_02(self):
+        """CON-02 was tightened, never exempted.
+
+        "Send an HTTP request to SharePoint" is an action of the SHAREPOINT
+        connector and is the provisioning route this deployment depends on,
+        PowerShell being unavailable on the target network. Exempting the file
+        would also have silenced a real HTTP connector added to it later, which
+        is the finding the rule exists for.
+        """
+        rules = {r[0]: r for r in SCAN.RULES}
+        pattern = re.compile(rules["CON-02"][2])
+        self.assertFalse(pattern.search(
+            "Send an HTTP request to SharePoint"))
+        for still_fires in ("use an HTTP request to fetch a thing",  # prerelease: allow CON-02 the specimen proves the rule still fires
+                            "Web.Contents(\"https://x\")",  # prerelease: allow CON-02 the specimen proves the rule still fires
+                            "an HTTP request to some other service"):  # prerelease: allow CON-02 the specimen proves the rule still fires
+            self.assertTrue(pattern.search(still_fires), still_fires)
+        # And no file-level escape was added instead.
+        src = read(os.path.join(ROOT, "scripts", "prerelease_scan.py")) \
+            if callable(globals().get("read")) else open(
+                os.path.join(ROOT, "scripts", "prerelease_scan.py"),
+                encoding="utf-8").read()
+        self.assertNotIn("gen_rest_payloads.py", SCAN.SKIP_FILES)
 
     def test_the_dod_host_is_watched(self):
         rules = {r[0]: r for r in SCAN.RULES}

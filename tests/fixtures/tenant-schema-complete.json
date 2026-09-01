@@ -1,0 +1,1214 @@
+{
+ "MF Installation": {
+  "fields": [
+   {
+    "InternalName": "Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Installation_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Source_Installation_String",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Location",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "MAJCOM",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Component",
+    "Indexed": false
+   },
+   {
+    "InternalName": "EOM_Folder_URL",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Generation_Enabled",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Registry_Validated_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Registry_Validated_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Source_System",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Needs_Review_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "DODAAC",
+    "Indexed": false
+   },
+   {
+    "InternalName": "DODAAD",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Org_Box_Email",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Official_POC_UPN",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF Facility": {
+  "fields": [
+   {
+    "InternalName": "Facility_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Facility_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Designation",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Unit",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Facility_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Operating_Model",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Source_Operating_Model",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Program_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Contract_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Primary_PV",
+    "Indexed": false
+   },
+   {
+    "InternalName": "POS_Terminals_Raw",
+    "Indexed": false
+   },
+   {
+    "InternalName": "POC_Display_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "In_R1_Scope",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Source_Row",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Source_System",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Facility_DODAAC",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Contract_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF EOM Requirement": {
+  "fields": [
+   {
+    "InternalName": "Requirement_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Document_Code",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Document_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Applicable_Model",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Requirement_Scope",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_Confidence",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_Basis",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Applicable_Facility_Types",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Applicable_Period_Month",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Routing_Org",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Frequency",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Required_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Due_Day",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Due_Basis",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Final_Due_Day",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Final_Due_Basis",
+    "Indexed": false
+   },
+   {
+    "InternalName": "NonDutyDay_Policy",
+    "Indexed": false
+   },
+   {
+    "InternalName": "QC_Required",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Accepted_File_Types",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Authority_Reference",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Authority_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Sort_Order",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF EOM Item": {
+  "fields": [
+   {
+    "InternalName": "EOM_Item_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "EOM_Item_Key",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Facility_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Contract_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Reporting_Period",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Requirement_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Requirement_Scope",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Authority_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Required_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Nominal_Due_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Effective_Due_Date",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Nominal_Final_Call_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Effective_Final_Call_Date",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Due_Date_Adjusted",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Initial_Submitted_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Initial_Submission_On_Time",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Acceptable_Evidence_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Final_Evidence_On_Time",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Current_Submission_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Received_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Final_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Status_Code",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Action_Owner",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Action_Required",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Days_Late",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Last_Reconciled_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Exception_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Correction_Due",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Waived_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Waiver_Reason",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF EOM Submission": {
+  "fields": [
+   {
+    "InternalName": "Submission_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Submission_Request_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "EOM_Item_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Version_No",
+    "Indexed": false
+   },
+   {
+    "InternalName": "File_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "File_URL",
+    "Indexed": false
+   },
+   {
+    "InternalName": "File_Size_KB",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Uploaded_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Uploaded_DateTime",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Submitted_On_Behalf_Of",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Intake_Method",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Classification_Method",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Classification_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Classification_Confidence",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Last_Error_Code",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Last_Error_Message",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Last_Processing_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Retry_Count",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Destination_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Source_Library",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Source_Path",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Is_Pilot",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Needs_Filing",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Filing_Note",
+    "Indexed": false
+   },
+   {
+    "InternalName": "SharePoint_Unique_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "SharePoint_File_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Is_Current",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Superseded_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "QC_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "QC_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "QC_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "QC_Comment",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF Unmatched File": {
+  "fields": [
+   {
+    "InternalName": "Unmatched_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "File_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "File_URL",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Fiscal_Year",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Discovered_DateTime",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Uploaded_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Suggested_Installation_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Suggested_Document_Code",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Resolution_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Resolved_Submission_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Resolved_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Resolved_DateTime",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF Security Mapping": {
+  "fields": [
+   {
+    "InternalName": "Security_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "UPN",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Scope_Type",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Facility_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Role",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Job_Title",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Can_QC",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Can_Submit_On_Behalf",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Can_Edit_Requirements",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Can_Grant_Access",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Grant_Scope",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Grant_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Granted_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Granted_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Expires_Date",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Developer_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Tester_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF EOM Audit": {
+  "fields": [
+   {
+    "InternalName": "Audit_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Entity_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Entity_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Action",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Actor_UPN",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Action_DateTime",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Old_Value",
+    "Indexed": false
+   },
+   {
+    "InternalName": "New_Value",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Detail",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF App Config": {
+  "fields": [
+   {
+    "InternalName": "Config_Key",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Config_Value",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Config_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Description",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Admin_Only",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF Feature Flags": {
+  "fields": [
+   {
+    "InternalName": "Feature_Key",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Feature_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Enabled_Prod",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Enabled_Testers",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Minimum_Role",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Effective_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Notes",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF App Event Log": {
+  "fields": [
+   {
+    "InternalName": "Event_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Event_DateTime",
+    "Indexed": true
+   },
+   {
+    "InternalName": "User_UPN",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Role",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Facility_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Event_Type",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Record_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Result",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Error_Code",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Error_Message",
+    "Indexed": false
+   },
+   {
+    "InternalName": "App_Version",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF EOM Status": {
+  "fields": [
+   {
+    "InternalName": "Status_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "EOM_Item_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Reporting_Period",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Fiscal_Year",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Installation_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Facility_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Facility_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Operating_Model",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Contract_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Requirement_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Requirement_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Document_Code",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Requirement_Scope",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Authority_Status",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_Confidence",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Routing_Org",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Component",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Required_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Nominal_Due_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Effective_Due_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Nominal_Final_Call_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Effective_Final_Call_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Due_Date_Adjusted",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Received_Flag",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Initial_Submitted_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Initial_Submission_On_Time",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Final_Evidence_On_Time",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Version_No",
+    "Indexed": false
+   },
+   {
+    "InternalName": "QC_Status",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Final_Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Status_Code",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Action_Owner",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Action_Required",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Package_State",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Days_Late",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Current_File_URL",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Generated_DateTime",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF Non Duty Day": {
+  "fields": [
+   {
+    "InternalName": "Non_Duty_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Date",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF Calendar Event": {
+  "fields": [
+   {
+    "InternalName": "Event_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Event_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Title",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Event_Date",
+    "Indexed": true
+   },
+   {
+    "InternalName": "End_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "All_Day",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Scope_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Linked_Item_ID",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Status_Code",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Created_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Created_DateTime",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": true
+   }
+  ]
+ },
+ "MF Access Request": {
+  "fields": [
+   {
+    "InternalName": "Request_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Requester_UPN",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Requester_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Home_Installation",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Requested_Installation_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Justification",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Requested_Until",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Status",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Decided_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Decided_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Decision_Comment",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF Notification Rule": {
+  "fields": [
+   {
+    "InternalName": "Rule_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Trigger_Event",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Recipient_Type",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Recipient_Address",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Enabled",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Digest",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Cadence_Days",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Subject_Template",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Notes",
+    "Indexed": false
+   }
+  ]
+ },
+ "MF Document Destination": {
+  "fields": [
+   {
+    "InternalName": "Destination_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Portfolio_ID",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Document_Domain",
+    "Indexed": true
+   },
+   {
+    "InternalName": "Site_URL",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Library_Name",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Library_Url_Segment",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Root_Folder",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Folder_Template",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Create_Missing_Folders",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Fallback_Policy",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Month_Folder_Pattern_Note",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Site_Note",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Verified_By",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Verified_Date",
+    "Indexed": false
+   },
+   {
+    "InternalName": "Active_Flag",
+    "Indexed": false
+   }
+  ]
+ }
+}

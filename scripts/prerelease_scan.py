@@ -100,8 +100,20 @@ RULES = [
     # ---- prohibited connectors: FAIL ------------------------------------
     ("CON-01", "FAIL", r"shared_(webcontents|dropbox|googledrive|onedrive)\b",
      "Prohibited connector reference"),
-    ("CON-02", "WARN", r"Web\.Contents\s*\(|\bHTTP\s+request\b",
-     "HTTP connector usage. Prohibited in R1 unless separately approved."),
+    # "Send an HTTP request to SharePoint" is an action OF THE SHAREPOINT
+    # CONNECTOR, and it is the provisioning route this deployment depends on --
+    # PowerShell is unavailable on the target network. The prohibited thing is
+    # the HTTP connector, which is a different connector entirely.
+    #
+    # The rule is TIGHTENED rather than the file exempted: an exemption would
+    # also silence a real HTTP connector added to that file later, which is
+    # exactly the finding the rule exists for. A negative lookahead keeps the
+    # rule watching every other phrasing.
+    ("CON-02", "WARN",
+     r"Web\.Contents\s*\(|\bHTTP\s+request\b(?!\s+to\s+SharePoint)",
+     "HTTP connector usage. Prohibited in R1 unless separately approved. "
+     "The SharePoint connector's own 'Send an HTTP request to SharePoint' "
+     "action is NOT this and does not fire here."),
 
     # ---- security bypass: FAIL ------------------------------------------
     ("BYP-01", "FAIL", r"(?i)(bypass_?security|disable_?auth|skip_?auth|isAdmin\s*=\s*true)",

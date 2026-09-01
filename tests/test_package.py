@@ -516,3 +516,56 @@ class ImportChecklistIsSequenced(unittest.TestCase):
         flat = " ".join(self.text.split())
         self.assertRegex(flat, r"(?i)737 .{0,30}rows")
         self.assertRegex(flat, r"(?i)still 737")
+
+
+class TheAssemblyRunbookIsCurrent(unittest.TestCase):
+    """Its counts are generated from the solution and the schema.
+
+    It said 18 environment variables while the solution carried 24. A maker
+    following it would have stopped at the sixth missing box and had no way to
+    know whether the ZIP or the runbook was wrong. Numbers in a runbook are
+    load-bearing, so they are derived, not typed.
+    """
+
+    def setUp(self):
+        with open(os.path.join(ROOT, "CANVAS_APP_ASSEMBLY.md"),
+                  encoding="utf-8") as fh:
+            self.text = fh.read()
+        with open(os.path.join(ROOT, "solution", "src", "Other",
+                               "Customizations.xml"), encoding="utf-8") as fh:
+            self.cust = fh.read()
+
+    def _count(self, pattern):
+        return len(re.findall(pattern, self.cust))
+
+    def test_the_environment_variable_count_matches_the_solution(self):
+        n = self._count(r"<environmentvariabledefinition[^>]*schemaname=")
+        self.assertEqual(n, 24)
+        self.assertRegex(self.text, rf"Environment variables \| \*\*{n}\*\*")
+
+    def test_the_connection_reference_count_matches_the_solution(self):
+        n = self._count(r"<connectionreference[^>]*connectionreferencelogicalname=")
+        self.assertRegex(self.text, rf"Connection references \| \*\*{n}\*\*")
+
+    def test_the_flow_count_matches_the_solution(self):
+        n = self._count(r"<Workflow WorkflowId=")
+        self.assertRegex(self.text, rf"Flows \| \*\*{n}\*\*")
+
+    def test_every_screen_and_component_has_a_paste_row(self):
+        src = os.path.join(ROOT, "canvas-app", "src")
+        for sub in ("Screens", "Components"):
+            for f in sorted(os.listdir(os.path.join(src, sub))):
+                if f.endswith(".pa.yaml"):
+                    self.assertIn(f, self.text,
+                                  f"{f} has no row in the runbook")
+
+    def test_it_says_the_session_runs_once(self):
+        flat = " ".join(self.text.split())
+        self.assertRegex(flat, r"(?i)this session runs ONCE")
+        self.assertRegex(flat, r"(?i)the exported ZIP carries the app|"
+                               r"exported\s+ZIP carries the app")
+
+    def test_it_keeps_the_round_trip_check(self):
+        flat = " ".join(self.text.split())
+        self.assertIn("pac canvas unpack", flat)
+        self.assertRegex(flat, r"(?i)the export wins")

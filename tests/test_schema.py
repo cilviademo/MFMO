@@ -604,3 +604,74 @@ class TestAppSource(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class ProvisioningIsVerifiable(unittest.TestCase):
+    """The provisioning artifacts, and the check that the tenant matches them.
+
+    "The provisioning run said OK" is not evidence. A run can create a list,
+    most of its columns and none of its indexes and still report success, and
+    the missing index on a list that will pass 5,000 items is the one failure
+    in this whole deployment that cannot be repaired afterwards.
+    """
+
+    def _run(self, *args):
+        import subprocess
+        return subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts",
+                                          "verify_provisioning.py"), *args],
+            capture_output=True, text=True, cwd=ROOT)
+
+    def test_a_complete_tenant_passes(self):
+        r = self._run(os.path.join(ROOT, "tests", "fixtures",
+                                   "tenant-schema-complete.json"))
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_a_missing_index_on_a_high_volume_list_fails(self):
+        r = self._run(os.path.join(ROOT, "tests", "fixtures",
+                                   "tenant-schema-broken.json"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Reporting_Period' is NOT indexed", r.stdout)
+        self.assertIn("cannot be added later", r.stdout)
+
+    def test_a_missing_column_and_a_missing_list_fail(self):
+        r = self._run(os.path.join(ROOT, "tests", "fixtures",
+                                   "tenant-schema-broken.json"))
+        self.assertIn("Submission_Request_ID' is missing", r.stdout)
+        self.assertIn("MF Notification Rule: list is missing entirely",
+                      r.stdout)
+
+    def test_the_payloads_carry_index_operations_for_every_index(self):
+        with open(os.path.join(ROOT, "provisioning",
+                               "sharepoint-schema.json"), encoding="utf-8") as fh:
+            payloads = json.load(fh)
+        by_title = {l["listTitle"]: l for l in payloads}
+        for l in S.LISTS:
+            ops = by_title[l.title]["indexOperations"]
+            self.assertEqual({o["field"] for o in ops},
+                             set(l.indexed_columns), l.title)
+            for o in ops:
+                self.assertEqual(o["payload"]["Indexed"], True)
+                self.assertIn(l.title, o["path"])
+
+    def test_the_payloads_say_which_uniqueness_sharepoint_actually_enforces(self):
+        # A composite key is a flow-side check. Saying so stops an operator
+        # assuming the list protects something it does not.
+        with open(os.path.join(ROOT, "provisioning",
+                               "sharepoint-schema.json"), encoding="utf-8") as fh:
+            payloads = json.load(fh)
+        for l in payloads:
+            u = l["uniqueKey"]
+            self.assertIn("enforcedBySharePoint", u)
+            if len(u["columns"]) > 1:
+                self.assertFalse(u["enforcedBySharePoint"], l["listTitle"])
+
+    def test_the_whatif_report_marks_the_irreversible_lists(self):
+        with open(os.path.join(ROOT, "provisioning", "whatif-report.md"),
+                  encoding="utf-8") as fh:
+            text = fh.read()
+        for l in S.LISTS:
+            if l.volume_estimate >= 5000:
+                row = [ln for ln in text.splitlines()
+                       if f"`{l.title}`" in ln and "|" in ln]
+                self.assertTrue(any("**YES**" in ln for ln in row), l.title)
