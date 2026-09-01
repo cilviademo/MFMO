@@ -1,0 +1,98 @@
+{
+ "lists": 17,
+ "columns": 286,
+ "indexes": 90,
+ "expected_rows": 737,
+ "as_of": "2026-09-01",
+ "statuses": {
+  "NOT_DUE": 737
+ },
+ "flow_actions": 30,
+ "per_list": [
+  [
+   "MF_App_Config",
+   6,
+   2
+  ],
+  [
+   "MF_Feature_Flags",
+   7,
+   1
+  ],
+  [
+   "MF_Installation",
+   18,
+   4
+  ],
+  [
+   "MF_Facility",
+   19,
+   5
+  ],
+  [
+   "MF_EOM_Requirement",
+   23,
+   4
+  ],
+  [
+   "MF_Document_Destination",
+   15,
+   3
+  ],
+  [
+   "MF_Non_Duty_Day",
+   6,
+   4
+  ],
+  [
+   "MF_Notification_Rule",
+   9,
+   3
+  ],
+  [
+   "MF_Security_Mapping",
+   20,
+   8
+  ],
+  [
+   "MF_Access_Request",
+   11,
+   4
+  ],
+  [
+   "MF_Calendar_Event",
+   13,
+   4
+  ],
+  [
+   "MF_EOM_Item",
+   32,
+   13
+  ],
+  [
+   "MF_EOM_Submission",
+   33,
+   13
+  ],
+  [
+   "MF_Unmatched_File",
+   13,
+   4
+  ],
+  [
+   "MF_EOM_Status",
+   39,
+   8
+  ],
+  [
+   "MF_EOM_Audit",
+   9,
+   4
+  ],
+  [
+   "MF_App_Event_Log",
+   13,
+   6
+  ]
+ ]
+}

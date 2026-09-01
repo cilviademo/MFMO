@@ -1,0 +1,105 @@
+# =============================================================================
+# App.pa.yaml — application object.
+#
+# The .pa.yaml is the code. The .msapp and the solution ZIP are build
+# artifacts; if they ever disagree with this tree, this tree wins and the
+# artifact is rebuilt.
+#
+# App.Formulas carries everything declarative. OnStart is deliberately small:
+# there is NO ClearCollect of business data here. At 89 installations x
+# facilities x requirements x 12 months, MF EOM Item passes the 2,000-row
+# non-delegable ceiling inside the first year, and a non-delegable query
+# returns WRONG results, not slow ones.
+# =============================================================================
+
+App:
+  Properties:
+    # The gate is a formula, so maintenance and no-access are decided before a
+    # screen renders rather than by an OnVisible redirect the user sees through.
+    StartScreen: =MF_StartScreen
+
+    OnStart: |
+      =Concurrent(
+          // One telemetry row per session. Business events, not clicks.
+          Patch(
+              'MF App Event Log',
+              Defaults('MF App Event Log'),
+              MF_EventRow(
+                  If(gblCanEnterApp, "AppOpened", "MaintenanceModeBlocked"),
+                  If(gblCanEnterApp, "Success", "Warning"),
+                  "",
+                  "",
+                  ""
+              )
+          ),
+          Set(locPeriod, gblOpenPeriod),
+          Set(locSelectedItem, Blank()),
+          Set(locSelectedInstallation, gblMyInstallation),
+          Set(locSelectedFacility, gblMyFacility)
+      )
+
+    # Fluent 2 native modern controls throughout. Do not build a fake combo box
+    # out of a gallery and a button, a custom table from labels, or a tab strip
+    # from rectangles — composite controls assembled where a native one exists
+    # are the most common cause of a screen reader announcing nothing useful.
+    Theme: =PowerAppsTheme
+    ThemeName: ="Fluent2"
+
+    # Responsive layout via auto-layout containers, never absolute X/Y.
+    # Button.X = 475 is the signature of a brittle app and it breaks at 200% zoom.
+    SizeBreakpoints: =[600, 900, 1200]
+
+ScreenOrder:
+  - scrHome
+  - scrMyPackage
+  - scrOverview
+  - scrInstallations
+  - scrExceptions
+  - scrUpload
+  - scrInstallation
+  - scrReview
+  - scrUnmatched
+  - scrCalendar
+  - scrActivity
+  - scrAccessRequest
+  - scrAdminRequirements
+  - scrMaintenance
+  - scrNoAccess
+  - scrDiagnostics
+
+# Data sources are bound by connection reference at import time. The list names
+# appear here as Power Fx symbols, which is unavoidable — a canvas app
+# addresses a SharePoint list by its identifier. What does NOT appear anywhere
+# is a site URL, a site GUID, or a list name as a string literal: those come
+# from environment variables with MF_App_Config as the fallback, and
+# scripts/validate_solution.py fails the build on a hit.
+DataSources:
+  - 'MF Installation'
+  - 'MF Facility'
+  - 'MF EOM Requirement'
+  - 'MF EOM Item'
+  - 'MF EOM Submission'
+  - 'MF Unmatched File'
+  - 'MF Security Mapping'
+  - 'MF EOM Audit'
+  - 'MF App Config'
+  - 'MF Feature Flags'
+  - 'MF App Event Log'
+  - 'MF EOM Status'
+  - 'MF Non Duty Day'
+  - 'MF Calendar Event'
+  - 'MF Access Request'
+  - 'MF Notification Rule'
+  - 'MF Document Destination'
+  - EOM02_Submission          # Power Automate — the front door
+  - Office365Users           # Entra identity. CAC resolves it before the app loads.
+
+# App.Formulas is the concatenation of these files, kept separate in the
+# repository so the engine is reviewable on its own.
+Formulas:
+  - ../formulas/App.Formulas.fx
+  - ../formulas/StatusEngine.fx
+  - ../formulas/Cascade.fx
+  # Delegation.fx declares every approved query against a high-volume list.
+  # The anti-pattern catalogue above them is comment.
+  - ../formulas/Delegation.fx

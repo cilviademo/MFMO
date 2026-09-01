@@ -30,3 +30,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 dist/*.zip
+# EXCEPT the two designated tracked distribution copies -- the
+# release gate's child-commit allowance names them explicitly and
+# the archive scanner sweeps their every entry on every run.
+!dist/MFOps_manual-kit_1.0.zip

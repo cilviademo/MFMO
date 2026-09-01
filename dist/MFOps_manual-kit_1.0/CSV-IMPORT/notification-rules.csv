@@ -1,0 +1,9 @@
+Rule_ID,Trigger_Event,Recipient_Type,Recipient_Address,Enabled,Digest,Cadence_Days,Subject_Template,Notes
+NR-001,SubmissionCreated,Portfolio org box,,TRUE,TRUE,,Mission Feeding: {count} new submission(s) awaiting review,Ships ENABLED. Reviewers learn something arrived without watching a folder.
+NR-002,StatusChanged,Submitter,,TRUE,FALSE,,Mission Feeding: {document} {status},Ships ENABLED. A base learns their document came back without opening the app. Per-item because a status change is specific and actionable.
+NR-003,DueSoon,Installation POC,,FALSE,TRUE,3,Mission Feeding: {count} document(s) due soon,Tune once the queue behaves.
+NR-004,FirstSuspensePassed,Installation POC,,FALSE,TRUE,,Mission Feeding: {count} document(s) now late,The only week in the cycle where a reminder still changes the outcome.
+NR-005,FinalSuspensePassed,Portfolio Manager,,FALSE,TRUE,7,Mission Feeding: {count} document(s) overdue,
+NR-006,CorrectionSuspensePassed,Submitter,,FALSE,TRUE,,Mission Feeding: correction suspense passed for {count} document(s),
+NR-007,PendingReviewAging,Portfolio Manager,,FALSE,TRUE,3,Mission Feeding: {count} submission(s) awaiting review over {days} days,Review throughput is a real metric because Accept means opening the file.
+NR-008,AccessRequested,Portfolio Manager,,FALSE,FALSE,,Mission Feeding: access request for {installation},Routed to a holder of Can_Grant_Access.

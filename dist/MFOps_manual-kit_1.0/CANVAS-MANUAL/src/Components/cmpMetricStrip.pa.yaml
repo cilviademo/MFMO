@@ -1,0 +1,126 @@
+# =============================================================================
+# cmpMetricStrip — four metric cards in a row, with the denominator stated once.
+#
+# Used by scrOverview and scrInstallations. It exists because a metric strip
+# assembled by hand on two screens drifts: one gets a new state, the other does
+# not, and the two screens disagree about the same period.
+#
+# THE FOUR METRICS ARE SEMANTIC, NEVER COLOUR. Amber covers both "the base owes
+# a correction" and "AFSVC owes a review" — counting by colour would put two
+# different people's work in one number and give the reader nothing to act on.
+# =============================================================================
+
+ComponentDefinitions:
+  cmpMetricStrip:
+    DefinitionType: CanvasComponent
+    CustomProperties:
+      Period:
+        PropertyKind: Input
+        DisplayName: Period
+        Description: The reporting period these counts describe.
+        DataType: Text
+        Default: ="2026-08"
+      ScopeQualifier:
+        PropertyKind: Input
+        DisplayName: ScopeQualifier
+        Description: >-
+          What the counts are OF. Rendered beside them, always. A count with no
+          denominator is the reporting failure this build exists to prevent.
+        DataType: Text
+        Default: ="your scope"
+      OnSelectStatus:
+        PropertyKind: Event
+        DisplayName: OnSelectStatus
+        Description: Raised when a card is chosen, with SelectedStatus set.
+        ReturnType: None
+      SelectedStatus:
+        PropertyKind: Output
+        DisplayName: SelectedStatus
+        Description: The Final_Status the reader just asked to filter by.
+        DataType: Text
+
+    Properties:
+      Height: =120
+      Width: =840
+      SelectedStatus: =locStripStatus
+
+    Children:
+      - conStrip:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =4
+            TabIndex: =-1
+          Children:
+
+            - lblDenominator:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: =cmpMetricStrip.ScopeQualifier & " - " & cmpMetricStrip.Period
+                  Color: =clrTextSecondary
+                  TabIndex: =-1
+
+            - conCards:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutGap: =12
+                  LayoutWrap: =true
+                  FillPortions: =1
+                  TabIndex: =-1
+                Children:
+
+                  - cardAccepted:
+                      Control: Component
+                      ComponentName: cmpMetricCard
+                      Properties:
+                        Label: ="Accepted"
+                        Count: =MF_CountAccepted(cmpMetricStrip.Period)
+                        Accent: =clrStatusGreen
+                        ScopeQualifier: =cmpMetricStrip.ScopeQualifier
+                        OnSelect: |
+                          =Set(locStripStatus, "ACCEPTED");
+                           cmpMetricStrip.OnSelectStatus()
+
+                  - cardAwaiting:
+                      Control: Component
+                      ComponentName: cmpMetricCard
+                      Properties:
+                        # AFSVC owns this one. Yellow, not amber.
+                        Label: ="Awaiting review"
+                        Count: =MF_CountAwaitingReview(cmpMetricStrip.Period)
+                        Accent: =clrStatusYellow
+                        ScopeQualifier: =cmpMetricStrip.ScopeQualifier
+                        OnSelect: |
+                          =Set(locStripStatus, "RECEIVED_PENDING_QC");
+                           cmpMetricStrip.OnSelectStatus()
+
+                  - cardCorrections:
+                      Control: Component
+                      ComponentName: cmpMetricCard
+                      Properties:
+                        # The base owns this one. Amber, and a different hue
+                        # from yellow -- they sit at the same luminance, so
+                        # colour alone never distinguishes them.
+                        Label: ="Corrections"
+                        Count: =MF_CountCorrections(cmpMetricStrip.Period)
+                        Accent: =clrStatusAmber
+                        ScopeQualifier: =cmpMetricStrip.ScopeQualifier
+                        OnSelect: |
+                          =Set(locStripStatus, "RETURNED");
+                           cmpMetricStrip.OnSelectStatus()
+
+                  - cardOverdue:
+                      Control: Component
+                      ComponentName: cmpMetricCard
+                      Properties:
+                        Label: ="Overdue"
+                        Count: =MF_CountOverdue(cmpMetricStrip.Period)
+                        Accent: =clrStatusRed
+                        ScopeQualifier: =cmpMetricStrip.ScopeQualifier
+                        OnSelect: |
+                          =Set(locStripStatus, "OVERDUE");
+                           cmpMetricStrip.OnSelectStatus()

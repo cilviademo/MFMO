@@ -1,0 +1,100 @@
+# =============================================================================
+# scrMaintenance — the kill switch landing.
+#
+# Reached when MF_App_Config.MaintenanceMode is true and the user is neither a
+# developer nor an admin. It is App.StartScreen, not an OnVisible redirect:
+# nobody should briefly see the app before being sent here.
+#
+# Publishing IS deploying in a single-environment tenant. When something breaks
+# after a publish you flip this rather than racing to unpublish.
+#
+# No business data source is opened here. If the reason the app is down is that
+# a list is unhealthy, this screen must still render.
+# =============================================================================
+
+Screens:
+  scrMaintenance:
+    Properties:
+      Fill: =clrSurfaceAlt
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutJustifyContent: =LayoutJustifyContent.Center
+            LayoutGap: =16
+            PaddingLeft: =24
+            PaddingRight: =24
+            TabIndex: =-1
+          Children:
+            - lblHeading:
+                Control: Text
+                Variant: Subtitle
+                Properties:
+                  Text: ="Mission Feeding Operations is paused"
+                  Color: =clrText
+                  Size: =24
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  # Focus lands here so a screen reader announces the reason
+                  # before the support link.
+                  TabIndex: =0
+            - lblBody:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: =gblSupportMessage
+                  Color: =clrText
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  LayoutMaxWidth: =520
+                  Live: =Live.Polite
+                  TabIndex: =-1
+            - lblReassurance:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: ="Anything you have already submitted is safe. Nothing has been lost."
+                  Color: =clrTextSecondary
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  TabIndex: =-1
+            - lblSupport:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: =If(IsBlank(gblSupportContact), "", "If you need to submit something urgently, contact " & gblSupportContact & ".")
+                  Color: =clrTextSecondary
+                  Align: =Align.Center
+                  AutoHeight: =true
+                  TabIndex: =-1
+            - lblVersion:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  Text: ="Version " & gblAppVersion
+                  Color: =clrTextSecondary
+                  TabIndex: =-1
+            - btnRetry:
+                Control: Button
+                Variant: Secondary
+                Properties:
+                  Text: ="Check again"
+                  AccessibleLabel: ="Check again whether maintenance has finished"
+                  OnSelect: =Refresh('MF App Config'); Navigate(MF_StartScreen, ScreenTransition.None)
+                  TabIndex: =0
+            - btnDeveloperBypass:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Continue as developer"
+                  # Only visible to a Developer_Flag holder, who would not have
+                  # landed here anyway. Present for the case where the flag is
+                  # granted while the session is open.
+                  Visible: =gblIsDeveloper
+                  AccessibleLabel: ="Continue into the app as a developer, bypassing maintenance mode"
+                  OnSelect: =Navigate(scrHome, ScreenTransition.None)
+                  TabIndex: =0

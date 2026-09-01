@@ -1,0 +1,235 @@
+# =============================================================================
+# scrDiagnostics — the protected developer surface, and System Health.
+#
+# GATED TWICE: the EOM_DIAGNOSTICS feature flag (Enabled_Prod FALSE) AND
+# Developer_Flag on MF Security Mapping. A normal user must not reach this
+# screen by any navigation, deep link or keyboard route — that is an acceptance
+# test, and the OnVisible below enforces it even if a navigation gets here some
+# other way.
+#
+# In a single-environment tenant this is how you answer "what is this app
+# actually doing right now" without a second environment to compare against.
+#
+# The configuration health checks are the ones that catch a silent failure: a
+# facility with no requirement set sits green forever, and stale reconciliation
+# looks exactly like a quiet month.
+# =============================================================================
+
+Screens:
+  scrDiagnostics:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =If(
+            !gblIsDeveloper || !MF_IsFeatureOn("EOM_DIAGNOSTICS"),
+            // Belt and braces. The nav already excludes this screen; this
+            // catches anything that reached it another way.
+            Patch('MF App Event Log', Defaults('MF App Event Log'),
+                  MF_EventRow("PermissionDenied", "Failure", "scrDiagnostics",
+                              "NO_DEVELOPER_FLAG",
+                              "Diagnostics reached without Developer_Flag"));
+            Navigate(MF_StartScreen, ScreenTransition.None)
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =12
+            PaddingLeft: =20
+            PaddingRight: =20
+            PaddingTop: =16
+            PaddingBottom: =16
+            TabIndex: =-1
+          Children:
+            - lblHeading:
+                Control: Text
+                Variant: Subtitle
+                Properties:
+                  Text: ="Diagnostics and system health"
+                  TabIndex: =0
+            - btnBack:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Back"
+                  AccessibleLabel: ="Back to home"
+                  OnSelect: =Back(ScreenTransition.None)
+                  TabIndex: =0
+
+            - lblIdentity:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: |
+                    ="Identity: " & gblCurrentUser.Email & Char(10) &
+                     "Role: " & gblRole & "   Scope: " & gblScopeType & Char(10) &
+                     "Developer: " & Text(gblIsDeveloper) & "   Tester: " & Text(gblIsTester) & Char(10) &
+                     "Can QC: " & Text(gblCanQC) & "   On behalf: " & Text(gblCanOnBehalf) &
+                     "   Edit requirements: " & Text(gblCanEditReqs) & Char(10) &
+                     "Mappings: " & Text(CountRows(gblMyScope)) &
+                     "   Facilities in scope: " & Text(CountRows(MF_MyFacilities))
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            - lblVersions:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: |
+                    ="App version: " & gblAppVersion & Char(10) &
+                     "Schema version expected by this app: " & MF_ExpectedSchemaVersion & Char(10) &
+                     "Schema version in config: " & gblSchemaVersion & Char(10) &
+                     "Tenant cloud: " & gblTenantCloud & Char(10) &
+                     "Open period: " & gblOpenPeriod & "   Selected: " & locPeriod & Char(10) &
+                     "Maintenance: " & Text(gblMaintenanceMode) & "   Read-only: " & Text(gblReadOnlyMode) & Char(10) &
+                     "Session: " & Text(gblSessionId)
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            - lblSchemaWarning:
+                Control: Text
+                Variant: Body
+                Properties:
+                  # A schema mismatch is the failure that produces baffling
+                  # blank columns. Surface it rather than debugging it twice.
+                  Text: =MF_SchemaMismatchDetail
+                  Color: =clrStatusRed
+                  Visible: =!gblSchemaMatches
+                  AutoHeight: =true
+                  Live: =Live.Polite
+                  TabIndex: =-1
+
+            - lblCloudWarning:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="TenantCloud is UNKNOWN. Expected UsGovDod — this tenant is DoD, not GCC High. Confirm before the deployment scripts are finalised."
+                  Color: =clrStatusAmber
+                  Visible: =gblTenantCloud = "UNKNOWN"
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            # --- configuration health -------------------------------------
+            - lblHealthHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Configuration health"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - lblHealthChecks:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  # These are the checks that catch a SILENT failure. A facility
+                  # with no requirement set is not a facility with nothing to
+                  # do; it sits green forever unless something looks for it.
+                  Text: |
+                    =With(
+                        {
+                            items: MF_VisibleItems(locPeriod),
+                            noReqs: Filter(MF_MyFacilities,
+                                        !MF_HasItems(Facility_ID, locPeriod)),
+                            stale: Filter(MF_VisibleItems(locPeriod),
+                                        IsBlank(Last_Reconciled_DateTime)
+                                        || Last_Reconciled_DateTime <
+                                           DateAdd(Now(), -MF_ConfigNumber("ReconciliationStaleHours", 36), Hours)),
+                            unmatched: MF_UnmatchedQueue()
+                        },
+                        "Facilities with no requirement set: " & Text(CountRows(noReqs)) & Char(10) &
+                        "Items not reconciled recently: " & Text(CountRows(stale)) & Char(10) &
+                        "Unmatched file backlog: " & Text(CountRows(unmatched)) & Char(10) &
+                        "Items this period, in scope: " & Text(CountRows(items)) & Char(10) &
+                        "Provisional requirements: " &
+                            Text(CountRows(Filter('MF EOM Requirement', Authority_Status = "UNVERIFIED"))) &
+                            " of " & Text(CountRows('MF EOM Requirement'))
+                    )
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            - lblDelegationCheck:
+                Control: Text
+                Variant: Caption
+                Properties:
+                  # The count that would be truncated is the count that tells
+                  # you it was. If this equals the threshold, the figures above
+                  # are a lie.
+                  Text: |
+                    =With(
+                        { n: CountRows(MF_VisibleItems(locPeriod)) },
+                        "Rows returned: " & Text(n) &
+                        "   Warning threshold: " & Text(MF_DelegationWarnAt) &
+                        If(n >= MF_DelegationWarnAt, "   TRUNCATION LIKELY", "   OK")
+                    )
+                  Color: =If(MF_TruncationSuspected(MF_VisibleItems(locPeriod)), clrStatusRed, clrTextSecondary)
+                  AutoHeight: =true
+                  TabIndex: =-1
+
+            # --- feature flags as this session resolves them ---------------
+            - lblFlagsHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Feature flags, as this session resolves them"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - galFlags:
+                Control: Gallery
+                Variant: verticalGallery
+                Properties:
+                  Items: =MF_FlagRows
+                  TemplateSize: =40
+                  AccessibleLabel: ="Feature flags"
+                  TabIndex: =0
+                Children:
+                  - lblFlagRow:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: |
+                          =ThisItem.Feature_Key & ": prod " & Text(ThisItem.Enabled_Prod) &
+                           ", testers " & Text(ThisItem.Enabled_Testers) &
+                           ", resolved " & Text(MF_IsFeatureOn(ThisItem.Feature_Key))
+                        AutoHeight: =true
+                        TabIndex: =-1
+
+            # --- recent events for this session ---------------------------
+            - lblEventsHeading:
+                Control: Text
+                Variant: Body
+                Properties:
+                  Text: ="Recent events, this session"
+                  FontWeight: =FontWeight.Semibold
+                  TabIndex: =-1
+
+            - galEvents:
+                Control: Gallery
+                Variant: verticalGallery
+                Properties:
+                  # Filtered by the indexed User_UPN. Never an unfiltered read
+                  # of an append-only list.
+                  Items: |
+                    =FirstN(
+                        SortByColumns(
+                            Filter('MF App Event Log', User_UPN = gblCurrentUser.Email),
+                            "Event_DateTime", SortOrder.Descending),
+                        20)
+                  TemplateSize: =44
+                  AccessibleLabel: ="Recent telemetry events"
+                  TabIndex: =0
+                Children:
+                  - lblEventRow:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: |
+                          =Text(ThisItem.Event_DateTime, "hh:nn:ss") & "  " & ThisItem.Event_Type &
+                           "  " & ThisItem.Result & "  " & Coalesce(ThisItem.Error_Message, "")
+                        AutoHeight: =true
+                        TabIndex: =-1

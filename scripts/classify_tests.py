@@ -89,6 +89,9 @@ CLASSIFICATION = {
     "test_operator_bundle_selfcontained": {
         "OperatorBundleIsSelfContained": ("STRUCTURAL", "the delivery re-verified in isolation: closure, imports, citations, manifest"),
     },
+    "test_manual_kit": {
+        "ManualKitMatchesTheSchema": ("STRUCTURAL", "every hand-typeable number re-derived from the schema, the engine and the flow JSON"),
+    },
     "test_assembler": {
         "AssemblerFailsClosed":        (B, "nine failure simulations against the real script with a pac shim"),
         "FinalExportValidatorWorks":   (B, "the final validator run against a good export and three broken ones"),

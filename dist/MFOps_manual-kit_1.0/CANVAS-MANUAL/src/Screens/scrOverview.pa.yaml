@@ -1,0 +1,232 @@
+# =============================================================================
+# scrOverview — the AFSVC landing screen.
+#
+# One question: across everything I can see, what is the shape of it and what
+# needs me? The metric strip answers the first, the table answers the second.
+#
+# SCOPE IS APPLIED SERVER-SIDE, BEFORE ANYTHING IS COUNTED. Every query below
+# starts from MF_VisibleItems, which filters on Installation_ID / Portfolio_ID
+# according to MF Security Mapping. A count assembled from rows the viewer may
+# not see is a disclosure, not a rounding error.
+#
+# Power Apps Visible/Filter is NOT a security boundary. The data layer must
+# enforce installation scope independently -- see docs/security-open-issue.md,
+# which is OPEN.
+# =============================================================================
+
+Screens:
+  scrOverview:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Concurrent(
+            Set(locSelectedItem, Blank()),
+            Set(locSearch, ""),
+            Set(locStatus, Blank()),
+            Set(locRequirement, Blank()),
+            Set(locPortfolio, Blank()),
+            // Arriving at the manager's own landing screen ends the base-user
+            // preview - it must never linger invisibly across the PM surface.
+            Set(gblPreviewInst, Blank())
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =0
+            TabIndex: =-1
+          Children:
+
+            - btnSkipToContent:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Skip to main content"
+                  Height: =If(Self.Focus, 32, 1)
+                  Opacity: =If(Self.Focus, 1, 0)
+                  OnSelect: =SetFocus(galAttention)
+                  AccessibleLabel: ="Skip to main content"
+                  TabIndex: =0
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =16
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  BorderThickness: =1
+                  BorderColor: =clrBorder
+                  TabIndex: =-1
+                Children:
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Overview"
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+                  - cmbPeriod:
+                      Control: ComboBox
+                      Properties:
+                        Items: =MF_SelectablePeriods
+                        DisplayFields: =["Period"]
+                        SelectMultiple: =false
+                        DefaultSelectedItems: |
+                            =[{ Period: gblOpenPeriod }]
+                        OnChange: =Set(locPeriod, Self.Selected.Period)
+                        AccessibleLabel: ="Reporting period"
+                        LayoutMinWidth: =160
+                        TabIndex: =0
+
+                  # --- Preview as a base user (EOM_PREVIEW_AS) ---------------
+                  # View-only: sets gblPreviewInst and lands on the base Home.
+                  # Never an identity change - the flow authenticates the real
+                  # caller regardless, and scrUpload refuses while previewing.
+                  - drpPreviewInst:
+                      Control: ComboBox
+                      Properties:
+                        Items: =MF_MyInstallations
+                        DisplayFields: =["Installation_Name"]
+                        SearchFields: =["Installation_Name"]
+                        SelectMultiple: =false
+                        InputTextPlaceholder: ="Preview an installation..."
+                        Visible: =gblCanQC && MF_IsFeatureOn("EOM_PREVIEW_AS")
+                        AccessibleLabel: ="Installation to preview as a base user"
+                        LayoutMinWidth: =220
+                        TabIndex: =0
+                  - btnPreviewAs:
+                      Control: Button
+                      Variant: Secondary
+                      Properties:
+                        Text: ="Preview as base user"
+                        Visible: =gblCanQC && MF_IsFeatureOn("EOM_PREVIEW_AS")
+                        DisplayMode: |
+                          =If(IsBlank(drpPreviewInst.Selected.Installation_ID),
+                              DisplayMode.Disabled, DisplayMode.Edit)
+                        AccessibleLabel: ="Open the base user view of the selected installation, read only"
+                        OnSelect: |
+                          =Set(gblPreviewInst, drpPreviewInst.Selected.Installation_ID);
+                           Set(locSelectedItem, Blank());
+                           Navigate(scrHome, ScreenTransition.None)
+                        TabIndex: =0
+
+            - conBody:
+                Control: GroupContainer
+                Variant: verticalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =16
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - stripMetrics:
+                      Control: Component
+                      ComponentName: cmpMetricStrip
+                      Properties:
+                        Period: =locPeriod
+                        ScopeQualifier: =MF_ScopeQualifier()
+                        # Choosing a card narrows the table below rather than
+                        # navigating away. The reader keeps their place.
+                        OnSelectStatus: =Set(locStatus, stripMetrics.SelectedStatus)
+
+                  - toolbarFilters:
+                      Control: Component
+                      ComponentName: cmpFilterToolbar
+                      Properties:
+                        ShowPortfolio: =gblScopeType = "Enterprise"
+                        OnFilterChange: =Set(locSelectedItem, Blank())
+
+                  - lblAttentionHeading:
+                      Control: Text
+                      Variant: Body
+                      Properties:
+                        Text: ="Needs your attention"
+                        FontWeight: =FontWeight.Semibold
+                        Color: =clrText
+                        TabIndex: =-1
+
+                  - lblAttentionCount:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: |
+                          =With(
+                              { n: CountRows(galAttention.AllItems) },
+                              Text(n) & If(n = 1, " item", " items") & " in " & MF_ScopeQualifier() &
+                              If(MF_TruncationSuspected(galAttention.AllItems),
+                                 " - result may be truncated, report this", "")
+                          )
+                        Color: =If(MF_TruncationSuspected(galAttention.AllItems), clrStatusRed, clrTextSecondary)
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+                  - galAttention:
+                      Control: Gallery
+                      Variant: verticalGallery
+                      Properties:
+                        # DELEGATION: the outer Filter runs server-side on
+                        # Reporting_Period + scope (MF_VisibleItems) and on
+                        # Final_Status and Requirement_ID, both indexed. The
+                        # blank tests are constants, evaluated once, so they do
+                        # not defeat delegation.
+                        Items: |
+                          =SortByColumns(
+                              Filter(
+                                  MF_VisibleItems(locPeriod),
+                                  Action_Required = true,
+                                  IsBlank(locStatus) || Final_Status = locStatus,
+                                  IsBlank(locRequirement) || Requirement_ID = locRequirement,
+                                  IsBlank(locPortfolio) || Portfolio_ID = locPortfolio
+                              ),
+                              "Effective_Due_Date", SortOrder.Ascending
+                          )
+                        TemplateSize: =80
+                        FillPortions: =1
+                        AccessibleLabel: ="Items needing attention"
+                        TabIndex: =0
+                      Children:
+                        - itemRow:
+                            Control: Component
+                            ComponentName: cmpEOMItem
+                            Properties:
+                              Item: =ThisItem
+                              ShowScopeTarget: =true
+                              OnPrimaryAction: |
+                                =Set(locSelectedItem, ThisItem);
+                                 Navigate(
+                                     If(
+                                         ThisItem.Final_Status = "RECEIVED_PENDING_QC" && gblCanQC,
+                                         scrReview,
+                                         scrUpload
+                                     ),
+                                     ScreenTransition.None
+                                 )
+
+                  - emptyAttention:
+                      Control: Component
+                      ComponentName: cmpEmptyState
+                      Properties:
+                        Visible: =CountRows(galAttention.AllItems) = 0
+                        Title: ="Nothing needs attention"
+                        Body: |
+                          =If(
+                              !IsBlank(locStatus) || !IsBlank(locRequirement) || !IsBlank(locPortfolio),
+                              "No items match the filters you have set. Use Reset to clear them.",
+                              "Everything in " & locPeriod & " for " & MF_ScopeQualifier() &
+                              " is accepted, waiting on someone else, or not yet due."
+                          )

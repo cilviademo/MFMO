@@ -1,0 +1,382 @@
+# =============================================================================
+# scrHome — role-shaped.
+#
+# Home answers one question: WHAT DO I NEED TO DO?
+#
+# A DFAC manager sees their facility, what needs doing, what is waiting on
+# AFSVC, and what was accepted — no portfolio arithmetic. A Portfolio Manager
+# sees the portfolio. Navigation follows permissions: three destinations for a
+# facility user, six for an admin.
+#
+# MY WORK filters on ACTION OWNERSHIP, not on colour. Amber covers both
+# correction needed (the facility's action) and awaiting review (AFSVC's), so a
+# submitter's "needs your attention" list must not contain documents sitting in
+# someone else's queue. Those appear under WAITING ON AFSVC.
+# =============================================================================
+
+Screens:
+  scrHome:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: |
+        =Concurrent(
+            Set(locSelectedItem, Blank()),
+            Set(locDialogOpen, false)
+        )
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            LayoutGap: =0
+            TabIndex: =-1
+          Children:
+
+            # First tab stop on every screen. Gate A2.
+            - btnSkipToContent:
+                Control: Button
+                Variant: Subtle
+                Properties:
+                  Text: ="Skip to main content"
+                  Height: =If(Self.Focus, 32, 1)
+                  Opacity: =If(Self.Focus, 1, 0)
+                  OnSelect: =SetFocus(galMyWork)
+                  AccessibleLabel: ="Skip to main content"
+                  TabIndex: =0
+
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =16
+                  LayoutWrap: =true
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  BorderThickness: =1
+                  BorderColor: =clrBorder
+                  TabIndex: =-1
+                Children:
+                  - lblAppTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Mission Feeding Operations"
+                        Color: =clrText
+                        FontWeight: =FontWeight.Semibold
+                        TabIndex: =-1
+                  - cmbPeriod:
+                      Control: ComboBox
+                      Properties:
+                        # ONE app-level reporting-period selector. Changing it
+                        # re-renders everything, which is most of the reason a
+                        # separate History destination stopped being needed.
+                        # Nothing anywhere hard-codes a period.
+                        Items: =MF_SelectablePeriods
+                        DisplayFields: =["Period"]
+                        SelectMultiple: =false
+                        DefaultSelectedItems: |
+                            =[{ Period: gblOpenPeriod }]
+                        OnChange: =Set(locPeriod, Self.Selected.Period)
+                        AccessibleLabel: ="Reporting period"
+                        LayoutMinWidth: =160
+                        TabIndex: =0
+                  - lblReadOnly:
+                      Control: Text
+                      Variant: Caption
+                      Properties:
+                        Text: =MF_ReadOnlyBanner
+                        Color: =clrStatusAmber
+                        Visible: =gblReadOnlyMode
+                        AutoHeight: =true
+                        Live: =Live.Polite
+                        TabIndex: =-1
+
+            - conBody:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutGap: =0
+                  LayoutWrap: =true
+                  TabIndex: =-1
+                Children:
+
+                  - conNav:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        LayoutMinWidth: =200
+                        FillPortions: =0
+                        PaddingTop: =12
+                        Fill: =clrSurface
+                        # Collapses under 700px rather than clipping. Gate A11.
+                        Visible: =Parent.Width > 700 || locNavOpen
+                        TabIndex: =-1
+                      Children:
+                        - galNav:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Role-shaped and feature-flagged in App.Formulas.
+                              # A flag removes the destination, not just the button.
+                              # In the base-user preview the rail shows only
+                              # what a base user gets - the manager tabs coming
+                              # back would break the illusion the preview
+                              # exists to provide. Overview stays reachable via
+                              # Exit preview on the banner.
+                              Items: |
+                                =If( IsBlank(gblPreviewInst),
+                                    colNavigation,
+                                    Filter(colNavigation, need = "all") )
+                              TemplateSize: =44
+                              AccessibleLabel: ="Main navigation"
+                              TabIndex: =0
+                            Children:
+                              - btnNavItem:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: =ThisItem.label
+                                    Align: =Align.Left
+                                    AccessibleLabel: ="Go to " & ThisItem.label
+                                    OnSelect: |
+                                      =Navigate(
+                                          Switch(
+                                              ThisItem.screen,
+                                              "scrUpload", scrUpload,
+                                              "scrInstallation", scrInstallation,
+                                              "scrReview", scrReview,
+                                              "scrUnmatched", scrUnmatched,
+                                              "scrCalendar", scrCalendar,
+                                              "scrAccessRequest", scrAccessRequest,
+                                              "scrActivity", scrActivity,
+                                              "scrAdminRequirements", scrAdminRequirements,
+                                              "scrDiagnostics", scrDiagnostics,
+                                              scrHome
+                                          ),
+                                          ScreenTransition.None
+                                      )
+                                    TabIndex: =0
+
+                  - conContent:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        LayoutGap: =12
+                        PaddingLeft: =20
+                        PaddingRight: =20
+                        PaddingTop: =16
+                        PaddingBottom: =16
+                        TabIndex: =-1
+                      Children:
+
+                        # --- Preview banner (EOM_PREVIEW_AS) -----------------
+                        # Not a component: the six-component architecture is
+                        # frozen, and this block appears on exactly the base
+                        # screens the preview re-scopes. Blue = informational;
+                        # the words carry the meaning, never the colour alone.
+                        - conPreviewBanner:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              Visible: =!IsBlank(gblPreviewInst)
+                              LayoutAlignItems: =LayoutAlignItems.Center
+                              LayoutGap: =12
+                              PaddingLeft: =12
+                              PaddingRight: =12
+                              PaddingTop: =8
+                              PaddingBottom: =8
+                              Fill: =clrStatusBlueBg
+                              BorderThickness: =1
+                              BorderColor: =clrStatusBlue
+                              TabIndex: =-1
+                            Children:
+                              - lblPreviewBanner:
+                                  Control: Text
+                                  Variant: Body
+                                  Properties:
+                                    Text: |
+                                      ="PREVIEW - you are viewing " &
+                                       LookUp('MF Installation', Installation_ID = gblPreviewInst).Installation_Name &
+                                       " as a base user would. Read-only: submitting is disabled."
+                                    Color: =clrStatusBlue
+                                    FontWeight: =FontWeight.Semibold
+                                    TabIndex: =-1
+                              - btnExitPreview:
+                                  Control: Button
+                                  Variant: Secondary
+                                  Properties:
+                                    Text: ="Exit preview"
+                                    AccessibleLabel: ="Exit the base user preview and return to Overview"
+                                    OnSelect: |
+                                      =Set(gblPreviewInst, Blank());
+                                       Navigate(scrOverview, ScreenTransition.None)
+                                    TabIndex: =0
+
+                        - cardPackage:
+                            Control: Component
+                            ComponentName: cmpMetricCard
+                            Properties:
+                              Label: |
+                                =If( !IsBlank(gblPreviewInst),
+                                    LookUp('MF Installation', Installation_ID = gblPreviewInst).Installation_Name,
+                                    Switch(
+                                        gblScopeType,
+                                        "Facility",     LookUp('MF Facility', Facility_ID = gblMyFacility).Facility_Name,
+                                        "Installation", LookUp('MF Installation', Installation_ID = gblMyInstallation).Installation_Name,
+                                        "Portfolio",    "Portfolio " & gblMyPortfolio,
+                                        "Enterprise"
+                                    )
+                                ) & " - " & locPeriod
+                              # Already scope-filtered server-side. Security is
+                              # applied BEFORE anything is counted. The preview
+                              # branch is a PRESENTATION narrowing of a scope
+                              # the viewer already reads - never a widening.
+                              Items: |
+                                =If( IsBlank(gblPreviewInst),
+                                    MF_VisibleItems(locPeriod),
+                                    MF_ItemsForInstallation(gblPreviewInst, locPeriod) )
+                              ScopeQualifier: =If(IsBlank(gblPreviewInst), MF_ScopeQualifier(), "")
+
+                        # --- MY WORK: what I owe -----------------------------
+                        - lblMyWorkHeading:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: ="Needs your attention"
+                              FontWeight: =FontWeight.Semibold
+                              Color: =clrText
+                              TabIndex: =-1
+
+                        - lblMyWorkCount:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              # The visible count serves two purposes: a screen
+                              # reader gets a total a virtualised gallery cannot
+                              # announce, and a truncated query becomes visible.
+                              Text: |
+                                =With(
+                                    { n: CountRows(galMyWork.AllItems) },
+                                    Text(n) & If(n = 1, " item", " items") &
+                                    If(MF_TruncationSuspected(galMyWork.AllItems),
+                                       " - result may be truncated, report this", "")
+                                )
+                              Color: =If(MF_TruncationSuspected(galMyWork.AllItems), clrStatusRed, clrTextSecondary)
+                              Live: =Live.Polite
+                              TabIndex: =-1
+
+                        - galMyWork:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Ownership, not colour. For a DFAC manager this
+                              # is usually empty or one row — which is the point.
+                              Items: |
+                                =If( IsBlank(gblPreviewInst),
+                                    Filter(MF_MyWork(locPeriod), MF_IsMyAction(Final_Status)),
+                                    Filter(MF_PreviewMyWork(gblPreviewInst, locPeriod), MF_IsBaseAction(Final_Status)) )
+                              TemplateSize: =80
+                              Visible: =CountRows(Self.AllItems) > 0
+                              AccessibleLabel: ="Requirements needing your action"
+                              TabIndex: =0
+                            Children:
+                              - itemRow:
+                                  Control: Component
+                                  ComponentName: cmpEOMItem
+                                  Properties:
+                                    Item: =ThisItem
+                                    ShowScopeTarget: =gblScopeType <> "Facility"
+                                    OnPrimaryAction: |
+                                      =Set(locSelectedItem, ThisItem);
+                                       Navigate(
+                                           If(
+                                               ThisItem.Final_Status = "RECEIVED_PENDING_QC" && gblCanQC,
+                                               scrReview,
+                                               scrUpload
+                                           ),
+                                           ScreenTransition.None
+                                       )
+
+                        - emptyMyWork:
+                            Control: Component
+                            ComponentName: cmpEmptyState
+                            Properties:
+                              Visible: =CountRows(galMyWork.AllItems) = 0
+                              Title: ="Nothing needs your attention"
+                              Body: |
+                                ="Everything in " & locPeriod & " is either accepted, waiting on someone else, or not yet due. " &
+                                 "If you expected a requirement here, check the period selector above."
+
+                        # --- WAITING ON SOMEONE ELSE -------------------------
+                        - lblWaitingHeading:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: ="Waiting on AFSVC"
+                              FontWeight: =FontWeight.Semibold
+                              Color: =clrText
+                              Visible: =CountRows(galWaiting.AllItems) > 0
+                              TabIndex: =-1
+
+                        - galWaiting:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              # Submitted and sitting in the review queue. It is
+                              # not the submitter's action, so it is not in My
+                              # Work — but they still need to see it.
+                              Items: |
+                                =If( IsBlank(gblPreviewInst),
+                                    MF_WaitingOnOthers(locPeriod),
+                                    MF_PreviewWaiting(gblPreviewInst, locPeriod) )
+                              TemplateSize: =80
+                              Visible: =CountRows(Self.AllItems) > 0
+                              AccessibleLabel: ="Submitted and awaiting review"
+                              TabIndex: =0
+                            Children:
+                              - waitingRow:
+                                  Control: Component
+                                  ComponentName: cmpEOMItem
+                                  Properties:
+                                    Item: =ThisItem
+                                    ShowScopeTarget: =gblScopeType <> "Facility"
+                                    OnPrimaryAction: =Set(locSelectedItem, ThisItem); Navigate(scrActivity, ScreenTransition.None)
+
+                        - conFooter:
+                            Control: GroupContainer
+                            Variant: horizontalAutoLayoutContainer
+                            Properties:
+                              LayoutGap: =8
+                              LayoutWrap: =true
+                              PaddingTop: =8
+                              TabIndex: =-1
+                            Children:
+                              - btnOpenPackage:
+                                  Control: Button
+                                  Variant: Secondary
+                                  Properties:
+                                    Text: ="Open my package"
+                                    AccessibleLabel: ="Open the full requirement package for " & locPeriod
+                                    OnSelect: =Navigate(scrInstallation, ScreenTransition.None)
+                                    TabIndex: =0
+                              - btnOpenCOP:
+                                  Control: Button
+                                  Variant: Subtle
+                                  Properties:
+                                    Text: ="Open COP in Power BI"
+                                    # Never a hard-coded link. The gov endpoint
+                                    # differs by cloud.
+                                    Visible: =!IsBlank(gblPowerBIURL)
+                                    AccessibleLabel: ="Open the common operational picture in Power BI, in a new tab"
+                                    OnSelect: =Launch(gblPowerBIURL, {}, LaunchTarget.New)
+                                    TabIndex: =0
