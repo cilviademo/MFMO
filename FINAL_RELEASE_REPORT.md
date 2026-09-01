@@ -733,7 +733,7 @@ inside the imported solution.
 
 ```
 branch    main
-commit    4d7ba4fc0a33f7593698f30eaa6cfb1d408724ce
+commit    23114e1563776dfd6ac1e920b6e3fd76d99c835f
 tag       v1.0.0, local only
 tree      clean
 history   fast-forward from claude/mission-feeding-eom-build-98fbsi
@@ -749,12 +749,12 @@ that commit, so the ZIP, the commit and the checksum describe one build.
 origin v1.0.0` is refused with HTTP 403 — this session's credentials permit
 pushing a branch and not creating a tag ref. The commit is on the remote;
 only the ref is missing. Recreate it with `git tag -a v1.0.0
-4d7ba4fc0a33f7593698f30eaa6cfb1d408724ce` from a session that can, or from the
+23114e1563776dfd6ac1e920b6e3fd76d99c835f` from a session that can, or from the
 GitHub releases UI. Nothing depends on it: the build takes any commit-ish.
 
 One caveat on the hash, stated rather than hidden: this file is inside the
 commit that follows the one it names, because a file cannot contain its own
-commit's hash. `d9368c4` is the commit the artifact was **built from** and is
+commit's hash. `23114e1` is the commit the artifact was **built from** and is
 the one to check the checksum against. The commit that records it is its child,
 and changes no file the ZIP is packed from — verified by rebuilding after this
 was written and confirming the checksum is byte-identical.
@@ -783,7 +783,7 @@ same tag always yields the same checksum. Version, commit and checksum describe
 the same build.
 
 ```
-commit   4d7ba4fc0a33f7593698f30eaa6cfb1d408724ce
+commit   23114e1563776dfd6ac1e920b6e3fd76d99c835f
 branch   main
 tag      v1.0.0 (local only — see below)
 ```
