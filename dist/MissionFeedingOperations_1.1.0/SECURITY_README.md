@@ -1,6 +1,6 @@
 # Security verification — Phase 5
 
-`scripts/prerelease_scan.py` returns **PASS**, 0 failures, 3 warnings. Below are
+`scripts/prerelease_scan.py` returns **PASS**, 0 failures, 4 warnings. Below are
 the checks the scanner cannot make, done by hand, plus what the warnings are.
 
 **This checks the PACKAGE. It says nothing about the tenant.** DLP, tenant
@@ -12,12 +12,12 @@ all deployment-side. **Import success is not authorisation to operate.**
 
 ```
 30 content rules + 11 manifest assertions + 7 required-artifact checks
-PASS — no blocking findings. 3 warning(s).
+PASS — no blocking findings. 4 warning(s).
 ```
 
 All 11 manifest assertions verified true against the repository.
 
-The three warnings are `IDN-01` on `configuration/security-mapping.sample.csv`
+Three of the warnings are `IDN-01` on `configuration/security-mapping.sample.csv`
 — placeholder accounts at `example.mil` in a file named `.sample`. They are
 warnings by design: the file exists to be loaded into a test tenant with
 `-IncludeSampleData`, and the scan's job is to make sure nobody forgets that.
@@ -40,7 +40,7 @@ unexplained one fails the scan as `EXC-01`.
 |---|---|---|
 | No commercial endpoint anywhere | PASS | zero matches for the commercial Power Apps, Flow, SharePoint, Power BI, Azure Websites or Graph hosts across every `.fx`, `.yaml`, `.json`, `.csv`, `.ps1`, `.xml` |
 | Cloud is DoD, not GCC High | PASS | `MF_App_Config.TenantCloud = UsGovDod`; `cloud.target: DOD` in the manifest |
-| Every environment-specific value is an environment variable | PASS | 18 variables, **every one with a blank default** |
+| Every environment-specific value is an environment variable | PASS | 24 variables, **every one with a blank default** |
 | No hardcoded destination | PASS | all four `Site_URL` blank; `URL-01` now watches `.dps.mil` as well as `.sharepoint.us` |
 | Connectors limited to the allowlist | **FIXED** | see below |
 | Each conditional connector degrades gracefully | PASS | every conditional entry declares a fallback, checked by test |

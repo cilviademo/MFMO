@@ -35,12 +35,12 @@ is not marked PROVISIONED BY BUILD happens outside the import.
 
 | Category | Count |
 |---|---|
-| PROVISIONED BY BUILD | 20 |
+| PROVISIONED BY BUILD | 26 |
 | CREATED BY DEPLOYMENT SCRIPT | 19 |
 | MUST ALREADY EXIST | 16 |
 | MANUAL .MIL CONFIGURATION | 7 |
 | OPTIONAL / FEATURE-GATED | 4 |
-| **Total** | **66** |
+| **Total** | **72** |
 
 **16 resources MUST ALREADY EXIST** and **7 require manual .mil configuration.** None of them is created by importing the package.
 
@@ -61,10 +61,16 @@ is not marked PROVISIONED BY BUILD happens outside the import.
 | Environment variable `MF_CurrentFiscalYear` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
 | Environment variable `MF_NotificationsEnabled` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
 | Environment variable `MF_EscalationDaysOverdue` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
+| Environment variable `MF_PilotSite_SiteURL` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
+| Environment variable `MF_InstallationList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
+| Environment variable `MF_FacilityList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
+| Environment variable `MF_NonDutyDayList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
+| Environment variable `MF_DestinationList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
+| Environment variable `MF_NotificationRuleList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
 | Environment variable `MF_StatusList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
 | Environment variable `MF_ConfigList` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
 | Environment variable `MF_TenantCloud` | Build team, at import | Declared by the package, **value blank**. Bound at import. |
-| Canvas app | Build team, at import | One root component. |
+| Canvas app | Build team, Path A | **NOT in Artifact 1** — deliberately. Created as a blank wrapper inside the imported solution, then filled by `scripts/assemble_full_solution.sh` and validated in Studio (`CANVAS_APP_ASSEMBLY.md`). One root component in the final export. |
 | Flow `EOM01ExpectedPackage` | Build team, at import | Imported **off**. Enable in the order in `docs/DEPLOYMENT.md`. |
 | Flow `EOM02Submission` | Build team, at import | Imported **off**. Enable in the order in `docs/DEPLOYMENT.md`. |
 | Flow `EOM02bLegacyIntake` | Build team, at import | Imported **off**. Enable in the order in `docs/DEPLOYMENT.md`. Deployed FOUR TIMES, once per site collection. |
@@ -124,7 +130,7 @@ is not marked PROVISIONED BY BUILD happens outside the import.
 | Environment variable `MF_Portfolio2_SiteURL` | Portfolio site administrator | Declared by the package, **value blank**. Bound at import. One of the four site collections. |
 | Environment variable `MF_Portfolio3_SiteURL` | Portfolio site administrator | Declared by the package, **value blank**. Bound at import. One of the four site collections. |
 | Environment variable `MF_Portfolio4_SiteURL` | Portfolio site administrator | Declared by the package, **value blank**. Bound at import. One of the four site collections. |
-| Connection reference `MF Ops - SharePoint` | Tenant administrator (DLP) + build team (connection) | New connectors are disabled by default in DoD until an administrator reviews them. Conditional connectors degrade gracefully — `security/connector-allowlist.yaml`. |
+| Connection reference `MF Ops - SharePoint` | Tenant administrator (DLP) + build team (connection) | Verify the connector is available and permitted by the environment's current DLP/data policy. DoD disables NEWLY INTRODUCED connectors by default until administrator review — do not infer the state of these long-published connectors from that policy. Conditional connectors degrade gracefully — `security/connector-allowlist.yaml`. |
 | Entra security groups for installation scope | SharePoint administrator + ISSM | The open data-layer issue. `docs/security-open-issue.md`. |
 | Permission assumption: end users cannot write `MF_EOM_Audit` directly | SharePoint administrator | Not enforced today. `audit_author_enforced_at_data_layer: false`. |
 
@@ -132,8 +138,8 @@ is not marked PROVISIONED BY BUILD happens outside the import.
 
 | Resource | Owner | Note |
 |---|---|---|
-| Connection reference `MF Ops - Office 365 Users` | Tenant administrator (DLP) + build team (connection) | New connectors are disabled by default in DoD until an administrator reviews them. Conditional connectors degrade gracefully — `security/connector-allowlist.yaml`. |
-| Connection reference `MF Ops - Outlook (notifications)` | Tenant administrator (DLP) + build team (connection) | New connectors are disabled by default in DoD until an administrator reviews them. Conditional connectors degrade gracefully — `security/connector-allowlist.yaml`. |
+| Connection reference `MF Ops - Office 365 Users` | Tenant administrator (DLP) + build team (connection) | Verify the connector is available and permitted by the environment's current DLP/data policy. DoD disables NEWLY INTRODUCED connectors by default until administrator review — do not infer the state of these long-published connectors from that policy. Conditional connectors degrade gracefully — `security/connector-allowlist.yaml`. |
+| Connection reference `MF Ops - Outlook (notifications)` | Tenant administrator (DLP) + build team (connection) | Verify the connector is available and permitted by the environment's current DLP/data policy. DoD disables NEWLY INTRODUCED connectors by default until administrator review — do not infer the state of these long-published connectors from that policy. Conditional connectors degrade gracefully — `security/connector-allowlist.yaml`. |
 | Power BI workspace and dataset for the COP | Build team + Power BI administrator | `MF_PowerBIReportURL` blank hides the COP button. The app is fully usable without it. |
 | Portfolio org boxes for notification delivery | Portfolio managers | Only needed if notifications are enabled. Six of eight rules ship disabled. |
 
@@ -173,7 +179,7 @@ output for two things:
    one means the site is not fresh and every column on that list needs checking.
 2. **Any column reported as "exists" that you did not expect.** The script
    compares on the internal name from
-   `provisioning/schema.generated.json`, so a column with a matching *display*
+   `provisioning/sharepoint-schema.json`, so a column with a matching *display*
    name and a different internal name is reported as **missing**, and the script
    would add a second column beside it. Two columns with the same display name
    is the visible symptom.
@@ -212,7 +218,7 @@ Three outcomes, in order of preference:
 
 **Never resolve this by editing `scripts/eom_schema.py` to match what is already
 on the site.** That would make the tenant the source of truth for a schema that
-17 lists, 286 columns, 5 flows and 12 screens are written against.
+17 lists, 286 columns, 5 flows and 16 screens are written against.
 
 ## What importing the ZIP does not do
 

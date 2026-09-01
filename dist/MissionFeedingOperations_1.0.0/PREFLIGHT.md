@@ -133,6 +133,7 @@ afternoon. It is now a `-Cloud` parameter defaulting to `USGovernmentDoD`.
 
 **Indexes are set by the script**, on `Reporting_Period`, `Installation_ID`,
 `Facility_ID`, `Requirement_ID` and `Status_Code`. Verify they exist after the
-run. SharePoint will not let you index a list past 5,000 items without admin
-help, and `MF EOM Item` crosses that inside the first year. It is the one thing
-in the whole sequence you genuinely cannot fix later.
+run. Past the 5,000-item List View Threshold, adding an index to a large list
+is restricted and painful, and `MF EOM Item` crosses that inside the first
+year. Treat index creation as before-data-only: plan on it not being fixable
+later rather than betting the pilot on an exception.

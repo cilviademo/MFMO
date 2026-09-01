@@ -71,7 +71,7 @@ cleanly and fails on the first real day.
 
 Read, in order:
 
-1. `deployment/DEPENDENCY_MANIFEST.md` — **66 destination-side resources.
+1. `deployment/DEPENDENCY_MANIFEST.md` — **72 destination-side resources.
    16 MUST ALREADY EXIST. Importing the ZIP creates none of them.**
 2. `deployment/site-bindings.md` — the four site collections, and the ten
    minutes of somebody's time that everything downstream depends on.
@@ -125,7 +125,7 @@ None of these is an incomplete build. Each is a decision.
 ## What is verified, and what is not
 
 ```
-536 unit tests                      OK  (239 behavioural / 157 structural / 140 policy)
+546 unit tests                      OK  (239 behavioural / 167 structural / 140 policy)
     solution validation             0 failures
     pre-release security scan       PASS, 4 warnings (each explained in the report)
     design parity gate              PASS (16 screens, 6 components, 19 tokens)
