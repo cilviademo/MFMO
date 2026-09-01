@@ -686,7 +686,7 @@ inside the imported solution.
 
 ```
 branch    main
-commit    c10bf0d0ff6021b029a936e2047e3f7f9b7baea5
+commit    4d7ba4fc0a33f7593698f30eaa6cfb1d408724ce
 tag       v1.0.0, local only
 tree      clean
 history   fast-forward from claude/mission-feeding-eom-build-98fbsi
@@ -702,7 +702,7 @@ that commit, so the ZIP, the commit and the checksum describe one build.
 origin v1.0.0` is refused with HTTP 403 — this session's credentials permit
 pushing a branch and not creating a tag ref. The commit is on the remote;
 only the ref is missing. Recreate it with `git tag -a v1.0.0
-c10bf0d0ff6021b029a936e2047e3f7f9b7baea5` from a session that can, or from the
+4d7ba4fc0a33f7593698f30eaa6cfb1d408724ce` from a session that can, or from the
 GitHub releases UI. Nothing depends on it: the build takes any commit-ish.
 
 One caveat on the hash, stated rather than hidden: this file is inside the
@@ -736,7 +736,7 @@ same tag always yields the same checksum. Version, commit and checksum describe
 the same build.
 
 ```
-commit   c10bf0d0ff6021b029a936e2047e3f7f9b7baea5
+commit   4d7ba4fc0a33f7593698f30eaa6cfb1d408724ce
 branch   main
 tag      v1.0.0 (local only — see below)
 ```

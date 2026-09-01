@@ -6,6 +6,18 @@ validation open. Three paths, best first.
 
 ---
 
+## Step 0 — environment prerequisites (fail here, not halfway through)
+
+Confirm every one of these BEFORE starting Path A. A prerequisite discovered
+mid-assembly costs a re-export; discovered here it costs a minute.
+
+- [ ] The **DoD** Power Platform environment is selected (`make.apps.appsplatform.us`), and it permits creating a canvas app inside a solution.
+- [ ] You hold Maker + solution import/export permissions there, and Power Apps Studio opens.
+- [ ] The SharePoint schema is provisioned: **17 lists**, indexes verified **before any data** (`scripts/verify_provisioning.py`).
+- [ ] The 3 connection references can be created/bound in this environment.
+- [ ] The assembly workstation has the **Power Platform CLI, version 2.11.2** — the version this pipeline was proven on. A different version refuses to run unless `PAC_ALLOW_VERSION_DRIFT=1` is set *after* the canvas round-trip suite passes on it. Canvas pack/unpack is a preview surface; this is a controlled bootstrap, not an assumption of permanent API stability.
+- [ ] Python dev dependencies installed: `pip install -r requirements-dev.txt`.
+
 ## Path A — assemble against your own export (~15 minutes, recommended)
 
 1. Import `MissionFeedingOperations_1.0.0.zip` (Artifact 1).
@@ -14,23 +26,38 @@ validation open. Three paths, best first.
    sources listed in step 2 of Path C below** — your environment then mints the
    real SharePoint data-source metadata and the assembled app opens with
    sources already bound. Save. Do not build anything.
-3. **Export the solution** (unmanaged).
-4. On a machine with the Power Platform CLI:
+3. **Bump the solution version to `1.1.0`** (solution → settings → version).
+   The assembler reads the version from `Solution.xml` and refuses a mismatch
+   rather than rewriting platform identity metadata.
+4. **Export the solution** (unmanaged).
+5. On a machine with the Power Platform CLI (2.11.2):
 
        scripts/assemble_full_solution.sh <your-export>.zip
 
-   It unpacks *your* app with `pac canvas unpack`, keeps **your identity and
-   your environment's scaffolding**, swaps in this repository's 16 screens,
-   6 components and 1,800+ formulas, re-packs with `pac canvas pack`, puts the
-   app back into *your* export, and validates the result structurally
-   (`validate_solution.py --export`). Nothing in the output is fabricated:
-   wrapper and identity are the platform's, scaffolding is Studio's, content
-   is this repository's, assembly is Microsoft's packer.
-5. Import the assembled `MissionFeedingOperations_1.1.0.zip`.
-6. **Open the app for edit once.** Microsoft's packer states on every run that
+   Nine gates, each fail-closed: pinned CLI version; exactly one canvas app
+   (or `MF_EXPECTED_APP` names it — the first match alphabetically is never
+   silently chosen); **all 19 data sources present in your wrapper, by name**
+   — the point of Path A is an already-bound app, so a missing source stops
+   the build and names itself; the environment-minted flow reference matches
+   `EOM02_Submission` (a mismatch stops with instructions to update the
+   *repository* source in a deliberate commit — the built app is never
+   patched); unpack verified; pack verified **and the app's bytes must
+   actually change**; internal solution version equals the release version;
+   structural validation; a full archive leak sweep. Nothing in the output is
+   fabricated: wrapper and identity are the platform's, scaffolding is
+   Studio's, content is this repository's, assembly is Microsoft's packer.
+6. Import the assembled `MissionFeedingOperations_1.1.0.zip` — this is the
+   release **candidate**, not yet the release.
+7. **Open the app for edit once.** Microsoft's packer states on every run that
    a SourceCode-packed app is validated by that open. Add any data source
-   still missing, save, **publish**, and **re-export** — the re-export is the
-   final, permanent artifact. No further Studio work, ever.
+   still missing, resolve zero errors, run the **Accessibility Checker**,
+   save, **publish**, and **re-export** — **the platform's re-export is the
+   canonical Canvas-inclusive artifact**, stronger evidence than anything
+   assembled locally. Then promote it:
+
+       scripts/validate_final_export.sh <re-exported>.zip
+
+   No further Studio work, ever.
 
 This path was dry-run end to end here — unpack, swap, pack, re-zip,
 validate: 16 screens, 5 workflows, no literal URLs — against a simulated
@@ -38,7 +65,8 @@ export. Your export differs only in being real.
 
 ## Path B — the pre-built .msapp (already built, not Studio-validated)
 
-`scripts/build_msapp.py` builds `dist/canvas/MissionFeedingOperations.msapp`
+`scripts/build_msapp.py` builds
+`dist/canvas/MissionFeedingOperations_REFERENCE_ONLY.msapp`
 from the same source, using a genuine Studio-built donor app for format
 scaffolding (see `canvas-app/donor/README.md`), neutralised entry by entry —
 the build **fails** if a single commercial-cloud string survives. It
@@ -234,9 +262,18 @@ pac canvas unpack --msapp ./unpacked/CanvasApps/*.msapp --sources ./exported-src
 diff -r ./exported-src/Src canvas-app/src
 ```
 
-**Where they disagree, the export wins and the repository is updated in a
-commit.** Studio normalises formulas, and a repository that quietly disagrees
-with the shipped app is how the next round starts from a wrong premise.
+**Classify every difference before the repository changes.**
+
+| Class | Examples | Action |
+|---|---|---|
+| Normalisation-only | formatting, ordering, Studio-generated IDs, whitespace | reconcile into the repository automatically where safe |
+| **Semantic** | a formula changed, a control removed, a property value changed, a data source changed, screen behaviour changed | **explicit review before the repository is touched** |
+
+Studio normalisation keeping the repository honest is the goal; Studio
+silently destroying a correct repository implementation is the failure mode.
+A repository that quietly disagrees with the shipped app is how the next
+round starts from a wrong premise — but so is an export blindly overwriting
+a deliberate fix.
 
 From then on `scripts/build_canvas.sh` can rebuild the `.msapp` from this
 repository against that app as the seed, and no further Studio session is
