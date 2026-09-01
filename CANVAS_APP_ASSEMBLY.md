@@ -1,5 +1,55 @@
 # Canvas app assembly
 
+## Why there is no .msapp in the ZIP — the actual reason
+
+This was previously stated as a judgement call: I was not confident a
+hand-authored `.msapp` would open. That was true but incomplete. The real
+answer is architectural, and it is now verified against **Microsoft's own
+Power Platform CLI 2.11.2** run against this source tree:
+
+**`pac canvas pack` cannot originate an app from YAML. Both layouts require a
+seed artifact that only Studio or an authenticated environment can mint.**
+
+| Layout | What it requires | Verified |
+|---|---|---|
+| `SourceCode` | **Exactly one `.msapr` file** in the sources directory. The `.pa.yaml` files are an *edit layer* over that archive. | The packer's own assertion: *"Call to ValidateSources should've ensured the sources directory contains exactly one .msapr file."* With a `.msapr` present it proceeds to pack; without one it fails validation. |
+| `Experimental` | The full PAModel tree — `CanvasManifest.json`, `Controls/*.json`, `Entropy/`, `Checksum.json` — where the **control tree lives in JSON, not in the YAML**. | `pac canvas pack --layout Experimental` on a YAML-only tree: *"The sources directory is invalid."* |
+
+So the missing piece is not effort and not skill. A canvas app's control
+identities live in a binary archive, and the YAML edits them; there is no
+supported path from YAML alone to a new app. Anyone claiming to have produced
+one from source has either had a seed app or has hand-forged an archive that
+Studio will validate on open — and if it fails, the error names an internal
+file and explains nothing.
+
+**`scripts/build_canvas.sh` is the bridge.** Give it a seed app id in the
+target environment and it downloads, unpacks, overlays every screen and
+component from this repository, and packs. One command, then import the
+`.msapp` into the solution.
+
+## What IS verified about the canvas source
+
+All **1,300 formulas across 20 files parse under Microsoft.PowerFx**, the same
+engine Studio uses — run via `pac power-fx run`, reproducible with
+`PAC=<path> python3 scripts/check_powerfx.py`.
+
+```
+Power Fx syntax check — 1300 formulas from 20 files
+  binding diagnostics ignored: 2000
+No syntax errors. Every formula parses under Microsoft.PowerFx.
+```
+
+The 2,000 ignored diagnostics are all one thing: nothing is connected here, so
+every SharePoint source, every named formula from the `.fx` files, and every
+canvas-host function (`Navigate`, `Back`, `User`, `Defaults`) is out of scope.
+Those say nothing about whether a formula is written correctly. A **syntax**
+error would be wrong on any machine, and there are none.
+
+This is a parse result, not a runtime one. It does not tell you a formula
+returns the right answer against real data.
+
+---
+
 **The app is not in the solution ZIP, and there is no placeholder for one.**
 
 You build it in Power Apps Studio, **inside the already-imported solution**. It

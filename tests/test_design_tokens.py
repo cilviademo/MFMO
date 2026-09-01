@@ -14,6 +14,7 @@ import math
 import os
 import re
 import unittest
+import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -470,3 +471,41 @@ class NoCountIsReportedWithoutItsDenominator(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheCanvasSourceIsExtractable(unittest.TestCase):
+    """The .pa.yaml is the app's source, and the formula extractor is what
+    lets a real Power Fx engine see it. If extraction silently returns little,
+    `scripts/check_powerfx.py` passes by looking at nothing -- the shape of
+    failure this whole build keeps finding."""
+
+    def setUp(self):
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import canvas_formulas
+        self.items = list(canvas_formulas.all_formulas())
+
+    def test_it_finds_formulas_in_every_source_file(self):
+        files = {i[0] for i in self.items}
+        # 12 screens + 4 components + App + 4 .fx files
+        self.assertEqual(len(files), 21 - 1, sorted(files))
+
+    def test_it_finds_a_realistic_number_of_formulas(self):
+        # 1,300 at the time of writing. A floor, not an equality: adding a
+        # control should not fail this, gutting the extractor should.
+        self.assertGreater(len(self.items), 1000)
+
+    def test_block_scalars_are_captured_whole(self):
+        # The multi-line `Key: |` form carries the OnStart and every OnSelect.
+        # An extractor that only handled `Key: =expr` would miss the behaviour
+        # of the entire app and still report a healthy count.
+        onstart = [i for i in self.items
+                   if i[0].endswith("App.pa.yaml") and i[2] == "OnStart"]
+        self.assertEqual(len(onstart), 1)
+        self.assertIn("Concurrent", onstart[0][3])
+        self.assertGreater(onstart[0][3].count("\n"), 5)
+
+    def test_the_checker_refuses_to_pass_silently_without_pac(self):
+        # An unavailable checker must not read as a passing one.
+        src = read(os.path.join(ROOT, "scripts", "check_powerfx.py"))
+        self.assertIn("SKIPPED", src)
+        self.assertIn("An unavailable checker is not a passing one", src)

@@ -73,6 +73,7 @@ CLASSIFICATION = {
         "NothingTheAdminOwnsIsHardcoded":   (P, "the five admin-owned values stay in configuration"),
         "ColourIsNeverTheOnlyChannel":      (P, "accessibility ruling: text and icon accompany colour"),
         "NoCountIsReportedWithoutItsDenominator": (P, "the reporting ruling stays applied"),
+        "TheCanvasSourceIsExtractable":     (B, "the extractor run over the real source, block scalars included"),
     },
     "test_flow_expression": {
         "TheInterpreterIsStrict":        (B, "the interpreter itself tested on cases with known answers"),

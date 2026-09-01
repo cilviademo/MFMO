@@ -486,7 +486,7 @@ class ImportChecklistIsSequenced(unittest.TestCase):
         "Import the solution ZIP",
         "Bind the connection reference and all 24 environment variables",
         "Duplicate EOM-02b three times",
-        "Build the canvas app in Studio",
+        "Build the canvas app",
         "Enable EOM-01 only, and run it twice",
     ]
 

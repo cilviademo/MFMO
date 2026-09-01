@@ -153,13 +153,37 @@ three portfolios with nothing to report.
 
 ---
 
-## 8. Build the canvas app in Studio
+## 8. Build the canvas app
 
-The ZIP contains no `.msapp`. That is deliberate — see `KNOWN_LIMITATIONS.md`.
+The ZIP contains no `.msapp`, and the reason is architectural rather than a
+judgement call: **`pac canvas pack` cannot originate an app from YAML.** Both
+of its layouts need a seed artifact that only Studio or an authenticated
+environment can mint. `CANVAS_APP_ASSEMBLY.md` shows the CLI output proving it.
 
-- [ ] Follow `CANVAS_APP_ASSEMBLY.md`. Paste the formula files in the order it
-      gives: App.Formulas, StatusEngine, Delegation, Cascade. Later files
-      reference earlier ones.
+The source is complete and real: 12 screens, 4 components, 4 formula files,
+**1,300 formulas, all of which parse under Microsoft's own Power Fx engine.**
+What is missing is the seed, and you can make one in a minute.
+
+- [ ] In the target environment, create a **blank canvas app** named
+      `Mission Feeding Operations` and save it. That is the seed.
+- [ ] Install the Power Platform CLI on a machine that can reach the
+      environment, then:
+
+      pac auth create --environment <url> --cloud UsGovDod
+      pac canvas list                       # find the seed app id
+      scripts/build_canvas.sh <app-id> MissionFeedingOperations.msapp
+
+      This downloads the seed, overlays every screen and component from the
+      repository, and packs a real `.msapp`.
+- [ ] **Open the packed app for edit in Studio before doing anything else.**
+      Microsoft's packer prints this warning itself; a SourceCode-packed app is
+      not considered validated until Studio has opened it.
+- [ ] Add the `.msapp` to the solution, then re-export the solution so the ZIP
+      carries the app, the flows and the bindings together.
+
+If the CLI is not available on the network, fall back to pasting the formula
+files in Studio in this order — App.Formulas, StatusEngine, Delegation,
+Cascade — because later files reference earlier ones.
 
 **Verify:** the app opens, `gblSchemaMatches` is true, and no delegation
 warning appears on any gallery.

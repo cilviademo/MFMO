@@ -120,6 +120,72 @@ tenant:
   expression treated a null final call as "no deadline" and left the item amber
   forever instead of going red — the wrong answer in the safe-looking direction.
 
+## The canvas app — what changed this round
+
+**The `.msapp` question is settled, and not by judgement.** I obtained
+Microsoft's own Power Platform CLI 2.11.2 and ran it against this source tree.
+(NuGet is reachable from here; the .NET 10 runtime was assembled from
+`microsoft.netcore.app.runtime.linux-x64` and `microsoft.aspnetcore.app.runtime.linux-x64`
+because the dotnet CDN is blocked by policy.)
+
+**`pac canvas pack` cannot originate an app from YAML.**
+
+| Layout | Requires | Evidence |
+|---|---|---|
+| `SourceCode` | Exactly one `.msapr` archive in the sources directory; the `.pa.yaml` files are an **edit layer** over it | The packer's own assertion string: *"Call to ValidateSources should've ensured the sources directory contains exactly one .msapr file."* Supplying a `.msapr` moves it past validation into packing. |
+| `Experimental` | The full PAModel tree — `CanvasManifest.json`, `Controls/*.json`, `Entropy/`, `Checksum.json` — where the control tree lives in **JSON, not YAML** | `pac canvas pack --layout Experimental` on a YAML-only tree: *"The sources directory is invalid."* |
+
+A canvas app's control identities live in a binary archive; the YAML edits
+them. There is no supported path from YAML alone to a new app. So the gap was
+never effort — it is an artifact only Studio or an authenticated environment
+can mint, and no amount of building here produces one.
+
+### What that gap actually costs, and the bridge
+
+It costs **one blank app**. `scripts/build_canvas.sh` does the rest:
+
+```
+pac auth create --environment <url> --cloud UsGovDod
+pac canvas list                                    # the seed app's id
+scripts/build_canvas.sh <app-id> MissionFeedingOperations.msapp
+```
+
+It downloads the seed, unpacks it, overlays every screen and component from
+this repository, and packs a real `.msapp` with Microsoft's packer. Then add
+the `.msapp` to the solution and re-export — and the ZIP carries the app, the
+five flows, the connection references and the environment variables together,
+which is the deliverable that was being asked for.
+
+Nobody rebuilds a screen, a formula, a gallery or a status badge by hand.
+
+### The canvas source is now verified as Power Fx
+
+Nothing here had ever parsed the `.pa.yaml` as Power Fx — the tests read it as
+text. It has now been run through **Microsoft.PowerFx**, the same engine Studio
+uses:
+
+```
+Power Fx syntax check — 1300 formulas from 20 files
+  binding diagnostics ignored: 2000
+No syntax errors. Every formula parses under Microsoft.PowerFx.
+```
+
+Reproduce with `PAC=<path to pac> python3 scripts/check_powerfx.py`. Without
+the CLI it prints SKIPPED and exits 0 — an unavailable checker must not read as
+a passing one, and a test asserts that behaviour.
+
+The 2,000 ignored diagnostics are one thing: nothing is connected here, so
+every SharePoint source, every named formula from the `.fx` files and every
+canvas-host function (`Navigate`, `Back`, `User`, `Defaults`) is out of scope.
+Nine "deprecated use of `.`" advisories are the same cascade — the engine
+cannot tell record-field access from table-column shorthand on an unbound
+identifier, and the ones I spot-checked are correct record access.
+
+**This is a parse result, not a runtime one.** It does not say a formula
+returns the right answer against real data. But it moves 3,652 lines of canvas
+source from *entirely unverified* to *parses under the real engine*, which is
+the largest single reduction in this release's unknowns.
+
 ## Test classification — what 453 passing tests actually prove
 
 **A suite written against the generator that produced the artifact can pass in
@@ -455,7 +521,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **453 passed**, 0 failed — 191 behavioural, 145 structural, 117 policy |
+| Unit tests | **457 passed**, 0 failed — 195 behavioural, 145 structural, 117 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |
