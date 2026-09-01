@@ -125,7 +125,7 @@ None of these is an incomplete build. Each is a decision.
 ## What is verified, and what is not
 
 ```
-536 unit tests                      OK  (239 behavioural / 157 structural / 140 policy)
+546 unit tests                      OK  (239 behavioural / 167 structural / 140 policy)
     solution validation             0 failures
     pre-release security scan       PASS, 4 warnings (each explained in the report)
     design parity gate              PASS (16 screens, 6 components, 19 tokens)

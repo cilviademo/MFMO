@@ -12,7 +12,10 @@ Confirm every one of these BEFORE starting Path A. A prerequisite discovered
 mid-assembly costs a re-export; discovered here it costs a minute.
 
 - [ ] The **DoD** Power Platform environment is selected (`make.apps.appsplatform.us`), and it permits creating a canvas app inside a solution.
-- [ ] You hold Maker + solution import/export permissions there, and Power Apps Studio opens.
+- [ ] The environment has a **Dataverse database**. Creating a canvas app *inside a solution* requires one — an environment without Dataverse fails at step 1 with an error that does not name this cause.
+- [ ] You hold **Environment Maker** (or equivalent authoring) privileges plus solution import/export, and Power Apps Studio opens.
+- [ ] Pilot users are planned a Dataverse security role carrying **Read on the Process (Workflow) table** — a user invoking a flow from a solution-contained canvas app needs it, and without it the app opens perfectly, galleries load, and only Submit fails. Budget this check now, not during that debugging session.
+- [ ] Each pilot user's assigned DoD Microsoft 365 SKU includes **Power Apps for Microsoft 365** or an equivalent canvas-app entitlement (see the licensing note after publish).
 - [ ] The SharePoint schema is provisioned: **17 lists**, indexes verified **before any data** (`scripts/verify_provisioning.py`).
 - [ ] The 3 connection references can be created/bound in this environment.
 - [ ] The assembly workstation has the **Power Platform CLI, version 2.11.2** — the version this pipeline was proven on. A different version refuses to run unless `PAC_ALLOW_VERSION_DRIFT=1` is set *after* the canvas round-trip suite passes on it. Canvas pack/unpack is a preview surface; this is a controlled bootstrap, not an assumption of permanent API stability.
@@ -92,6 +95,18 @@ release exactly as a failing test would.
 - **Zero external fetches** — the app renders with no missing-image
   placeholders and no font fallback flash; it depends on nothing outside
   its data sources.
+- **Delegation review** — no unexplained delegation warning (the blue
+  underline) on any query against the six lists that grow past 2,000 rows:
+  `MF EOM Item`, `MF EOM Submission`, `MF EOM Status`, `MF App Event Log`,
+  `MF Security Mapping`, `MF EOM Audit`. A nondelegable query silently
+  operates on only the first 500–2,000 records and returns wrong answers
+  that look right. The local analyzer approximates this; **Studio's
+  warnings are the authority**, and the two predicates the local audit
+  reports NOT VERIFIABLE LOCALLY are exactly what to look at first.
+- **Live Monitor smoke run** — open Monitor against the app and walk
+  startup → My Package → Submit → EOM-02 → status refresh. Look for 403,
+  404, 429, connector errors, whole-list retrievals, and slow requests.
+  This catches what no static inspection of the ZIP can.
 
 Record the outcome (a sentence per line above is enough) in the import
 worksheet or the PR that promotes the re-export. Post-publish screenshots,
@@ -309,9 +324,25 @@ permission error that looks like a broken app.
    empty galleries and failing patches.
 
 Licensing note: every connector in this solution is **standard**
-(SharePoint, Office 365 Users, Outlook), so pilot users need only the
-base Microsoft 365 licence in the DoD tenant — no premium Power Apps
-licence, by design. Keep it that way; the connector allowlist enforces it.
+(SharePoint, Office 365 Users, Outlook) — the solution is deliberately
+designed to avoid premium connector requirements, and the connector
+allowlist enforces that. Whether a given pilot user's assigned DoD
+Microsoft 365 SKU actually carries the **Power Apps for Microsoft 365**
+entitlement is a tenant licensing question: confirm it per user before
+onboarding rather than assuming the base licence includes it.
+
+One identity distinction to keep straight, because it decides what your
+permission tests must cover: the three **connection references govern the
+flows** — EOM-02 writes as the configured service identity, uniformly.
+The canvas app's **direct SharePoint reads and writes run as the signed-in
+user**, under that user's own SharePoint permissions — the SharePoint
+connection is not shareable, and sharing the app grants nothing in
+SharePoint. So the pilot permission test is not "do the Power Fx filters
+hide other installations" — it is: a base user opens the app, **cannot
+retrieve another installation's protected data, and cannot browse or edit
+lists beyond their intended SharePoint permissions**, tested against
+SharePoint itself. `docs/security-open-issue.md` remains OPEN precisely
+because the data layer is the boundary that has to hold.
 
 ---
 
@@ -319,8 +350,26 @@ licence, by design. Keep it that way; the connector allowlist enforces it.
 
 Solution → **Export** → **unmanaged**, then again as **managed**.
 
-Both ZIPs go to the release step. The unmanaged one is the DEV/PILOT artifact;
-the managed one is what a later production environment would take.
+Both ZIPs go to the release step, and the words matter: **unmanaged** is for
+the development environment where this app is still being authored and
+normalised — which is what "pilot" means while the pilot runs there.
+**Managed** is what any separate controlled TEST/UAT environment and any
+future production environment take. If the pilot moves to its own
+environment, it moves as managed.
+
+After the re-export passes `scripts/validate_final_export.sh`, run
+**Microsoft's own static analysis** against it before import:
+
+    pac solution check --path <re-export>.zip \
+        --geo <your region>   # DoD tenants use the DoD checker endpoint,
+                              # mil.api.advisor.appsplatform.us
+
+Checker success does not guarantee import success — Microsoft says so
+itself — but it is an independent Microsoft analysis of the same artifact
+this repository's own validators inspect, which is exactly the point: the
+author and the validator should not always be the same codebase. In a
+Managed Environment with checker enforcement, critical findings can block
+the import outright; better to meet them here.
 
 **This is the moment the app stops being Studio work.** From here the ZIP
 carries it.

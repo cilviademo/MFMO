@@ -1,0 +1,118 @@
+{
+  "_instructions": "Copy to deployment-settings.dod.json (NEVER committed - the repository is public), fill every Value and ConnectionId on the .mil side, then import with: pac solution import --path MissionFeedingOperations_1.0.0.zip --settings-file deployment-settings.dod.json. deployment/site-bindings.md is the worksheet the values come from.",
+  "EnvironmentVariables": [
+    {
+      "SchemaName": "mfops_MF_SharePointSiteURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_Portfolio1_SiteURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_Portfolio2_SiteURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_Portfolio3_SiteURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_Portfolio4_SiteURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_PilotSite_SiteURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_RequirementList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_ItemList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_SubmissionList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_UnmatchedList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_SecurityList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_AuditList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_PowerBIReportURL",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_CurrentFiscalYear",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_NotificationsEnabled",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_EscalationDaysOverdue",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_StatusList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_ConfigList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_InstallationList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_FacilityList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_NonDutyDayList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_DestinationList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_NotificationRuleList",
+      "Value": ""
+    },
+    {
+      "SchemaName": "mfops_MF_TenantCloud",
+      "Value": ""
+    }
+  ],
+  "ConnectionReferences": [
+    {
+      "LogicalName": "mfops_sharepointonline",
+      "ConnectionId": "",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+    },
+    {
+      "LogicalName": "mfops_office365users",
+      "ConnectionId": "",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_office365users"
+    },
+    {
+      "LogicalName": "mfops_office365",
+      "ConnectionId": "",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+    }
+  ]
+}

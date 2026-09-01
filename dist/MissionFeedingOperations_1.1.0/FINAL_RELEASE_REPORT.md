@@ -51,10 +51,11 @@ columns (`Destination_ID`, `Needs_Filing`, `Is_Pilot`), the idempotency key
 filters on; and `MF_Security_Mapping` 2 → 8, because scope resolution runs on
 every screen load and `Expires_Date` is what makes access actually stop working.
 
-**47 of the 90 sit on the six lists that cross 5,000 rows**, where SharePoint
-refuses to add an index afterwards. The other 43 are on lists that stay small
+**47 of the 90 sit on the six lists that cross 5,000 rows** — the List View
+Threshold, past which adding an index to a large list is restricted and not
+to be counted on. The other 43 are on lists that stay small
 and are precautionary: a spare index costs a little write overhead, a missing
-one on a list that unexpectedly grows cannot be fixed at all.
+one on a list that unexpectedly grows may not be addable when you need it.
 
 ## The four pre-release warnings
 

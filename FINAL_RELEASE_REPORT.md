@@ -51,10 +51,11 @@ columns (`Destination_ID`, `Needs_Filing`, `Is_Pilot`), the idempotency key
 filters on; and `MF_Security_Mapping` 2 → 8, because scope resolution runs on
 every screen load and `Expires_Date` is what makes access actually stop working.
 
-**47 of the 90 sit on the six lists that cross 5,000 rows**, where SharePoint
-refuses to add an index afterwards. The other 43 are on lists that stay small
+**47 of the 90 sit on the six lists that cross 5,000 rows** — the List View
+Threshold, past which adding an index to a large list is restricted and not
+to be counted on. The other 43 are on lists that stay small
 and are precautionary: a spare index costs a little write overhead, a missing
-one on a list that unexpectedly grows cannot be fixed at all.
+one on a list that unexpectedly grows may not be addable when you need it.
 
 ## The four pre-release warnings
 
@@ -481,7 +482,7 @@ returns the right answer against real data. But it moves 3,652 lines of canvas
 source from *entirely unverified* to *parses under the real engine*, which is
 the largest single reduction in this release's unknowns.
 
-## Test classification — what 536 passing tests actually prove
+## Test classification — what 546 passing tests actually prove
 
 **A suite written against the generator that produced the artifact can pass in
 full while the tests and the generator share one wrong premise.** Counting tests
@@ -492,10 +493,10 @@ fails the release gate — a new test cannot join the total unlabelled.
 
 | Kind | Tests | Share | What a pass means |
 |---|---:|---:|---|
-| **BEHAVIOURAL** | 239 | 44% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
-| **STRUCTURAL** | 157 | 29% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
-| **POLICY** | 140 | 26% | A settled decision stays applied. These outlive the decisions they encode. |
-| **TOTAL** | **536** | | |
+| **BEHAVIOURAL** | 239 | 43% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
+| **STRUCTURAL** | 167 | 30% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
+| **POLICY** | 140 | 25% | A settled decision stays applied. These outlive the decisions they encode. |
+| **TOTAL** | **546** | | |
 
 ### Three POLICY tests encoded the decision this round reversed
 
@@ -816,7 +817,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **536 passed**, 0 failed — 239 behavioural, 157 structural, 140 policy |
+| Unit tests | **546 passed**, 0 failed — 239 behavioural, 167 structural, 140 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |

@@ -1,8 +1,13 @@
-# Import checklist — 1.0.0
+# Import checklist — RELEASE V1
+
+Covers the whole arc: Artifact 1 (the 1.0.0 backend) through the Path A canvas candidate (1.1.0). The V1 label wraps both — see `RELEASE_NOTES.md`.
 
 **Do these in order and stop at the first unchecked box.** The order is not a
-preference. Indexes cannot be added after a list passes 5,000 items, and every
-step below that one assumes the lists exist and are shaped correctly.
+preference. SharePoint's 5,000-item List View Threshold makes bad indexing
+choices operationally painful and can restrict index creation on large
+lists, and every step below the provisioning one assumes the lists exist
+and are shaped correctly. Provision and VERIFY every intended index before
+loading data rather than relying on later index creation.
 
 Every box is something the import cannot do for you.
 
@@ -46,8 +51,9 @@ kept for environments that have it; it is not the route here.
 
 ## 2. Verify the indexes — before any data is loaded
 
-**This is the one step that cannot be repaired later.** SharePoint refuses to
-add an index once a list passes 5,000 items, and `MF_EOM_Item` passes 5,000 in
+**This is the step you least want to repair later.** Past the 5,000-item List
+View Threshold, index creation on a large list is restricted and slow at
+best — plan on it not working rather than on it working. `MF_EOM_Item` passes 5,000 in
 the first quarter of use.
 
 - [ ] Open **List settings → Indexed columns** on each of the 17 lists and

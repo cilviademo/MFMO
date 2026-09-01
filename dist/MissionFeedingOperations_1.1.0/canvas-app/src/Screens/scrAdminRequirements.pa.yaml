@@ -1,0 +1,249 @@
+# =============================================================================
+# scrAdminRequirements — the requirement catalogue.
+#
+# Requirements are configuration, not code. There is no 'if Legacy then require
+# 1119' anywhere in the app; changing a requirement next year is a list edit.
+#
+# This is also where a requirement stops being provisional. All twelve seeded
+# rows are UNVERIFIED, so none of them can currently drive an adverse status.
+# Verifying one is a deliberate act with a named authority behind it, and it
+# changes how every base's tile behaves — so it is recorded and attributed.
+#
+# Authority and governance detail lives HERE rather than in the facility-facing
+# screens: a DFAC manager needs to know a requirement is provisional, not to
+# read the whole citation debate.
+#
+# There is no colour picker on this screen. There is no colour picker anywhere.
+# =============================================================================
+
+Screens:
+  scrAdminRequirements:
+    Properties:
+      Fill: =clrSurfaceAlt
+      OnVisible: =Set(locReq, Blank()); Set(locReqError, "")
+
+    Children:
+      - conRoot:
+          Control: GroupContainer
+          Variant: verticalAutoLayoutContainer
+          Properties:
+            Width: =Parent.Width
+            Height: =Parent.Height
+            TabIndex: =-1
+          Children:
+            - conHeader:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  LayoutAlignItems: =LayoutAlignItems.Center
+                  LayoutGap: =12
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =12
+                  PaddingBottom: =12
+                  Fill: =clrSurface
+                  TabIndex: =-1
+                Children:
+                  - btnBack:
+                      Control: Button
+                      Variant: Subtle
+                      Properties:
+                        Text: ="Back"
+                        AccessibleLabel: ="Back to home"
+                        OnSelect: =Back(ScreenTransition.None)
+                        TabIndex: =0
+                  - lblTitle:
+                      Control: Text
+                      Variant: Subtitle
+                      Properties:
+                        Text: ="Requirements"
+                        TabIndex: =-1
+
+            - conBody:
+                Control: GroupContainer
+                Variant: horizontalAutoLayoutContainer
+                Properties:
+                  FillPortions: =1
+                  LayoutWrap: =true
+                  LayoutGap: =16
+                  PaddingLeft: =20
+                  PaddingRight: =20
+                  PaddingTop: =16
+                  PaddingBottom: =16
+                  TabIndex: =-1
+                Children:
+
+                  - conList:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =300
+                        LayoutGap: =8
+                        TabIndex: =-1
+                      Children:
+                        - lblProvisionalCount:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: |
+                                =With(
+                                    { n: CountRows(Filter('MF EOM Requirement', Authority_Status = "UNVERIFIED")) },
+                                    Text(n) & " of " & Text(CountRows('MF EOM Requirement')) &
+                                    " requirements are provisional. A provisional requirement generates its checklist row and can be filed against, but it never drives an adverse status and the action sits with the programme."
+                                )
+                              Color: =clrText
+                              AutoHeight: =true
+                              TabIndex: =-1
+
+                        - galRequirements:
+                            Control: Gallery
+                            Variant: verticalGallery
+                            Properties:
+                              Items: =SortByColumns('MF EOM Requirement', "Sort_Order", SortOrder.Ascending)
+                              TemplateSize: =84
+                              AccessibleLabel: ="Requirement catalogue"
+                              TabIndex: =0
+                            Children:
+                              - conReqRow:
+                                  Control: GroupContainer
+                                  Variant: verticalAutoLayoutContainer
+                                  Properties:
+                                    LayoutGap: =2
+                                    PaddingTop: =8
+                                    PaddingBottom: =8
+                                    TabIndex: =-1
+                                  Children:
+                                    - lblReqName:
+                                        Control: Text
+                                        Variant: Body
+                                        Properties:
+                                          Text: =ThisItem.Document_Code & " - " & ThisItem.Document_Name
+                                          FontWeight: =FontWeight.Semibold
+                                          AutoHeight: =true
+                                          TabIndex: =-1
+                                    - lblReqMeta:
+                                        Control: Text
+                                        Variant: Caption
+                                        Properties:
+                                          Text: |
+                                            =ThisItem.Applicable_Model & " - " & ThisItem.Requirement_Scope & " scope - " &
+                                             ThisItem.Frequency & " - due day " & ThisItem.Due_Day & " - " &
+                                             ThisItem.Authority_Status &
+                                             If(ThisItem.Active_Flag, "", " - INACTIVE")
+                                          Color: =clrTextSecondary
+                                          AutoHeight: =true
+                                          TabIndex: =-1
+                                    - btnOpenReq:
+                                        Control: Button
+                                        Variant: Secondary
+                                        Properties:
+                                          Text: ="Open"
+                                          AccessibleLabel: ="Open " & ThisItem.Requirement_ID & " " & ThisItem.Document_Name
+                                          OnSelect: =Set(locReq, ThisItem); Set(locAuthority, ThisItem.Authority_Reference); SetFocus(lblReqHeading)
+                                          TabIndex: =0
+
+                        - emptyRequirements:
+                            Control: Component
+                            ComponentName: cmpEmptyState
+                            Properties:
+                              # The catalogue is seeded, so empty here means the
+                              # list did not load — which looks identical to
+                              # "no requirements exist" without this.
+                              Visible: =CountRows(galRequirements.AllItems) = 0
+                              Title: ="The requirement catalogue is empty"
+                              Body: ="Thirteen requirements are seeded at provisioning, eight of them active. An empty catalogue means the list did not load or was never seeded. Do not add requirements here to work around it."
+
+                  - conDetail:
+                      Control: GroupContainer
+                      Variant: verticalAutoLayoutContainer
+                      Properties:
+                        FillPortions: =1
+                        LayoutMinWidth: =320
+                        LayoutGap: =12
+                        PaddingLeft: =16
+                        PaddingRight: =16
+                        PaddingTop: =16
+                        PaddingBottom: =16
+                        Fill: =clrSurface
+                        BorderThickness: =1
+                        BorderColor: =clrBorder
+                        Visible: =!IsBlank(locReq.Requirement_ID)
+                        TabIndex: =-1
+                      Children:
+                        - lblReqHeading:
+                            Control: Text
+                            Variant: Subtitle
+                            Properties:
+                              Text: =locReq.Document_Name
+                              AutoHeight: =true
+                              TabIndex: =0
+                        - lblCurrentAuthority:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: |
+                                  ="Current reference: " & Coalesce(locReq.Authority_Reference, "none recorded")
+                              Color: =clrTextSecondary
+                              AutoHeight: =true
+                              TabIndex: =-1
+                        - txtAuthority:
+                            Control: TextInput
+                            Variant: MultiLine
+                            Properties:
+                              Default: =locAuthority
+                              OnChange: =Set(locAuthority, Self.Value)
+                              HintText: ="Regulation, contract clause or policy memo"
+                              AccessibleLabel: ="Authority reference. Required to verify this requirement."
+                              DisplayMode: =MF_WriteMode
+                              TabIndex: =0
+                        - lblVerifyWarning:
+                            Control: Text
+                            Variant: Caption
+                            Properties:
+                              Text: ="Verifying this requirement lets a missed suspense turn a base red. Do not verify it without a citation you would defend at an inspection."
+                              Color: =clrTextSecondary
+                              AutoHeight: =true
+                              TabIndex: =-1
+                        - lblReqError:
+                            Control: Text
+                            Variant: Body
+                            Properties:
+                              Text: =locReqError
+                              Color: =clrStatusRed
+                              Visible: =!IsBlank(locReqError)
+                              AutoHeight: =true
+                              Live: =Live.Assertive
+                              TabIndex: =-1
+                        - btnVerify:
+                            Control: Button
+                            Variant: Primary
+                            Properties:
+                              Text: ="Mark verified"
+                              AccessibleLabel: ="Mark " & locReq.Document_Name & " as verified"
+                              DisplayMode: |
+                                =If(
+                                    !gblCanWrite || !gblCanEditReqs || IsBlank(Trim(Coalesce(locAuthority, ""))),
+                                    DisplayMode.Disabled, DisplayMode.Edit)
+                              TabIndex: =0
+                              OnSelect: |
+                                =If(
+                                    IsBlank(Trim(Coalesce(locAuthority, ""))),
+                                    Set(locReqError, "Record the authority reference before verifying. A verified requirement with no citation is worse than a provisional one."),
+                                    Patch('MF EOM Requirement', locReq,
+                                        { Authority_Status: "Verified",
+                                          Authority_Reference: locAuthority });
+                                    Patch('MF EOM Audit', Defaults('MF EOM Audit'),
+                                        { Audit_ID: "AUD-" & Text(Now(), "yyyymmddhhmmss"),
+                                          Entity_Type: "Requirement",
+                                          Entity_ID: locReq.Requirement_ID,
+                                          Action: "Reclassified",
+                                          Actor_UPN: gblCurrentUser.Email,
+                                          Action_DateTime: Now(),
+                                          Old_Value: "UNVERIFIED",
+                                          New_Value: "Verified",
+                                          Detail: locAuthority });
+                                    Notify(locReq.Document_Name & " is now verified. Items past suspense against it will show Overdue from the next nightly run.",
+                                           NotificationType.Success);
+                                    Set(locReq, Blank())
+                                )

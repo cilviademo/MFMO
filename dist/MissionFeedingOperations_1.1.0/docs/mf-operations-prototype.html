@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  STALE — this is the V3 prototype.
+
+  Its information architecture, security model and domain boundaries are still
+  the reference. Its STATUS ENGINE is not: it predates the six visual states,
+  the two suspense dates with a LATE window between them, the nominal/effective
+  date model, the seven QC verdicts and the two on-time facts.
+
+  The engine lives in scripts/status_engine.py and is defined in
+  docs/status-calculation.md. Do not port itemStatus() from this file.
+-->
+<title>Mission Feeding Operations</title>
+<style>
+:root{
+  --bg:#f4f5f7; --surface:#fff; --line:#e3e6ea; --line-2:#c9d0d8;
+  --ink:#1b2733; --ink-2:#59646f; --ink-3:#87919b;
+  --brand:#2f5d7c; --brand-2:#1e3f56; --brand-soft:#eaf1f6;
+  --green:#3f7d4f; --green-bg:#e7f2ea;
+  /* Yellow (2) is AFSVC's; amber (5) is the base's with runway. They are
+     different claims about WHO OWES THE ITEM and must not converge -- every
+     earlier build drew them as two near-identical browns ~1.2:1 apart. Gold
+     vs orange, 41 degrees of hue apart. See docs/accessibility.md. */
+  --yellow:#6e6607; --yellow-bg:#faf3d6;
+  --amber:#9a4a0e;  --amber-bg:#fbeadc;
+  --red:#a83a30;   --red-bg:#f9e8e6;
+  --info:#2b6182;  --info-bg:#e6f0f6;
+  --gray:#6b7681;  --gray-bg:#ecedf0;
+  --r:6px; --shadow:0 1px 2px rgba(20,30,40,.05),0 3px 10px rgba(20,30,40,.05);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif}
+button{font:inherit;cursor:pointer}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* harness — not part of the app */
+.harness{background:#20303d;color:#c2cfda;padding:7px 16px;display:flex;gap:14px;
+  align-items:center;flex-wrap:wrap;font-size:12.5px}
+.harness strong{color:#fff}
+.harness select{background:#2d4152;color:#fff;border:1px solid #3b5164;border-radius:4px;
+  padding:3px 7px;font:inherit}
+.harness .note{color:#7e94a6;margin-left:auto}
+.harness button{background:#3b5164;color:#fff;border:0;border-radius:4px;padding:3px 9px}
+
+.app{max-width:1140px;margin:0 auto;padding:0 16px 64px}
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 0 10px;flex-wrap:wrap}
+.logo{width:30px;height:30px;border-radius:5px;background:var(--brand);color:#fff;
+  display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.topbar h1{font-size:16px}
+.period{display:flex;align-items:center;gap:7px;margin-left:14px}
+.period label{font-size:12px;color:var(--ink-2)}
+.period select{padding:5px 9px;border:1px solid var(--line-2);border-radius:5px;
+  background:#fff;font:inherit}
+.ident{margin-left:auto;display:flex;align-items:center;gap:9px;text-align:right}
+.ident .t{font-size:12px;color:var(--ink-2)}
+.ident .t b{display:block;color:var(--ink);font-size:13px}
+.ident .av{width:31px;height:31px;border-radius:50%;background:var(--brand-soft);
+  color:var(--brand-2);display:grid;place-items:center;font-weight:600;font-size:12px;flex:none}
+.cacnote{font-size:11px;color:var(--ink-3);width:100%;margin-top:2px}
+
+nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;
+  overflow-x:auto}
+nav.tabs button{background:none;border:0;padding:9px 14px;color:var(--ink-2);
+  border-bottom:2px solid transparent;white-space:nowrap;border-radius:4px 4px 0 0}
+nav.tabs button:hover{background:var(--brand-soft);color:var(--brand-2)}
+nav.tabs button[aria-current="true"]{color:var(--brand-2);font-weight:600;border-bottom-color:var(--brand)}
+nav.tabs .badge{display:inline-block;margin-left:6px;background:var(--red);color:#fff;
+  border-radius:9px;padding:0 6px;font-size:11px;font-weight:600}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
+.card>header{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;
+  align-items:center;gap:10px;flex-wrap:wrap}
+.card>header h2{font-size:14px}
+.card>header .sub{color:var(--ink-3);font-size:12px}
+.card>header .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pad{padding:16px}
+.section-title{font-size:12px;font-weight:600;color:var(--ink-2);margin:0 0 9px}
+.actions{display:flex;gap:9px;flex-wrap:wrap}
+.meta{color:var(--ink-3);font-size:12px}
+.stack-sm>*+*{margin-top:9px}
+.stack-md>*+*{margin-top:16px}
+
+/* five states, never colour alone */
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:11px;padding:2px 10px;
+  font-size:12px;font-weight:600;white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.c0{color:var(--gray);background:var(--gray-bg)}
+.c1{color:var(--red);background:var(--red-bg)}
+.c2{color:var(--yellow);background:var(--yellow-bg)}
+.c3{color:var(--green);background:var(--green-bg)}
+.c4{color:var(--info);background:var(--info-bg)}
+.c5{color:var(--amber);background:var(--amber-bg)}
+.chip.c1::before{border-radius:1px}
+.chip.c2::before{border-radius:1px;transform:rotate(45deg)}
+.chip.c5::before{border-radius:1px;transform:rotate(45deg) scale(.8)}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r);
+  overflow:hidden;margin-bottom:16px}
+.tiles>div{background:var(--surface);padding:15px}
+.tiles .n{font-size:28px;font-weight:300;line-height:1.15;letter-spacing:-.02em}
+.tiles .k{font-size:12px;color:var(--ink-3);margin-top:3px}
+
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11.5px;font-weight:600;color:var(--ink-3);padding:9px 16px;
+  border-bottom:1px solid var(--line);background:#fafbfc}
+td{padding:11px 16px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--brand-soft)}
+td.num{text-align:right}
+
+.btn{border:1px solid var(--line-2);background:var(--surface);color:var(--ink);
+  border-radius:5px;padding:7px 13px;font-weight:500}
+.btn:hover{background:#f6f8f9;border-color:var(--ink-3)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri:hover{background:var(--brand-2)}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.link{border:0;background:none;color:var(--brand-2);text-decoration:underline;padding:4px 0}
+
+label.f{display:block}
+label.f>span{display:block;font-size:12.5px;color:var(--ink-2);margin-bottom:5px;font-weight:500}
+select,input[type=text],input[type=date],textarea{width:100%;padding:8px 10px;
+  border:1px solid var(--line-2);border-radius:5px;font:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:66px;resize:vertical}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+
+.drop{border:2px dashed var(--line-2);border-radius:var(--r);padding:22px;text-align:center;
+  color:var(--ink-2);background:#fbfcfd}
+.drop.armed{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-2)}
+.drop .fn{font-weight:600;color:var(--ink);margin-top:6px;word-break:break-all}
+
+.note-box{border:1px solid var(--line);border-left:3px solid var(--info);background:#f6fafc;
+  padding:10px 13px;border-radius:5px;font-size:12.5px;color:var(--ink-2)}
+.warn-box{border:1px solid #ecdfb8;border-left:3px solid #c9a227;background:#fbf8ec;
+  padding:10px 13px;border-radius:5px;font-size:12.5px;color:#6b5a1c}
+.empty{padding:38px 16px;text-align:center;color:var(--ink-3)}
+.err{color:var(--red);font-size:12.5px;margin:10px 0;display:none}
+.err.on{display:block}
+
+.ver{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);align-items:center;
+  font-size:13px}
+.ver:last-child{border-bottom:0}
+.ver .vn{font-weight:600;width:26px;color:var(--ink-2)}
+.ver.cur{background:var(--brand-soft);margin:0 -12px;padding:9px 12px;border-radius:5px}
+.radios{display:flex;flex-direction:column;gap:8px}
+.radios label{display:flex;gap:9px;align-items:center;padding:9px 12px;border:1px solid var(--line);
+  border-radius:5px;cursor:pointer}
+.radios label:has(input:checked){border-color:var(--brand);background:var(--brand-soft);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.owner{font-size:11px;border:1px solid var(--line-2);border-radius:3px;padding:1px 6px;
+  color:var(--ink-3);white-space:nowrap}
+.owner.mine{border-color:var(--brand);color:var(--brand-2);background:var(--brand-soft)}
+
+/* cards on narrow screens instead of squeezed tables */
+.rec{display:none;border-bottom:1px solid var(--line);padding:13px 16px}
+.rec:last-child{border-bottom:0}
+.rec .r1{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.rec .r2{margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:800px){
+  table.responsive{display:none}
+  .rec{display:block}
+  .grid2{grid-template-columns:1fr}
+  .ident .t{display:none}
+}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1b2733;
+  color:#fff;padding:11px 18px;border-radius:6px;font-size:13.5px;opacity:0;pointer-events:none;
+  transition:opacity .18s;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:9}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="harness">
+  <strong>Test harness</strong>
+  <label>Simulate CAC identity
+    <select id="roleSel" aria-label="Simulate signed-in user"></select>
+  </label>
+  <label>Today
+    <select id="dateSel">
+      <option value="2026-09-05">5 Sep — before suspense</option>
+      <option value="2026-09-12" selected>12 Sep — after the 10th</option>
+      <option value="2026-09-20">20 Sep — after the 15th</option>
+    </select>
+  </label>
+  <button id="resetBtn">Reset</button>
+  <span class="note">On the network there is no sign-in. This selector exists only for testing.</span>
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="logo">MF</div>
+    <div>
+      <h1>Mission Feeding Operations</h1>
+    </div>
+    <div class="period">
+      <label for="perSel">Reporting period</label>
+      <select id="perSel"></select>
+    </div>
+    <div class="ident">
+      <div class="t"><b id="whoName"></b><span id="whoScope"></span></div>
+      <div class="av" id="whoAv"></div>
+      <div class="cacnote">Identified by CAC — no sign-in required</div>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+  <div id="view"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════
+   /domain — statusEngine
+   ONE evaluation returns the whole state object. Label, colour and
+   action ownership never diverge because they are never derived
+   separately.
+   ══════════════════════════════════════════════════════════════ */
+const CODE = {NA:0, ACTION:1, PENDING:2, DONE:3, INFO:4};
+
+const S = {
+  NOT_APPLICABLE:      {code:CODE.NA,      label:"Not applicable",   owner:null,       act:false},
+  NOT_DUE:             {code:CODE.INFO,    label:"Not due",          owner:"Facility", act:false},
+  PENDING_VALIDATION:  {code:CODE.INFO,    label:"Informational",    owner:"Admin",    act:false},
+  OVERDUE:             {code:CODE.ACTION,  label:"Overdue",          owner:"Facility", act:true},
+  NOT_SATISFIED:       {code:CODE.PENDING, label:"Not satisfied",    owner:"Facility", act:true},
+  CORRECTION_REQUIRED: {code:CODE.PENDING, label:"Correction needed",owner:"Facility", act:true},
+  RECEIVED_PENDING_QC: {code:CODE.PENDING, label:"Awaiting review",  owner:"Reviewer", act:true},
+  ACCEPTED:            {code:CODE.DONE,    label:"Accepted",         owner:null,       act:false}
+};
+
+function itemStatus(it, req, today, currentQC){
+  const mk = k => Object.assign({status:k}, S[k]);
+
+  if (it.Waived_Flag || !it.Required_Flag) return mk("NOT_APPLICABLE");
+
+  // A provisional requirement is informational, never adverse.
+  if (req.Authority_Status === "UNVERIFIED" && !it.Received_Flag) return mk("PENDING_VALIDATION");
+
+  const qc = currentQC;
+  if (qc === "Accepted")            return mk("ACCEPTED");
+  if (qc === "Not Applicable")      return mk("NOT_APPLICABLE");
+  if (qc === "Correction Required") return mk("CORRECTION_REQUIRED");
+
+  // Wrong document means the requirement is still UNMET. Whether that is
+  // urgent depends on the suspense, not on the QC verdict.
+  if (qc === "Wrong Document")
+    return today > it.Due_Date ? mk("OVERDUE") : mk("NOT_SATISFIED");
+
+  if (it.Received_Flag)             return mk("RECEIVED_PENDING_QC");
+  return today <= it.Due_Date ? mk("NOT_DUE") : mk("OVERDUE");
+}
+
+/* Package state is computed from semantic statuses, not from colour codes.
+   [ACCEPTED, NOT_DUE, NOT_DUE] is IN PROGRESS, not COMPLETE. */
+const PKG = {
+  ACTION_REQUIRED:{code:CODE.ACTION,  label:"Action required"},
+  IN_REVIEW:      {code:CODE.PENDING, label:"In review"},
+  COMPLETE:       {code:CODE.DONE,    label:"Complete"},
+  IN_PROGRESS:    {code:CODE.INFO,    label:"In progress"},
+  NOT_APPLICABLE: {code:CODE.NA,      label:"Nothing due"}
+};
+function packageState(states){
+  const has = k => states.some(s=>s.status===k);
+  const applicable = states.filter(s=>s.status!=="NOT_APPLICABLE");
+  if (!applicable.length) return Object.assign({state:"NOT_APPLICABLE"}, PKG.NOT_APPLICABLE);
+  if (has("OVERDUE") || has("CORRECTION_REQUIRED") || has("NOT_SATISFIED"))
+    return Object.assign({state:"ACTION_REQUIRED"}, PKG.ACTION_REQUIRED);
+  if (has("RECEIVED_PENDING_QC")) return Object.assign({state:"IN_REVIEW"}, PKG.IN_REVIEW);
+  const real = applicable.filter(s=>s.status!=="PENDING_VALIDATION");
+  if (real.length && real.every(s=>s.status==="ACCEPTED"))
+    return Object.assign({state:"COMPLETE"}, PKG.COMPLETE);
+  return Object.assign({state:"IN_PROGRESS"}, PKG.IN_PROGRESS);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   /domain — dateUtil
+   Reporting_Period is YYYY-MM. Dates are YYYY-MM-DD. Datetimes carry a
+   time part. Parse before comparing so a timestamp never leaks into a
+   day number.
+   ══════════════════════════════════════════════════════════════ */
+const D = {
+  day: v => (v||"").slice(0,10),
+  before: (a,b) => D.day(a) <= D.day(b),
+  after:  (a,b) => D.day(a) >  D.day(b),
+  fmt(v){
+    const d = D.day(v); if(!d) return "—";
+    const [y,m,dd] = d.split("-");
+    return `${+dd} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]}`;
+  },
+  fmtLong(v){ const d=D.day(v); return d ? D.fmt(d)+" "+d.slice(0,4) : "—"; },
+  period(p){
+    const [y,m] = p.split("-");
+    return `${["January","February","March","April","May","June","July","August",
+      "September","October","November","December"][+m-1]} ${y}`;
+  },
+  daysBetween(a,b){ return Math.round((new Date(D.day(b))-new Date(D.day(a)))/864e5); }
+};
+
+/* ══════════════════════════════════════════════════════════════
+   /data
+   ══════════════════════════════════════════════════════════════ */
+const REQUIREMENTS = [
+ {Requirement_ID:"REQ-001",Document_Code:"1119",Document_Name:"AF Form 1119 Daily Feeding Summary",Applicable_Model:"Legacy/APF",Requirement_Scope:"Facility",Applicable_Facility_Types:"Main DFAC;Flight Kitchen;Satellite;MAF",Required_Flag:true,Due_Day:10,Authority_Status:"UNVERIFIED",Authority_Reference:"DAFMAN 34-131 — paragraph not confirmed",Sort_Order:10,Active_Flag:true},
+ {Requirement_ID:"REQ-002",Document_Code:"1119-1",Document_Name:"AF Form 1119-1 Continuation",Applicable_Model:"Legacy/APF",Requirement_Scope:"Facility",Applicable_Facility_Types:"Main DFAC;Flight Kitchen;Satellite;MAF",Required_Flag:true,Due_Day:10,Authority_Status:"UNVERIFIED",Authority_Reference:"Applicability not confirmed",Sort_Order:20,Active_Flag:true},
+ {Requirement_ID:"REQ-003",Document_Code:"SIK",Document_Name:"Subsistence-in-Kind Bill",Applicable_Model:"Legacy/APF",Requirement_Scope:"Installation",Applicable_Facility_Types:"",Required_Flag:true,Due_Day:10,Authority_Status:"UNVERIFIED",Authority_Reference:"Scope unresolved — may be consolidated installation billing",Sort_Order:30,Active_Flag:true},
+ {Requirement_ID:"REQ-011",Document_Code:"SAIIT",Document_Name:"SAIIT inventory accountability",Applicable_Model:"Food 2.0",Requirement_Scope:"Facility",Applicable_Facility_Types:"Main DFAC;Contract Cafe;MAF",Required_Flag:true,Due_Day:15,Authority_Status:"UNVERIFIED",Authority_Reference:"Confirm",Sort_Order:80,Active_Flag:true},
+ {Requirement_ID:"REQ-012",Document_Code:"SAIIT",Document_Name:"SAIIT inventory accountability",Applicable_Model:"Legacy/APF",Requirement_Scope:"Facility",Applicable_Facility_Types:"Main DFAC;MAF",Required_Flag:true,Due_Day:15,Authority_Status:"UNVERIFIED",Authority_Reference:"Confirm",Sort_Order:80,Active_Flag:true},
+ {Requirement_ID:"REQ-010",Document_Code:"CONTRACTOR-INV",Document_Name:"Contractor invoice",Applicable_Model:"Food 2.0",Requirement_Scope:"Contract",Applicable_Facility_Types:"",Required_Flag:true,Due_Day:15,Authority_Status:"UNVERIFIED",Authority_Reference:"One invoice may cover several facilities under one CLIN",Sort_Order:70,Active_Flag:true},
+ {Requirement_ID:"REQ-007",Document_Code:"SF1080",Document_Name:"SF 1080 Voucher for Transfers",Applicable_Model:"Food 2.0",Requirement_Scope:"Installation",Applicable_Facility_Types:"",Required_Flag:false,Due_Day:10,Authority_Status:"UNVERIFIED",Authority_Reference:"Applicability unresolved",Sort_Order:40,Active_Flag:true}
+];
+const INSTALLATIONS = [
+ {Installation_ID:"INST-001",Installation_Name:"Lackland",Portfolio_ID:"PF-03"},
+ {Installation_ID:"INST-002",Installation_Name:"Minot",Portfolio_ID:"PF-03"},
+ {Installation_ID:"INST-003",Installation_Name:"Malmstrom",Portfolio_ID:"PF-03"},
+ {Installation_ID:"INST-004",Installation_Name:"Creech",Portfolio_ID:"PF-03"}
+];
+const FACILITIES = [
+ {Facility_ID:"FAC-1234",Installation_ID:"INST-001",Facility_Name:"Bldg 1234 DFAC",Facility_Type:"Main DFAC",Operating_Model:"Legacy/APF",Contract_ID:""},
+ {Facility_ID:"FAC-1240",Installation_ID:"INST-001",Facility_Name:"Gateway Café",Facility_Type:"Contract Cafe",Operating_Model:"Food 2.0",Contract_ID:"CON-0041"},
+ {Facility_ID:"FAC-1255",Installation_ID:"INST-001",Facility_Name:"Flightline Kitchen",Facility_Type:"Flight Kitchen",Operating_Model:"Legacy/APF",Contract_ID:""},
+ {Facility_ID:"FAC-2010",Installation_ID:"INST-002",Facility_Name:"Bldg 210 DFAC",Facility_Type:"Main DFAC",Operating_Model:"Legacy/APF",Contract_ID:""},
+ {Facility_ID:"FAC-3010",Installation_ID:"INST-003",Facility_Name:"Bldg 1120 DFAC",Facility_Type:"Main DFAC",Operating_Model:"Legacy/APF",Contract_ID:""},
+ {Facility_ID:"FAC-3020",Installation_ID:"INST-003",Facility_Name:"Missile Field MAF",Facility_Type:"MAF",Operating_Model:"MAFFO/MAF",Contract_ID:""},
+ {Facility_ID:"FAC-4010",Installation_ID:"INST-004",Facility_Name:"Bldg 200 DFAC",Facility_Type:"Main DFAC",Operating_Model:"Legacy/APF",Contract_ID:""}
+];
+const IDENTITIES = [
+ {key:"dfac",Name:"T. Alvarez",Role:"DFAC Manager",UPN:"alvarez@example.mil",Scope_Type:"Facility",
+  Facility_ID:"FAC-1234",Installation_ID:"INST-001",Portfolio_ID:"PF-03",
+  Can_QC:false,Can_Submit_On_Behalf:false,Can_Edit_Requirements:false,Developer_Flag:false,
+  desc:"Lackland · Bldg 1234 DFAC"},
+ {key:"acct",Name:"R. Okonkwo",Role:"Accountant",UPN:"okonkwo@example.mil",Scope_Type:"Installation",
+  Installation_ID:"INST-001",Portfolio_ID:"PF-03",
+  Can_QC:false,Can_Submit_On_Behalf:false,Can_Edit_Requirements:false,Developer_Flag:false,
+  desc:"Lackland · all facilities"},
+ {key:"mfm",Name:"J. Whitfield",Role:"MFM",UPN:"whitfield@example.mil",Scope_Type:"Installation",
+  Installation_ID:"INST-002",Portfolio_ID:"PF-03",
+  Can_QC:false,Can_Submit_On_Behalf:true,Can_Edit_Requirements:false,Developer_Flag:false,
+  desc:"Minot · submits on behalf"},
+ {key:"pm",Name:"D. Reyes",Role:"Portfolio Manager",UPN:"reyes@example.mil",Scope_Type:"Portfolio",
+  Portfolio_ID:"PF-03",Can_QC:true,Can_Submit_On_Behalf:true,Can_Edit_Requirements:false,
+  Developer_Flag:false,desc:"Portfolio PF-03"},
+ {key:"admin",Name:"K. Sandoval",Role:"Admin",UPN:"sandoval@example.mil",Scope_Type:"Enterprise",
+  Can_QC:true,Can_Submit_On_Behalf:true,Can_Edit_Requirements:true,Developer_Flag:true,
+  desc:"Enterprise · admin"}
+];
+const PERIODS = ["2026-08","2026-07","2026-06"];
+
+/* ══════════════════════════════════════════════════════════════
+   /domain — requirementEngine (EOM-01)
+   ══════════════════════════════════════════════════════════════ */
+function matchesReq(f, r){
+  return (f.Operating_Model===r.Applicable_Model || r.Applicable_Model==="All") &&
+    (!r.Applicable_Facility_Types || r.Applicable_Facility_Types.split(";").includes(f.Facility_Type));
+}
+function generateItems(period){
+  const out=[], due = d => `${period.slice(0,4)}-09-${String(d).padStart(2,"0")}`;
+  const key = (iid,fid,cid,code) =>
+    `${inst(iid).Installation_Name.toUpperCase()}|${fid?fac(fid).Facility_Name.replace(/\s/g,"").toUpperCase():(cid||"INST")}|${period}|${code}`;
+  REQUIREMENTS.filter(r=>r.Active_Flag).forEach(r=>{
+    if (r.Requirement_Scope==="Facility"){
+      FACILITIES.filter(f=>matchesReq(f,r)).forEach(f=>out.push(mkItem(f.Installation_ID,f.Facility_ID,null,r)));
+    } else if (r.Requirement_Scope==="Installation"){
+      INSTALLATIONS.filter(i=>FACILITIES.some(f=>f.Installation_ID===i.Installation_ID&&matchesReq(f,r)))
+        .forEach(i=>out.push(mkItem(i.Installation_ID,null,null,r)));
+    } else {
+      const seen=new Set();
+      FACILITIES.filter(f=>matchesReq(f,r)&&f.Contract_ID).forEach(f=>{
+        if(seen.has(f.Contract_ID))return; seen.add(f.Contract_ID);
+        out.push(mkItem(f.Installation_ID,null,f.Contract_ID,r));
+      });
+    }
+  });
+  function mkItem(iid,fid,cid,r){
+    return {EOM_Item_ID:`${period}|${fid||cid||iid}|${r.Requirement_ID}`,
+      EOM_Item_Key:key(iid,fid,cid,r.Document_Code),
+      Portfolio_ID:inst(iid).Portfolio_ID, Installation_ID:iid, Facility_ID:fid, Contract_ID:cid,
+      Reporting_Period:period, Requirement_ID:r.Requirement_ID,
+      Requirement_Scope:r.Requirement_Scope, Required_Flag:r.Required_Flag,
+      Due_Date:due(r.Due_Day), Received_Flag:false, Waived_Flag:false,
+      Current_Submission_ID:null, Correction_Due:null};
+  }
+  return out;
+}
+
+/* Configuration health — a facility with no matching requirement set would
+   otherwise show an empty package and look compliant. */
+function configHealth(){
+  const orphans = FACILITIES.filter(f=>!REQUIREMENTS.some(r=>r.Active_Flag && matchesReq(f,r)));
+  return {
+    installations: INSTALLATIONS.length,
+    facilities: FACILITIES.length,
+    orphans,
+    unmatched: DB.unmatched.filter(u=>u.Resolution_Status==="Needs Classification").length,
+    dupCurrent: 0,
+    generated: DB.items.filter(i=>i.Reporting_Period===PERIOD).length
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   /domain — securityEngine
+   A facility user's rollup must NOT include sibling facilities, and a
+   contract item is only theirs if the contract covers their facility.
+   ══════════════════════════════════════════════════════════════ */
+function visibleFacilities(){
+  if (ME.Scope_Type==="Facility") return FACILITIES.filter(f=>f.Facility_ID===ME.Facility_ID);
+  if (ME.Scope_Type==="Installation") return FACILITIES.filter(f=>f.Installation_ID===ME.Installation_ID);
+  if (ME.Scope_Type==="Portfolio")
+    return FACILITIES.filter(f=>inst(f.Installation_ID).Portfolio_ID===ME.Portfolio_ID);
+  return FACILITIES;
+}
+function visibleInstallations(){
+  if (ME.Scope_Type==="Enterprise") return INSTALLATIONS;
+  if (ME.Scope_Type==="Portfolio") return INSTALLATIONS.filter(i=>i.Portfolio_ID===ME.Portfolio_ID);
+  return INSTALLATIONS.filter(i=>i.Installation_ID===ME.Installation_ID);
+}
+function canSeeItem(it){
+  const fids = visibleFacilities().map(f=>f.Facility_ID);
+  if (it.Facility_ID) return fids.includes(it.Facility_ID);
+  if (it.Contract_ID)
+    return FACILITIES.some(f=>fids.includes(f.Facility_ID) && f.Contract_ID===it.Contract_ID);
+  return visibleInstallations().some(i=>i.Installation_ID===it.Installation_ID);
+}
+function visibleItems(period){
+  return DB.items.filter(it=>it.Reporting_Period===(period||PERIOD) && canSeeItem(it));
+}
+/* Rollup is always over what the viewer may see. A facility user's
+   installation figure is their slice, never the whole base. */
+function rollupFor(items){ return packageState(items.map(st)); }
+function installationState(iid){
+  return rollupFor(visibleItems().filter(i=>i.Installation_ID===iid));
+}
+function facilityState(fid){
+  return rollupFor(visibleItems().filter(i=>i.Facility_ID===fid));
+}
+
+/* action ownership: is this mine, or am I waiting on someone else? */
+function isMyAction(it){
+  const s = st(it);
+  if (!s.act) return false;
+  if (s.owner==="Reviewer") return ME.Can_QC;
+  if (s.owner==="Facility")
+    return ME.Scope_Type==="Facility" || ME.Scope_Type==="Installation" || ME.Can_Submit_On_Behalf;
+  return false;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   /state + helpers
+   ══════════════════════════════════════════════════════════════ */
+let DB, ME = IDENTITIES[0], TODAY = "2026-09-12", PERIOD = "2026-08";
+let TAB = "home", SEL = {inst:null, fac:null, item:null};
+let pendingFile = null, classifyOpen = {};
+
+const $ = s => document.querySelector(s);
+const inst = id => INSTALLATIONS.find(i=>i.Installation_ID===id);
+const fac  = id => FACILITIES.find(f=>f.Facility_ID===id);
+const rq   = id => REQUIREMENTS.find(r=>r.Requirement_ID===id);
+const esc  = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const curSub = it => DB.subs.find(s=>s.EOM_Item_ID===it.EOM_Item_ID && s.Is_Current);
+const st   = it => itemStatus(it, rq(it.Requirement_ID), TODAY, (curSub(it)||{}).QC_Status);
+const chip = s => `<span class="chip c${s.code}">${esc(s.label)}</span>`;
+const where = it => it.Facility_ID ? fac(it.Facility_ID).Facility_Name
+  : (it.Contract_ID ? "Contract "+it.Contract_ID : "Installation-level");
+
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("on"),2500); }
+function logEvent(type, result, detail){
+  DB.events.unshift({Event_DateTime:new Date().toLocaleTimeString(), User_UPN:ME.UPN,
+    Role:ME.Role, Event_Type:type, Result:result, Detail:detail, App_Version:"0.6.0"});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   /services
+   ══════════════════════════════════════════════════════════════ */
+function createSubmission(it, fileName, opts){
+  opts = opts||{};
+  const prior = DB.subs.filter(s=>s.EOM_Item_ID===it.EOM_Item_ID);
+  const id = "SUB-"+(DB.subs.length+1);
+  prior.filter(s=>s.Is_Current).forEach(s=>{s.Is_Current=false; s.Superseded_By=id;});
+  DB.subs.push({Submission_ID:id, EOM_Item_ID:it.EOM_Item_ID, Version_No:prior.length+1,
+    File_Name:fileName, SharePoint_File_ID:"SPF-"+(DB.subs.length+1),
+    Uploaded_By:opts.by||ME.Name, Uploaded_DateTime:opts.when||TODAY,
+    Submitted_On_Behalf_Of:opts.onBehalf||"", Intake_Method:opts.method||"App upload",
+    Classification_Method:opts.classMethod||"Declared at upload",
+    Is_Current:true, Superseded_By:null, QC_Status:opts.qc||"Pending Review",
+    QC_By:opts.qcBy||"", QC_DateTime:opts.qcWhen||"", QC_Comment:opts.comment||""});
+  it.Received_Flag = true; it.Current_Submission_ID = id;
+  if (opts.qc==="Correction Required") it.Correction_Due = opts.correctionDue||"2026-09-19";
+  return id;
+}
+function findItem(period, reqId, facId, instId){
+  return DB.items.find(i=>i.Reporting_Period===period && i.Requirement_ID===reqId &&
+    (facId ? i.Facility_ID===facId : (i.Installation_ID===instId && !i.Facility_ID)));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   seed
+   ══════════════════════════════════════════════════════════════ */
+function seed(){
+  DB = {items:[], subs:[], unmatched:[], events:[]};
+  PERIODS.forEach(p=>DB.items.push(...generateItems(p)));
+  const P = "2026-08";
+  const go = (k, file, qc, when, by, extra) => {
+    const it = DB.items.find(i=>i.EOM_Item_ID===`${P}|${k}`);
+    if (it) createSubmission(it, file, Object.assign({qc,when,by,qcBy:"D. Reyes",qcWhen:when}, extra||{}));
+  };
+  go("FAC-1234|REQ-001","August 1119.xlsx","Accepted","2026-09-04","T. Alvarez");
+  go("FAC-1234|REQ-002","1119-1 aug final.xlsx","Accepted","2026-09-04","T. Alvarez");
+  go("FAC-1234|REQ-012","SAIIT Aug.pdf","Pending Review","2026-09-11","T. Alvarez",{qcBy:"",qcWhen:""});
+  go("FAC-1240|REQ-011","Monthly Inventory Reconciliation.xlsx","Accepted","2026-09-09","T. Alvarez");
+  go("CON-0041|REQ-010","Invoice 88213.pdf","Pending Review","2026-09-14","D. Reyes",{qcBy:"",qcWhen:""});
+  go("FAC-1255|REQ-001","flightline aug.xlsx","Accepted","2026-09-06","T. Alvarez");
+  go("INST-001|REQ-003","SIK Bills August 2026.pdf","Correction Required","2026-09-07","R. Okonkwo",
+     {comment:"Line 14 inventory does not reconcile to the closing balance. Resubmit with the corrected worksheet."});
+  go("INST-001|REQ-003","SIK Bills August 2026 REV.pdf","Pending Review","2026-09-12","R. Okonkwo",{qcBy:"",qcWhen:""});
+  go("FAC-2010|REQ-001","Monthly Food Report Final.xlsx","Pending Review","2026-09-09","J. Whitfield",
+     {onBehalf:"FAC-2010",qcBy:"",qcWhen:""});
+  go("INST-002|REQ-003","sik_minot.pdf","Wrong Document","2026-09-08","J. Whitfield",
+     {comment:"This is the July package."});
+  go("FAC-3010|REQ-001","1119.xlsx","Accepted","2026-09-03","L. Barrett");
+  go("FAC-3010|REQ-002","1119-1.xlsx","Accepted","2026-09-03","L. Barrett");
+  go("FAC-3010|REQ-012","saiit.pdf","Accepted","2026-09-08","L. Barrett");
+  go("INST-003|REQ-003","SIK.pdf","Accepted","2026-09-05","L. Barrett");
+
+  DB.unmatched = [
+   {Unmatched_ID:"UNM-1",File_Name:"Creech Aug Financials.xlsx",Portfolio_ID:"PF-03",
+    Fiscal_Year:"FY2026",Discovered_DateTime:"2026-09-11",Uploaded_By:"P. Nakamura",
+    Sug_Inst:"INST-004",Sug_Inst_Conf:"High",Sug_Fac:"FAC-4010",Sug_Fac_Conf:"High",
+    Sug_Req:"REQ-001",Sug_Req_Conf:"Medium",Sug_Period:"2026-08",Sug_Period_Conf:"High",
+    Resolution_Status:"Needs Classification"},
+   {Unmatched_ID:"UNM-2",File_Name:"scan_0091.pdf",Portfolio_ID:"PF-03",
+    Fiscal_Year:"FY2026",Discovered_DateTime:"2026-09-12",Uploaded_By:"",
+    Sug_Inst:"",Sug_Inst_Conf:"Unresolved",Sug_Fac:"",Sug_Fac_Conf:"Unresolved",
+    Sug_Req:"",Sug_Req_Conf:"Unresolved",Sug_Period:"2026-08",Sug_Period_Conf:"Medium",
+    Resolution_Status:"Needs Classification"}
+  ];
+  DB.events = [];
+  logEvent("AppOpened","Success","Session started");
+}
+
+/* ══════════════════════════════════════════════════════════════
+   /ui — navigation, permission-aware
+   ══════════════════════════════════════════════════════════════ */
+function tabsFor(){
+  if (ME.Scope_Type==="Facility") return [["home","Home"],["package","My package"],["activity","Activity"]];
+  const t = [["home","Home"]];
+  if (ME.Can_QC) t.push(["review","Review"]);
+  t.push(["installations","Installations"]);
+  if (ME.Can_QC) t.push(["exceptions","Exceptions"]);
+  t.push(["activity","Activity"]);
+  if (ME.Can_Edit_Requirements) t.push(["admin","Admin"]);
+  return t;
+}
+function renderTabs(){
+  const q = visibleItems().filter(i=>st(i).status==="RECEIVED_PENDING_QC").length;
+  const u = DB.unmatched.filter(x=>x.Resolution_Status==="Needs Classification").length;
+  $("#tabs").innerHTML = tabsFor().map(([k,l])=>{
+    let b=""; if(k==="review"&&q) b=`<span class="badge">${q}</span>`;
+    if(k==="exceptions"&&u) b=`<span class="badge">${u}</span>`;
+    return `<button data-tab="${k}" aria-current="${TAB===k}">${l}${b}</button>`;}).join("");
+}
+
+/* record list: table on desktop, cards on narrow screens */
+function recordList(items, opts){
+  opts = opts||{};
+  if (!items.length) return `<div class="empty">${esc(opts.empty||"Nothing here.")}</div>`;
+  const rows = items.map(it=>{
+    const s = st(it), r = rq(it.Requirement_ID), mine = isMyAction(it);
+    const ownerTag = s.act
+      ? `<span class="owner ${mine?"mine":""}">${mine?"Your action":
+          (s.owner==="Reviewer"?"With AFSVC":"With the facility")}</span>` : "";
+    return {it,s,r,mine,ownerTag};
+  });
+  return `
+  <table class="responsive"><thead><tr>
+    ${opts.showLocation?"<th>Location</th>":""}<th>Requirement</th>
+    <th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+    ${rows.map(({it,s,r,ownerTag})=>`<tr class="click" data-act="open" data-id="${it.EOM_Item_ID}">
+      ${opts.showLocation?`<td><b>${esc(inst(it.Installation_ID).Installation_Name)}</b>
+        <div class="meta">${esc(where(it))}</div></td>`:""}
+      <td><b>${esc(r.Document_Code)}</b><div class="meta">${esc(r.Document_Name)}
+        ${it.Requirement_Scope!=="Facility"?" · "+it.Requirement_Scope+"-level":""}</div></td>
+      <td>${D.fmt(it.Due_Date)}</td>
+      <td>${chip(s)} ${ownerTag}</td>
+      <td class="num"><button class="btn sm" data-act="open" data-id="${it.EOM_Item_ID}">Open</button></td>
+    </tr>`).join("")}
+  </tbody></table>
+  ${rows.map(({it,s,r,ownerTag})=>`<div class="rec" data-act="open" data-id="${it.EOM_Item_ID}">
+    <div class="r1"><div><b>${esc(r.Document_Code)}</b>
+      <div class="meta">${esc(r.Document_Name)}</div></div>${chip(s)}</div>
+    <div class="r2"><span class="meta">${opts.showLocation?esc(where(it))+" · ":""}Due ${D.fmt(it.Due_Date)}</span>
+      ${ownerTag}</div>
+  </div>`).join("")}`;
+}
+
+/* ---------- Home ---------- */
+function viewHome(){
+  const items = visibleItems();
+  const mine = items.filter(isMyAction).sort((a,b)=>a.Due_Date.localeCompare(b.Due_Date));
+  const waiting = items.filter(i=>st(i).act && !isMyAction(i));
+
+  if (ME.Scope_Type==="Facility"){
+    const f = fac(ME.Facility_ID), s = facilityState(ME.Facility_ID);
+    const own = items.filter(i=>i.Facility_ID===ME.Facility_ID);
+    return `
+    <div class="card"><header><h2>${esc(f.Facility_Name)}</h2>
+      <span class="sub">${esc(f.Operating_Model)} · ${D.period(PERIOD)}</span>
+      <div class="right">${chip(s)}</div></header>
+      <div class="pad"><div class="actions">
+        <button class="btn pri" data-act="tab" data-id="package">Open my package</button>
+        <button class="btn" data-act="folder">Open EOM folder in Teams</button>
+      </div></div>
+    </div>
+    ${mine.length?`<div class="card"><header><h2>Needs your attention</h2></header>
+      ${recordList(mine)}</div>`:
+      `<div class="card"><header><h2>Needs your attention</h2></header>
+       <div class="empty">Nothing is waiting on you.</div></div>`}
+    ${waiting.length?`<div class="card"><header><h2>Waiting on AFSVC</h2>
+      <span class="sub">Submitted — no action needed from you</span></header>
+      ${recordList(waiting)}</div>`:""}
+    <div class="card"><header><h2>Accepted this period</h2></header>
+      ${recordList(own.filter(i=>st(i).status==="ACCEPTED"), {empty:"Nothing accepted yet."})}</div>`;
+  }
+
+  const insts = visibleInstallations();
+  const states = insts.map(i=>installationState(i.Installation_ID));
+  const n = k => states.filter(s=>s.state===k).length;
+  const unm = DB.unmatched.filter(u=>u.Resolution_Status==="Needs Classification").length;
+
+  return `
+  <div class="tiles">
+    <div><div class="n">${n("COMPLETE")} <span style="font-size:16px;color:var(--ink-3)">/ ${insts.length}</span></div>
+      <div class="k">Installations complete</div></div>
+    <div><div class="n" style="color:var(--yellow)">${n("IN_REVIEW")}</div><div class="k">In review</div></div>
+    <div><div class="n" style="color:var(--red)">${n("ACTION_REQUIRED")}</div><div class="k">Action required</div></div>
+    <div><div class="n" style="color:var(--info)">${n("IN_PROGRESS")}</div><div class="k">In progress</div></div>
+    ${ME.Can_QC?`<div><div class="n" style="color:${unm?"var(--amber)":"var(--ink-3)"}">${unm}</div>
+      <div class="k">Unclassified files</div></div>`:""}
+  </div>
+
+  <div class="card"><header><h2>Needs your attention</h2>
+    <span class="sub">${mine.length} item${mine.length===1?"":"s"} where you are the owner</span></header>
+    ${recordList(mine.slice(0,10), {showLocation:true, empty:"Nothing is waiting on you."})}
+  </div>
+
+  ${waiting.length?`<div class="card"><header><h2>Waiting on others</h2>
+    <span class="sub">Tracked, but not your action</span></header>
+    ${recordList(waiting.slice(0,6), {showLocation:true})}</div>`:""}
+
+  <div class="card"><header><h2>Installations</h2></header>
+    <table class="responsive"><thead><tr><th>Installation</th><th>Facilities</th>
+      <th>Package</th><th></th></tr></thead><tbody>
+      ${insts.map(i=>{const s=installationState(i.Installation_ID);
+        const fs=visibleFacilities().filter(f=>f.Installation_ID===i.Installation_ID);
+        return `<tr class="click" data-act="inst" data-id="${i.Installation_ID}">
+          <td><b>${esc(i.Installation_Name)}</b></td>
+          <td class="meta">${fs.length} · ${[...new Set(fs.map(f=>f.Operating_Model))].join(", ")}</td>
+          <td>${chip(s)}</td>
+          <td class="num"><button class="btn sm" data-act="inst" data-id="${i.Installation_ID}">Open</button></td>
+        </tr>`;}).join("")}
+    </tbody></table>
+    ${insts.map(i=>{const s=installationState(i.Installation_ID);
+      return `<div class="rec" data-act="inst" data-id="${i.Installation_ID}">
+        <div class="r1"><b>${esc(i.Installation_Name)}</b>${chip(s)}</div></div>`;}).join("")}
+  </div>`;
+}
+
+/* ---------- My package / facility detail ---------- */
+function viewPackage(){
+  const fid = SEL.fac || ME.Facility_ID || visibleFacilities()[0].Facility_ID;
+  const f = fac(fid), s = facilityState(fid);
+  const own = visibleItems().filter(i=>i.Facility_ID===fid);
+  const shared = visibleItems().filter(i=>!i.Facility_ID && i.Installation_ID===f.Installation_ID);
+  const orphan = !REQUIREMENTS.some(r=>r.Active_Flag && matchesReq(f,r));
+
+  return `
+  <div class="card"><header><h2>${esc(f.Facility_Name)}</h2>
+    <span class="sub">${esc(inst(f.Installation_ID).Installation_Name)} · ${esc(f.Operating_Model)} · ${D.period(PERIOD)}</span>
+    <div class="right">${chip(s)}</div></header>
+    ${orphan?`<div class="pad"><div class="warn-box">No active requirement set matches this
+      facility's operating model. Nothing will be generated here until an administrator adds one.</div></div>`:""}
+    ${recordList(own, {empty:"No facility requirements for this period."})}
+  </div>
+
+  ${shared.length?`<div class="card"><header><h2>Installation and contract items</h2>
+    <span class="sub">Filed once for the whole base — not per DFAC</span></header>
+    ${recordList(shared)}</div>`:""}
+
+  <div class="card"><header><h2>Add a submission</h2>
+    <span class="sub">For documents that arrived by email, or to attach directly</span></header>
+    <div class="pad stack-md">
+      <div class="note-box">Documents normally go into the Portfolio Teams FY folder and are picked
+        up automatically. Attaching here records the same submission and skips the classification step,
+        because you are telling us what it is.</div>
+      <div class="fields">
+        <label class="f"><span>Requirement</span>
+          <select id="selReq"><option value="">Select…</option>
+          ${own.concat(shared).map(i=>`<option value="${i.EOM_Item_ID}">
+            ${esc(rq(i.Requirement_ID).Document_Code)} — ${esc(where(i))}</option>`).join("")}
+          </select></label>
+        ${ME.Can_Submit_On_Behalf?`<label class="f"><span>On behalf of this location</span>
+          <select id="onBehalf"><option value="">No</option><option value="yes">Yes — arrived by email</option></select></label>`:""}
+      </div>
+      <div class="drop" id="drop"><div>Drop a file here, or</div>
+        <div style="margin-top:8px"><button class="btn sm" data-act="pick">Choose a file</button></div>
+        <div class="fn" id="fname"></div></div>
+      <div class="actions"><button class="btn pri" id="btnSubmit" disabled data-act="submit">Add submission</button>
+        <button class="btn" data-act="clear">Clear</button></div>
+      <div id="upErr" class="err"></div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Installations drill-through ---------- */
+function viewInstallations(){
+  if (!SEL.inst){
+    return `<div class="card"><header><h2>Installations</h2>
+      <span class="sub">${D.period(PERIOD)}</span></header>
+      <table class="responsive"><thead><tr><th>Installation</th><th>Facilities</th>
+        <th>Package</th><th></th></tr></thead><tbody>
+        ${visibleInstallations().map(i=>{const s=installationState(i.Installation_ID);
+          return `<tr class="click" data-act="inst" data-id="${i.Installation_ID}">
+            <td><b>${esc(i.Installation_Name)}</b><div class="meta">Portfolio ${esc(i.Portfolio_ID)}</div></td>
+            <td class="meta">${visibleFacilities().filter(f=>f.Installation_ID===i.Installation_ID).length}</td>
+            <td>${chip(s)}</td>
+            <td class="num"><button class="btn sm" data-act="inst" data-id="${i.Installation_ID}">Open</button></td>
+          </tr>`;}).join("")}
+      </tbody></table>
+      ${visibleInstallations().map(i=>`<div class="rec" data-act="inst" data-id="${i.Installation_ID}">
+        <div class="r1"><b>${esc(i.Installation_Name)}</b>${chip(installationState(i.Installation_ID))}</div></div>`).join("")}
+    </div>`;
+  }
+  const I = inst(SEL.inst);
+  const facs = visibleFacilities().filter(f=>f.Installation_ID===SEL.inst);
+  const direct = visibleItems().filter(i=>i.Installation_ID===SEL.inst && !i.Facility_ID);
+  return `
+  <div class="card"><header>
+    <button class="btn sm" data-act="tab" data-id="installations-root">← Installations</button>
+    <h2 style="margin-left:6px">${esc(I.Installation_Name)}</h2>
+    <span class="sub">Portfolio ${esc(I.Portfolio_ID)} · ${D.period(PERIOD)}</span>
+    <div class="right">${chip(installationState(SEL.inst))}</div></header>
+    <table class="responsive"><thead><tr><th>Facility</th><th>Model</th><th>Package</th><th></th></tr></thead>
+      <tbody>${facs.map(f=>`<tr class="click" data-act="fac" data-id="${f.Facility_ID}">
+        <td><b>${esc(f.Facility_Name)}</b><div class="meta">${esc(f.Facility_Type)}</div></td>
+        <td class="meta">${esc(f.Operating_Model)}</td>
+        <td>${chip(facilityState(f.Facility_ID))}</td>
+        <td class="num"><button class="btn sm" data-act="fac" data-id="${f.Facility_ID}">Open</button></td>
+      </tr>`).join("")}</tbody></table>
+    ${facs.map(f=>`<div class="rec" data-act="fac" data-id="${f.Facility_ID}">
+      <div class="r1"><div><b>${esc(f.Facility_Name)}</b><div class="meta">${esc(f.Operating_Model)}</div></div>
+        ${chip(facilityState(f.Facility_ID))}</div></div>`).join("")}
+  </div>
+  <div class="card"><header><h2>Installation and contract items</h2></header>
+    ${recordList(direct, {empty:"None for this period."})}</div>`;
+}
+
+/* ---------- Review ---------- */
+function viewReview(){
+  if (!SEL.item){
+    const q = visibleItems().filter(i=>st(i).status==="RECEIVED_PENDING_QC")
+      .sort((a,b)=>a.Due_Date.localeCompare(b.Due_Date));
+    return `<div class="card"><header><h2>Review queue</h2>
+      <span class="sub">${q.length} awaiting your decision</span></header>
+      ${recordList(q, {showLocation:true, empty:"The queue is clear."})}</div>`;
+  }
+  const it = DB.items.find(i=>i.EOM_Item_ID===SEL.item);
+  const r = rq(it.Requirement_ID), s = st(it);
+  const vs = DB.subs.filter(x=>x.EOM_Item_ID===it.EOM_Item_ID).sort((a,b)=>b.Version_No-a.Version_No);
+  const cur = vs.find(v=>v.Is_Current);
+  const prevComment = vs.find(v=>v.QC_Comment);
+
+  return `<div class="card">
+    <header><button class="btn sm" data-act="back">← Back</button>
+      <h2 style="margin-left:6px">${esc(r.Document_Code)}</h2>
+      <span class="sub">${esc(inst(it.Installation_ID).Installation_Name)} · ${esc(where(it))} · ${D.period(PERIOD)}</span>
+      <div class="right">${chip(s)}</div></header>
+    <div class="pad grid2">
+      <div class="stack-md">
+        <div style="border:1px solid var(--line);border-radius:6px;padding:15px;background:#fbfcfd">
+          <div class="section-title">Document</div>
+          <div style="font-size:15px;font-weight:600;word-break:break-all">${esc(cur?cur.File_Name:"Not received")}</div>
+          <div class="meta" style="margin:5px 0 12px">
+            ${cur?`Submitted ${D.fmtLong(cur.Uploaded_DateTime)} by ${esc(cur.Uploaded_By)}`:""}
+            ${cur&&cur.Submitted_On_Behalf_Of?`<br>on behalf of ${esc(cur.Submitted_On_Behalf_Of)}`:""}
+          </div>
+          <button class="btn">Open document</button>
+        </div>
+        <div>
+          <div class="section-title">Requirement</div>
+          <div class="meta">${esc(r.Document_Name)}<br>
+            Due ${D.fmtLong(it.Due_Date)} · ${it.Requirement_Scope} scope</div>
+        </div>
+        <div>
+          <div class="section-title">Versions</div>
+          <div style="border:1px solid var(--line);border-radius:6px;padding:2px 12px">
+            ${vs.map(v=>`<div class="ver ${v.Is_Current?"cur":""}"><span class="vn">v${v.Version_No}</span>
+              <span style="flex:1">${esc(v.File_Name)}
+                <div class="meta">${D.fmt(v.Uploaded_DateTime)} · ${esc(v.Uploaded_By)}</div></span>
+              <span class="meta">${esc(v.QC_Status)}</span></div>`).join("")}
+          </div>
+        </div>
+        ${prevComment?`<div class="warn-box"><b>Previous comment:</b> ${esc(prevComment.QC_Comment)}</div>`:""}
+      </div>
+
+      <div class="stack-md">
+        <div><div class="section-title">Decision</div>
+          <div class="radios">
+            ${[["Accepted","Accept"],["Correction Required","Return for correction"],
+               ["Wrong Document","Wrong document"],["Not Applicable","Not applicable"]]
+              .map(([v,l])=>`<label><input type="radio" name="qc" value="${v}" data-act="qcpick">
+                <span>${l}</span></label>`).join("")}
+          </div></div>
+        <div id="qcExtra"></div>
+        <div id="qcErr" class="err"></div>
+        <button class="btn pri" data-act="save">Save decision</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderQCExtra(){
+  const v = (document.querySelector('input[name="qc"]:checked')||{}).value;
+  const box = $("#qcExtra"); if(!box) return;
+  if (!v){ box.innerHTML=""; return; }
+  let h = "";
+  if (v==="Correction Required" || v==="Wrong Document")
+    h += `<label class="f"><span>What needs correcting</span>
+      <textarea id="qcComment" placeholder="The submitter sees this."></textarea></label>`;
+  if (v==="Correction Required")
+    h += `<label class="f" style="margin-top:12px"><span>Correction suspense</span>
+      <input type="date" id="qcDue" value="2026-09-19"></label>`;
+  if (v==="Not Applicable")
+    h += `<label class="f"><span>Authority for waiving this requirement</span>
+      <textarea id="qcComment" placeholder="This changes the expected package. Record why."></textarea></label>`;
+  box.innerHTML = h;
+}
+
+/* ---------- Exceptions ---------- */
+function viewExceptions(){
+  const q = DB.unmatched.filter(u=>u.Resolution_Status==="Needs Classification");
+  return `<div class="card"><header><h2>Unclassified files</h2>
+    <span class="sub">Found in a Portfolio FY folder, not matched to a requirement</span></header>
+    ${q.length===0?`<div class="empty">Nothing to classify.</div>`:`<div class="pad stack-md">
+    ${q.map(u=>{
+      const open = classifyOpen[u.Unmatched_ID];
+      const conf = c => `<span class="chip c${c==="High"?3:c==="Medium"?2:0}">${c} confidence</span>`;
+      const facsFor = iid => FACILITIES.filter(f=>f.Installation_ID===iid);
+      return `<div style="border:1px solid var(--line);border-radius:6px;padding:15px">
+        <div style="font-weight:600;word-break:break-all">${esc(u.File_Name)}</div>
+        <div class="meta" style="margin:3px 0 12px">Portfolio ${esc(u.Portfolio_ID)} · ${esc(u.Fiscal_Year)} ·
+          ${u.Uploaded_By?"uploaded by "+esc(u.Uploaded_By):"uploader unknown"} · found ${D.fmt(u.Discovered_DateTime)}</div>
+
+        ${!open?`
+          ${u.Sug_Inst?`<div class="section-title">We think this is</div>
+          <table style="border:1px solid var(--line);border-radius:6px;margin-bottom:12px">
+            <tbody>
+              <tr><td class="meta" style="width:130px">Installation</td>
+                <td>${esc(inst(u.Sug_Inst).Installation_Name)}</td><td class="num">${conf(u.Sug_Inst_Conf)}</td></tr>
+              ${u.Sug_Fac?`<tr><td class="meta">Facility</td><td>${esc(fac(u.Sug_Fac).Facility_Name)}</td>
+                <td class="num">${conf(u.Sug_Fac_Conf)}</td></tr>`:""}
+              ${u.Sug_Req?`<tr><td class="meta">Document</td><td>${esc(rq(u.Sug_Req).Document_Code)}</td>
+                <td class="num">${conf(u.Sug_Req_Conf)}</td></tr>`:""}
+              <tr><td class="meta">Period</td><td>${D.period(u.Sug_Period)}</td>
+                <td class="num">${conf(u.Sug_Period_Conf)}</td></tr>
+            </tbody></table>
+          <div class="actions"><button class="btn pri sm" data-act="confirm" data-id="${u.Unmatched_ID}">Confirm</button>
+            <button class="btn sm" data-act="change" data-id="${u.Unmatched_ID}">Change classification</button>
+            <button class="btn sm" data-act="notdoc" data-id="${u.Unmatched_ID}">Not an EOM document</button></div>`
+          :`<div class="note-box" style="margin-bottom:12px">We couldn't determine where this belongs.
+             Classify it manually.</div>
+            <div class="actions"><button class="btn pri sm" data-act="change" data-id="${u.Unmatched_ID}">Classify</button>
+              <button class="btn sm" data-act="notdoc" data-id="${u.Unmatched_ID}">Not an EOM document</button></div>`}
+        `:`
+          <div class="fields">
+            <label class="f"><span>Installation</span>
+              <select data-u="${u.Unmatched_ID}" data-k="inst" data-act="cascade"><option value="">Select…</option>
+              ${visibleInstallations().map(i=>`<option value="${i.Installation_ID}"
+                ${i.Installation_ID===(u.Pick_Inst||u.Sug_Inst)?"selected":""}>${esc(i.Installation_Name)}</option>`).join("")}
+              </select></label>
+            <label class="f"><span>Facility</span>
+              <select data-u="${u.Unmatched_ID}" data-k="fac"><option value="">Installation-level</option>
+              ${facsFor(u.Pick_Inst||u.Sug_Inst).map(f=>`<option value="${f.Facility_ID}"
+                ${f.Facility_ID===(u.Pick_Fac||u.Sug_Fac)?"selected":""}>${esc(f.Facility_Name)}</option>`).join("")}
+              </select></label>
+            <label class="f"><span>Document</span>
+              <select data-u="${u.Unmatched_ID}" data-k="req"><option value="">Select…</option>
+              ${reqsFor(u.Pick_Fac||u.Sug_Fac).map(r=>`<option value="${r.Requirement_ID}"
+                ${r.Requirement_ID===u.Sug_Req?"selected":""}>${esc(r.Document_Code)}</option>`).join("")}
+              </select></label>
+            <label class="f"><span>Period</span>
+              <select data-u="${u.Unmatched_ID}" data-k="per">
+              ${PERIODS.map(p=>`<option ${p===u.Sug_Period?"selected":""}>${p}</option>`).join("")}</select></label>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn pri sm" data-act="classify" data-id="${u.Unmatched_ID}">Save classification</button>
+            <button class="btn sm" data-act="cancelchange" data-id="${u.Unmatched_ID}">Cancel</button></div>`}
+      </div>`;}).join("")}
+    </div>`}
+  </div>`;
+}
+/* cascading: requirements follow the chosen facility's model, or the
+   installation set when no facility is chosen */
+function reqsFor(fid){
+  if (!fid) return REQUIREMENTS.filter(r=>r.Active_Flag && r.Requirement_Scope!=="Facility");
+  const f = fac(fid);
+  return REQUIREMENTS.filter(r=>r.Active_Flag && r.Requirement_Scope==="Facility" && matchesReq(f,r));
+}
+
+/* ---------- Activity ---------- */
+function viewActivity(){
+  return `<div class="card"><header><h2>Activity</h2>
+    <span class="sub">Business events, stamped with the app version</span></header>
+    ${DB.events.length===0?`<div class="empty">No activity yet this session.</div>`:
+    `<table class="responsive"><thead><tr><th>Time</th><th>Who</th><th>Event</th>
+      <th>Result</th><th>Detail</th></tr></thead><tbody>
+      ${DB.events.map(e=>`<tr><td class="meta">${esc(e.Event_DateTime)}</td>
+        <td>${esc(e.User_UPN)}</td><td>${esc(e.Event_Type)}</td>
+        <td>${esc(e.Result)}</td><td class="meta">${esc(e.Detail)}</td></tr>`).join("")}
+    </tbody></table>`}
+  </div>`;
+}
+
+/* ---------- Admin ---------- */
+function viewAdmin(){
+  const h = configHealth();
+  const ok = t=>`<span class="chip c3">${t}</span>`, warn = t=>`<span class="chip c2">${t}</span>`;
+  return `
+  <div class="card"><header><h2>System health</h2>
+    <span class="sub">Faster than reading flow run history</span></header>
+    <div class="pad stack-sm">
+      <div>${ok(h.installations+" installations mapped")}</div>
+      <div>${ok(h.facilities+" facilities mapped")}</div>
+      <div>${h.orphans.length?warn(h.orphans.length+" facilities have no requirement set"):ok("All facilities have a requirement set")}</div>
+      <div>${ok(h.generated+" items generated for "+D.period(PERIOD))}</div>
+      <div>${h.unmatched?warn(h.unmatched+" unclassified documents"):ok("No unclassified documents")}</div>
+      <div>${ok("No duplicate current submissions")}</div>
+      ${h.orphans.length?`<div class="warn-box"><b>Configuration warning</b><br>
+        ${h.orphans.map(f=>`${esc(inst(f.Installation_ID).Installation_Name)} · ${esc(f.Facility_Name)} —
+          operating model ${esc(f.Operating_Model)} has no active requirement set. Its package will
+          render empty and read as compliant.`).join("<br>")}</div>`:""}
+    </div>
+  </div>
+  <div class="card"><header><h2>Requirements</h2>
+    <span class="sub">Change a requirement here, never in the app or a flow</span></header>
+    <table class="responsive"><thead><tr><th>Code</th><th>Model</th><th>Scope</th>
+      <th>Due</th><th>Authority status</th></tr></thead><tbody>
+      ${REQUIREMENTS.map(r=>`<tr><td><b>${esc(r.Document_Code)}</b>
+        <div class="meta">${esc(r.Document_Name)}</div></td>
+        <td class="meta">${esc(r.Applicable_Model)}</td><td>${esc(r.Requirement_Scope)}</td>
+        <td>${r.Due_Day}th</td>
+        <td><span class="chip c4">${esc(r.Authority_Status)}</span>
+          <div class="meta">${esc(r.Authority_Reference)}</div></td></tr>`).join("")}
+    </tbody></table>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   /ui — render + single delegated event handler
+   ══════════════════════════════════════════════════════════════ */
+const VIEWS = {home:viewHome, package:viewPackage, installations:viewInstallations,
+  review:viewReview, exceptions:viewExceptions, activity:viewActivity, admin:viewAdmin};
+
+function render(){
+  $("#whoName").textContent = `${ME.Name} — ${ME.Role}`;
+  $("#whoScope").textContent = ME.desc;
+  $("#whoAv").textContent = ME.Name.split(" ").map(x=>x[0]).join("").slice(0,2);
+  $("#perSel").innerHTML = PERIODS.map(p=>`<option value="${p}" ${p===PERIOD?"selected":""}>
+    ${D.period(p)}${p===PERIODS[0]?" (open)":""}</option>`).join("");
+  renderTabs();
+  $("#view").innerHTML = (VIEWS[TAB]||viewHome)();
+  if (TAB==="review" && SEL.item) renderQCExtra();
+}
+
+document.addEventListener("click", e=>{
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const id = el.dataset.id;
+  switch(el.dataset.act){
+    case "open": {
+      const it = DB.items.find(i=>i.EOM_Item_ID===id); if(!it) return;
+      if (ME.Can_QC && it.Received_Flag){ SEL.item=id; TAB="review"; }
+      else if (it.Facility_ID){ SEL.fac=it.Facility_ID; TAB = ME.Scope_Type==="Facility"?"package":"package"; }
+      else { SEL.inst=it.Installation_ID; TAB="installations"; }
+      render(); break; }
+    case "inst": SEL.inst=id; TAB="installations"; render(); break;
+    case "fac":  SEL.fac=id;  TAB="package"; render(); break;
+    case "tab":
+      if (id==="installations-root"){ SEL.inst=null; TAB="installations"; }
+      else TAB=id;
+      render(); break;
+    case "back": SEL.item=null; render(); break;
+    case "qcpick": renderQCExtra(); break;
+    case "save": saveReview(); break;
+    case "pick": setFile(["Monthly Food Report Final.xlsx","August 1119.xlsx",
+      "scan_2026_08.pdf","aug financials FINAL v3.xlsx"][Math.floor(Math.random()*4)]); break;
+    case "clear": setFile(null); break;
+    case "submit": doSubmit(); break;
+    case "folder": toast("Would open the Portfolio FY folder in Teams."); break;
+    case "confirm": confirmClassification(id); break;
+    case "change": classifyOpen[id]=true; render(); break;
+    case "cancelchange": classifyOpen[id]=false; render(); break;
+    case "classify": manualClassify(id); break;
+    case "notdoc": {
+      const u=DB.unmatched.find(x=>x.Unmatched_ID===id);
+      u.Resolution_Status="Not an EOM document";
+      logEvent("ManualClassification","Success",u.File_Name+" marked not an EOM document");
+      toast("Removed from the queue."); render(); break; }
+  }
+});
+document.addEventListener("change", e=>{
+  const el = e.target;
+  if (el.id==="perSel"){ PERIOD=el.value; SEL.item=null; render(); return; }
+  if (el.id==="selReq"){ $("#btnSubmit").disabled = !(pendingFile && el.value); return; }
+  if (el.dataset && el.dataset.act==="cascade"){
+    const u = DB.unmatched.find(x=>x.Unmatched_ID===el.dataset.u);
+    u.Pick_Inst = el.value; u.Pick_Fac = ""; render(); return;
+  }
+  if (el.dataset && el.dataset.k==="fac"){
+    const u = DB.unmatched.find(x=>x.Unmatched_ID===el.dataset.u);
+    if (u){ u.Pick_Fac = el.value; render(); }
+  }
+});
+document.addEventListener("dragover", e=>{ if(e.target.closest("#drop")) e.preventDefault(); });
+document.addEventListener("drop", e=>{
+  const d = e.target.closest("#drop"); if(!d) return;
+  e.preventDefault(); setFile((e.dataTransfer.files[0]||{}).name || "dropped-file.xlsx");
+});
+
+function setFile(n){
+  pendingFile = n;
+  const f=$("#fname"), d=$("#drop"), b=$("#btnSubmit");
+  if(!f) return;
+  f.textContent = n||"";
+  d.classList.toggle("armed", !!n);
+  if(b) b.disabled = !(n && $("#selReq") && $("#selReq").value);
+}
+
+function doSubmit(){
+  const itemId = $("#selReq").value, err=$("#upErr");
+  const it = DB.items.find(i=>i.EOM_Item_ID===itemId);
+  if (!it){ err.textContent="Pick a requirement."; err.classList.add("on"); return; }
+  const ob = $("#onBehalf") && $("#onBehalf").value==="yes";
+  const v = createSubmission(it, pendingFile, {onBehalf: ob ? (it.Facility_ID||it.Installation_ID):""});
+  logEvent("SubmissionCreated","Success",
+    `${rq(it.Requirement_ID).Document_Code} · ${pendingFile} · declared at upload`);
+  toast("Submission added.");
+  pendingFile=null; err.classList.remove("on"); render();
+}
+
+function saveReview(){
+  const picked = document.querySelector('input[name="qc"]:checked');
+  const err = $("#qcErr"); err.classList.remove("on");
+  if (!picked){ err.textContent="Choose a decision."; err.classList.add("on"); return; }
+  const v = picked.value;
+  const comment = ($("#qcComment")||{}).value || "";
+  const due = ($("#qcDue")||{}).value || "";
+  if (["Correction Required","Wrong Document"].includes(v) && !comment.trim()){
+    err.textContent="Add a comment explaining what needs correcting."; err.classList.add("on"); return; }
+  if (v==="Not Applicable" && !comment.trim()){
+    err.textContent="Record the authority for waiving this requirement."; err.classList.add("on"); return; }
+  if (v==="Correction Required" && !due){
+    err.textContent="Set a date for the corrected document."; err.classList.add("on"); return; }
+
+  const it = DB.items.find(i=>i.EOM_Item_ID===SEL.item);
+  const cur = curSub(it);
+  cur.QC_Status=v; cur.QC_By=ME.Name; cur.QC_DateTime=TODAY; cur.QC_Comment=comment;
+  it.Correction_Due = v==="Correction Required" ? due : null;
+  logEvent(v==="Accepted"?"QCAccepted":v==="Correction Required"?"QCCorrectionRequired":"QCWrongDocument",
+    "Success", `${rq(it.Requirement_ID).Document_Code} · ${inst(it.Installation_ID).Installation_Name}`);
+  toast("Decision saved.");
+  SEL.item=null; render();
+}
+
+function confirmClassification(uid){
+  const u = DB.unmatched.find(x=>x.Unmatched_ID===uid);
+  applyClassification(u, u.Sug_Inst, u.Sug_Fac, u.Sug_Req, u.Sug_Period, "Folder context");
+}
+function manualClassify(uid){
+  const g = k => (document.querySelector(`[data-u="${uid}"][data-k="${k}"]`)||{}).value || "";
+  const u = DB.unmatched.find(x=>x.Unmatched_ID===uid);
+  applyClassification(u, g("inst"), g("fac"), g("req"), g("per"), "Manual");
+}
+function applyClassification(u, iid, fid, rid, per, method){
+  if (!iid || !rid){ toast("Pick an installation and a document."); return; }
+  const it = findItem(per, rid, fid, iid);
+  if (!it){
+    logEvent("ClassificationUncertain","Warning",`${u.File_Name} — no matching requirement`);
+    toast("No expected requirement matches that combination."); return; }
+  createSubmission(it, u.File_Name, {by:u.Uploaded_By||"Unknown", when:u.Discovered_DateTime,
+    method:"Folder drop", classMethod:method});
+  u.Resolution_Status="Classified";
+  classifyOpen[u.Unmatched_ID]=false;
+  logEvent("ManualClassification","Success",
+    `${u.File_Name} → ${rq(rid).Document_Code} at ${inst(iid).Installation_Name}`);
+  toast("Classified and added to the review queue.");
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   boot
+   ══════════════════════════════════════════════════════════════ */
+$("#roleSel").innerHTML = IDENTITIES.map(r=>`<option value="${r.key}">${r.Name} — ${r.Role}</option>`).join("");
+$("#roleSel").addEventListener("change", e=>{
+  ME = IDENTITIES.find(r=>r.key===e.target.value);
+  SEL={inst:null,fac:null,item:null}; TAB="home"; classifyOpen={};
+  logEvent("AppOpened","Success","Identity switched (test harness)");
+  render();
+});
+$("#dateSel").addEventListener("change", e=>{ TODAY=e.target.value; render(); });
+$("#resetBtn").addEventListener("click", ()=>{
+  SEL={inst:null,fac:null,item:null}; TAB="home"; classifyOpen={}; seed(); render(); toast("Reset.");
+});
+seed(); render();
+</script>
+</body>
+</html>

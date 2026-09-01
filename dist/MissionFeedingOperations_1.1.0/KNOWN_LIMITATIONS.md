@@ -86,6 +86,28 @@ Every one of these is a real gap in the evidence, not a formality.
 
 ---
 
+## ALM forward-look (not R1 blockers)
+
+Two Microsoft-side currents to plan around after the pilot succeeds:
+
+- **`pac canvas pack`/`unpack` are deprecated preview surfaces.** This
+  build contains that risk deliberately — PAC pinned to 2.11.2,
+  fail-closed on version drift, Studio-open validation mandatory, and the
+  platform's own re-export treated as the canonical artifact. It is the
+  right bootstrap, not the right steady state: once the app legitimately
+  exists in Power Platform, investigate migrating ongoing canvas source
+  control to **Power Platform Git Integration** (canvas source as
+  `.pa.yaml`, which is exactly what this repository already keeps).
+  Government-cloud feature availability differs — make it a tenant
+  capability check, not an assumption.
+- **End-to-end test automation, post-pilot:** Microsoft's Power Platform
+  **Playwright** framework supports canvas apps (auth helpers,
+  canvas-aware waiters). A smoke suite worth automating once auth
+  permits: base user opens Home → My Package → Submit → status becomes
+  awaiting review → reviewer returns it → base user resubmits → reviewer
+  accepts. Do not invest in the older Power Apps Test Engine — it is
+  deprecated with its repository scheduled for removal.
+
 ## Recommendation
 
 **DEV or PILOT only.** Not production.
