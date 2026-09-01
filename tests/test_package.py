@@ -563,7 +563,7 @@ class TheAssemblyRunbookIsCurrent(unittest.TestCase):
     def test_it_promises_no_recurring_studio_work(self):
         flat = " ".join(self.text.split())
         self.assertRegex(flat, r"(?i)No further Studio work")
-        self.assertRegex(flat, r"(?i)the re-export is the final")
+        self.assertRegex(flat, r"(?i)re-export is the canonical")
 
     def test_the_three_paths_are_ranked_and_honest(self):
         flat = " ".join(self.text.split())
@@ -580,10 +580,17 @@ class TheAssemblyRunbookIsCurrent(unittest.TestCase):
         self.assertIn("add the 19 data sources listed in step 2", flat)
         self.assertIn("add the 19 data sources, in this order", flat)
 
-    def test_it_keeps_the_round_trip_check(self):
+    def test_it_keeps_the_round_trip_check_with_the_reviewed_policy(self):
+        # "The export wins" was revised: Studio normalisation reconciles
+        # automatically, SEMANTIC differences require explicit review. Blindly
+        # letting Studio overwrite a deliberate fix is the same disease as the
+        # repository quietly disagreeing with the shipped app.
         flat = " ".join(self.text.split())
         self.assertIn("pac canvas unpack", flat)
-        self.assertRegex(flat, r"(?i)the export wins")
+        self.assertRegex(flat, r"(?i)Normalisation-only")
+        self.assertRegex(flat, r"(?i)explicit review before the repository")
+        self.assertNotRegex(flat, r"(?i)the export wins and the repository is "
+                                  r"updated")
 
 
 class TheExportValidatorWorks(unittest.TestCase):

@@ -120,86 +120,6 @@ tenant:
   expression treated a null final call as "no deadline" and left the item amber
   forever instead of going red — the wrong answer in the safe-looking direction.
 
-## STATUS: READY FOR PATH A ASSEMBLY
-
-Not FULLY VALIDATED FINAL RELEASE. That status is only reachable after the
-platform cycle on the .mil side, and this report does not round up.
-
-### The four artifacts, kept distinct
-
-| Artifact | What it is | Version | SHA-256 | Studio-validated | Tenant-executed |
-|---|---|---|---|---|---|
-| **Artifact 1** — `MissionFeedingOperations_1.0.0.zip` | backend bootstrap solution: 5 flows (disabled), 24 blank env vars, 3 connection refs. **Canvas app: NO, by design.** | 1.0.0 | recorded below, reproducible from the build commit | n/a | no |
-| **Reference `.msapp`** — `MissionFeedingOperations_REFERENCE_ONLY.msapp` | build validation only. Packed by pac 2.11.2 from schema-validated source over the neutralised scaffolding; round-trips byte-identically; residue-swept. **No platform identity; never a deployment artifact.** | n/a | printed by `build_msapp.py` on every build | **no** | no |
-| **Locally assembled candidate** — `MissionFeedingOperations_1.1.0.zip` | produced by `assemble_full_solution.sh` from the operator's wrapper export, through nine fail-closed gates. A candidate, not the release. | 1.1.0 (enforced against `Solution.xml`) | printed at assembly | not yet | no |
-| **Studio-validated final export** | the platform's own re-export after import → open → zero errors → Accessibility Checker → publish. **The canonical Canvas-inclusive artifact**, promoted by `validate_final_export.sh`. | 1.1.0 | recorded at promotion | **yes** | still NO until the pilot runs |
-
-### The residue finding, owned
-
-The previous round claimed the built `.msapp`'s "leak sweep: clean". **That
-claim was false.** User inspection found, inside the shipped archive: signed
-Azure Blob URLs (`blob.core.windows.net/…sig=…`), a donor tenant identifier
-(`sktid=`), three donor images and their `Resources.json` entries, the donor's
-AppName in `PublishInfo.json`, and donor feature flags enabled (runtime
-copilot, experimental CDS/SQL connectors). The sweep missed them because its
-blocklist had five entries and none of these classes.
-
-Closed structurally, not just with a longer list:
-
-- **The raw donor left the tree.** The tracked artifact is now the
-  pre-neutralised `scaffolding.msapr` (hash-pinned), produced by
-  `neutralise_donor.py`, which documents the disposition of every donor entry
-  and refuses to write output containing any blocked string. Donor images:
-  stripped, after *proving* the source references no image resource. Donor
-  flags: forced `False`. Donor name: gone. (The raw bytes remain in git
-  history at the earlier commit; the current tree is what ships and what the
-  scanner guards.)
-- **The scanner now inspects archives.** Every tracked or built `.msapp`,
-  `.msapr` and `.zip` — dist included, since that is exactly where the residue
-  lived — has every entry swept by every content rule plus four archive rules
-  (`ARC-01..04`: blob storage, SAS `sig=`, `sktid=`, `windows.net`). An
-  archive that cannot be opened is itself a FAIL. Only `tests/fixtures/` is
-  exempt, for the same reason the scanner's own rule file is: specimens must
-  contain what the rules forbid.
-- **Regression tests plant each residue class in a real archive** and require
-  the block; the shipped reference `.msapp` is re-probed by test against the
-  original finding list, not against the build script's word.
-
-### The assembler, made fail-closed
-
-The previous version piped pac through `grep … || true` — a failed pack could
-be masked and the blank wrapper re-shipped as the candidate. Rewritten with
-nine gates, each proven by a failure simulation:
-
-| Gate | Proven by |
-|---|---|
-| pinned PAC CLI 2.11.2 (drift refuses; override only after the round-trip suite passes on the new version) | wrong-version simulation |
-| exactly one canvas app, or `MF_EXPECTED_APP` selects — never first-alphabetically | zero-app, two-app, and selector simulations |
-| all **19 data sources present in the wrapper, by name** — a missing one stops and names itself | missing-source simulation |
-| environment-minted flow name matches `EOM02_Submission` — a mismatch stops with instructions to fix the *repository* source, never the built app | mismatch simulation |
-| unpack verified; pack verified **and the `.msapp` bytes must change** | pack-failure and no-op-pack simulations |
-| internal `Solution.xml` version = release version (bump in Power Apps before export; identity metadata is never rewritten here) | version-mismatch simulation |
-| structural validation + full archive leak sweep on the output | dry run |
-
-The full happy path was dry-run end to end with the real packer: a simulated
-wrapper export went through all nine gates to a validated candidate.
-
-### Also closed this round
-
-- `requirements-dev.txt` + a dependency preflight in `tests/run_tests.sh`: a
-  missing `yaml` module now says "environment problem, install this" instead
-  of surfacing mid-validator looking like a schema failure. Proven by
-  shadowing the module.
-- `validate_final_export.sh`: 18 structural PASS/FAIL rows plus three
-  NOT TESTABLE LOCALLY rows that are never converted to PASS. Proven against
-  a good synthetic post-Studio export and three broken ones (planted SAS
-  residue, version mismatch, missing type-300 RootComponent).
-- "The export wins" policy revised: normalisation-only differences reconcile
-  automatically; **semantic** differences require explicit review before the
-  repository changes.
-- Path A contamination guard: static tests prove the assembler deletes and
-  copies only `Src/` and never references the donor.
-
 ## The canvas app is now BUILT, not pasted
 
 The user asked for the full import ZIP to be producible without a human
@@ -763,7 +683,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **526 passed**, 0 failed — 239 behavioural, 153 structural, 134 policy |
+| Unit tests | **501 passed**, 0 failed — 217 behavioural, 153 structural, 131 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |

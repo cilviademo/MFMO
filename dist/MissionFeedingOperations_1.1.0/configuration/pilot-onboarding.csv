@@ -1,0 +1,6 @@
+Installation_ID,Registry_Validated_By,Registry_Validated_Date,Notes
+ANDERSEN_AB,TSgt Example (pilot placeholder),2026-08-31,One facility. Covers the simplest shape.
+JBSA_LACKLAND,TSgt Example (pilot placeholder),2026-08-31,Six facilities. Covers the most complex shape.
+CREECH_AFB,TSgt Example (pilot placeholder),2026-08-31,Single DFAC, BOS contract.
+CLEAR_SFS,TSgt Example (pilot placeholder),2026-08-31,Remote site, no ESM.
+EGLIN_AFB,TSgt Example (pilot placeholder),2026-08-31,Split installation in the source. Exercises the normalisation.

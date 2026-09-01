@@ -208,8 +208,84 @@ def walk():
                 yield os.path.join(base, f)
 
 
+ARCHIVE_EXT = (".msapp", ".zip", ".msapr")
+
+
+def walk_archives():
+    """Tracked archive-like artifacts. A leak inside a ZIP is still a leak,
+    and the first canvas build proved it: the .msapp shipped signed Azure Blob
+    URLs and a donor tenant identifier that no text-file scan could see. An
+    archive is never exempt merely because Git calls it binary."""
+    # tests/fixtures is the one exemption, for the same reason SKIP_FILES
+    # exempts the documents that define the gate: the fixture archives exist
+    # to prove these rules FIRE, so they necessarily contain what the rules
+    # forbid. They are never on the packaging path, and the tests that consume
+    # them assert the violations are detected.
+    fixture_dir = os.path.join(ROOT, "tests", "fixtures")
+    # Deliberately WIDER than the text walk: dist/ is skipped for text because
+    # build outputs restate their sources, but built ARCHIVES are the shipped
+    # artifacts themselves -- the donor residue lived in dist/canvas while
+    # every text scan read PASS. Only vendored prior art and the fixture
+    # specimens stay out.
+    archive_skip = {".git", "node_modules", "__pycache__", "reference",
+                    "handoffs"}
+    for base, dirs, files in os.walk(ROOT):
+        dirs[:] = [d for d in dirs
+                   if d not in archive_skip
+                   and os.path.join(base, d) not in SKIP_PATHS]
+        if os.path.abspath(base).startswith(fixture_dir):
+            continue
+        for f in files:
+            if f.lower().endswith(ARCHIVE_EXT):
+                yield os.path.join(base, f)
+
+
+def scan_archives():
+    """Apply every content rule to every entry of every tracked archive."""
+    import zipfile
+    hits = []
+    for path in walk_archives():
+        rel = os.path.relpath(path, ROOT)
+        try:
+            z = zipfile.ZipFile(path)
+        except (OSError, zipfile.BadZipFile):
+            hits.append(("FAIL", "ARC-00", rel, 0,
+                         "archive cannot be opened for inspection; an "
+                         "uninspectable artifact does not ship", ""))
+            continue
+        with z:
+            for entry in z.namelist():
+                text = z.read(entry).decode("utf-8", "ignore")
+                for rid, sev, pat, msg in RULES:
+                    m = re.search(pat, text)
+                    if m:
+                        raw = text[max(0, m.start() - 20):m.start() + 60]
+                        snippet = "".join(c for c in raw
+                                          if c.isprintable())[:90]
+                        hits.append((sev, rid, f"{rel}!{entry}", 0, msg,
+                                     snippet))
+                # Archive-only rules: the residue classes the first canvas
+                # build shipped. Signed SAS fragments and cloud-storage hosts
+                # have no business in any artifact of this project.
+                for rid, needle, msg in (
+                        ("ARC-01", "blob.core.windows.net",
+                         "Azure Blob storage URL inside an archive entry"),
+                        ("ARC-02", "sig=",
+                         "SAS signature fragment inside an archive entry"),
+                        ("ARC-03", "sktid=",
+                         "tenant identifier in a signed URL inside an "
+                         "archive entry"),
+                        ("ARC-04", ".windows.net",
+                         "windows.net host inside an archive entry")):
+                    if needle in text:
+                        hits.append(("FAIL", rid, f"{rel}!{entry}", 0, msg,
+                                     needle))
+    return hits
+
+
 def scan_content():
     hits, allowed = [], []
+    hits.extend(scan_archives())
     for path in walk():
         rel = os.path.relpath(path, ROOT)
         try:

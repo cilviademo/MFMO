@@ -1,0 +1,13 @@
+Non_Duty_ID,Date,Name,Scope_Type,Scope_ID,Active_Flag
+NDD-2026-NEWYEAR,2026-01-01,New Year's Day,Enterprise,,TRUE
+NDD-2026-MLK,2026-01-19,Martin Luther King Jr Day,Enterprise,,TRUE
+NDD-2026-PRES,2026-02-16,Washington's Birthday,Enterprise,,TRUE
+NDD-2026-MEMORIAL,2026-05-25,Memorial Day,Enterprise,,TRUE
+NDD-2026-JUNETEENTH,2026-06-19,Juneteenth,Enterprise,,TRUE
+NDD-2026-JULY4,2026-07-03,Independence Day observed,Enterprise,,TRUE
+NDD-2026-LABOR,2026-09-07,Labor Day,Enterprise,,TRUE
+NDD-2026-COLUMBUS,2026-10-12,Columbus Day,Enterprise,,TRUE
+NDD-2026-VETERANS,2026-11-11,Veterans Day,Enterprise,,TRUE
+NDD-2026-THANKSGIVING,2026-11-26,Thanksgiving Day,Enterprise,,TRUE
+NDD-2026-CHRISTMAS,2026-12-25,Christmas Day,Enterprise,,TRUE
+NDD-2026-ALTUS-DOWN,2026-09-04,Wing down day,Installation,ALTUS_AFB,TRUE

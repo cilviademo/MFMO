@@ -67,6 +67,8 @@ the real engine. Open it in a browser.
 ## Build state
 
 ```
+Canvas toolchain          Power Platform CLI 2.11.2 (pinned; canvas
+                          pack/unpack is preview surface — drift refuses)
 Schema version            5.0  (17 lists, 286 columns)   validated
 Requirement seed          13 rows, 8 active, authority and scope tracked apart
 Registry                  103 installations, 154 facilities, from the QRG

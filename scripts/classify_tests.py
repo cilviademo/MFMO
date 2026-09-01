@@ -84,6 +84,11 @@ CLASSIFICATION = {
         "TheExpressionIsWellFormed":     (S, "the emitted expression parses and is shaped as expected"),
         "TheExpressionAgreesWithTheEngine": (B, "the expression evaluated against the engine's fixture set"),
     },
+    "test_assembler": {
+        "AssemblerFailsClosed":        (B, "nine failure simulations against the real script with a pac shim"),
+        "FinalExportValidatorWorks":   (B, "the final validator run against a good export and three broken ones"),
+        "PathAOnlyReplacesContent":    (P, "the wrapper metadata wins; only Src/ is replaced"),
+    },
     "test_hardening": {
         "SplittingFilters":                   (B, "delegable filter splitting exercised on queries"),
         "TheGuard":                           (B, "the schema guard run against matching and mismatched versions"),
@@ -93,6 +98,7 @@ CLASSIFICATION = {
         "InlineExceptionsMustBeExplained":    (B, "marker parsing run against good and bad markers"),
         "TheScanStillPasses":                 (B, "each rule fired on a planted specimen and held off a lookalike"),
         "ConnectorsMatchTheAllowlist":        (P, "the connector allowlist is the settled policy"),
+        "ArchivesAreInspected":               (B, "each residue class planted in a real archive and blocked"),
     },
     "test_flow_bodies": {
         "TheGraphIsSound":                   (B, "runAfter graph walked for cycles and unreachable actions"),

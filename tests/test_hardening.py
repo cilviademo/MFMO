@@ -402,3 +402,84 @@ class ConnectorsMatchTheAllowlist(unittest.TestCase):
             fallback = entry.split("fallback:")[1].split("\n")[0].strip()
             self.assertTrue(fallback and fallback != '""',
                             f"a conditional connector has no fallback: {entry[:40]}")
+
+
+class ArchivesAreInspected(unittest.TestCase):
+    """The scanner recurses into tracked archives, and the rules fire there.
+
+    The first canvas build shipped donor residue INSIDE the .msapp -- signed
+    Azure Blob URLs with SAS fragments and a tenant identifier -- while every
+    text-file scan read PASS, because a ZIP is binary from Git's point of
+    view. An archive is never exempt merely because it is binary. These tests
+    plant each residue class in a real archive and require the scan to block.
+    """
+
+    def _scan_with(self, name, payload):
+        import tempfile, zipfile, shutil
+        d = tempfile.mkdtemp(dir=os.path.join(ROOT, "dist"))
+        try:
+            p = os.path.join(d, name)
+            with zipfile.ZipFile(p, "w") as z:
+                z.writestr("References/Resources.json", payload)
+            return SCAN.scan_archives()
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def _assert_blocked(self, payload, rid_prefix):
+        hits = self._scan_with("planted.msapp", payload)
+        matching = [h for h in hits if "planted.msapp" in h[2]
+                    and h[0] == "FAIL"]
+        self.assertTrue(matching, f"nothing fired on {payload[:40]!r}")
+        self.assertTrue(any(h[1].startswith(rid_prefix) for h in matching),
+                        [h[1] for h in matching])
+
+    def test_blob_storage_url_blocks(self):
+        self._assert_blocked(
+            '{"Uri": "https://x.blob.core.windows.net/media/a.jpg"}', "ARC")
+
+    def test_sas_signature_blocks(self):
+        self._assert_blocked('{"Uri": "https://h/a.png?sig=abc123"}', "ARC")
+
+    def test_tenant_identifier_blocks(self):
+        self._assert_blocked('{"Uri": "https://h/a?sktid=deadbeef"}', "ARC")
+
+    def test_a_mil_destination_in_a_zip_blocks(self):
+        hits = self._scan_with(
+            "planted.zip",
+            '{"dataset": "https://usaf.dps.mil/teams/RealSite/x"}')  # prerelease: allow URL-01 the specimen proves the archive rule fires
+        self.assertTrue(any("planted.zip" in h[2] and h[0] == "FAIL"
+                            for h in hits))
+
+    def test_an_unreadable_archive_blocks(self):
+        import tempfile, shutil
+        d = tempfile.mkdtemp(dir=os.path.join(ROOT, "dist"))
+        try:
+            with open(os.path.join(d, "corrupt.msapp"), "wb") as fh:
+                fh.write(b"not a zip at all")
+            hits = SCAN.scan_archives()
+            self.assertTrue(any(h[1] == "ARC-00" and "corrupt.msapp" in h[2]
+                                for h in hits))
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def test_the_tracked_scaffolding_is_clean(self):
+        # The neutralised scaffolding must pass the very rules built from the
+        # residue its raw donor carried.
+        hits = [h for h in SCAN.scan_archives()
+                if "scaffolding.msapr" in h[2] and h[0] == "FAIL"]
+        self.assertEqual(hits, [], hits)
+
+    def test_the_built_reference_msapp_is_clean_if_present(self):
+        p = os.path.join(ROOT, "dist", "canvas",
+                         "MissionFeedingOperations_REFERENCE_ONLY.msapp")
+        if not os.path.exists(p):
+            self.skipTest("reference msapp not built in this checkout")
+        import zipfile
+        residue = ("blob.core.windows.net", "sig=", "sktid=", ".windows.net",
+                   "almtestapp", "asmanyentities", "stickeromg",
+                   "crm.dynamics")
+        with zipfile.ZipFile(p) as z:
+            for n in z.namelist():
+                text = z.read(n).decode("utf-8", "ignore").lower()
+                for bad in residue:
+                    self.assertNotIn(bad, text, f"{bad} in {n}")

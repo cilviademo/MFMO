@@ -1,0 +1,152 @@
+Issue_ID,Issue_Type,Source_Row,Installation,Facility,Detail
+DQ-0001,Exact duplicate row,4,ANDERSEN AB,DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0002,Exact duplicate row,5,ANDERSEN AB,DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0003,Exact duplicate row,7,ANDERSEN AB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0004,Exact duplicate row,8,ANDERSEN AB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0005,Exact duplicate row,15,CANNON AFB,High Plains Café,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0006,Exact duplicate row,17,CANNON AFB,Pecos Trail DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0007,Exact duplicate row,30,EIELSON AFB,DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0008,Exact duplicate row,34,FAIRCHILD AFB,Ross DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0009,Exact duplicate row,35,FAIRCHILD AFB,Ross DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0010,Exact duplicate row,36,FAIRCHILD AFB,Ross DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0011,Exact duplicate row,38,FAIRCHILD AFB,Warrior DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0012,Exact duplicate row,39,FAIRCHILD AFB,Warrior DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0013,Exact duplicate row,40,FAIRCHILD AFB,Warrior DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0014,Exact duplicate row,42,FE WARREN AFB (2.0),Chadwell DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0015,Exact duplicate row,44,FE WARREN AFB (MAF),MAFFO,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0016,Exact duplicate row,49,GOODFELLOW AFB,Cressman DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0017,Exact duplicate row,51,GOODFELLOW AFB,Western Winds DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0018,Exact duplicate row,57,HURLBURT FIELD,Riptide,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0019,Exact duplicate row,59,INCIRLIK AB,Sultan's Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0020,Exact duplicate row,60,INCIRLIK AB,Sultan's Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0021,Exact duplicate row,67,JBSA LACKLAND,Live Oak,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0022,Exact duplicate row,68,JBSA LACKLAND,Amigo,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0023,Exact duplicate row,69,JBSA LACKLAND,SWT,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0024,Exact duplicate row,70,JBSA LACKLAND,Chapman,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0025,Exact duplicate row,71,JBSA LACKLAND,Defender,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0026,Exact duplicate row,72,JBSA LACKLAND,Flight Kitchen (FK),Byte-identical to an earlier row. Excluded from the registry.
+DQ-0027,Exact duplicate row,77,KEESLER AFB,Azalea,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0028,Exact duplicate row,78,KEESLER AFB,Azalea,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0029,Exact duplicate row,79,KEESLER AFB,Azalea,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0030,Exact duplicate row,81,KEESLER AFB,Live Oak,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0031,Exact duplicate row,82,KEESLER AFB,Live Oak,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0032,Exact duplicate row,83,KEESLER AFB,Live Oak,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0033,Exact duplicate row,85,KEESLER AFB,Magnolia,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0034,Exact duplicate row,86,KEESLER AFB,Magnolia,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0035,Exact duplicate row,87,KEESLER AFB,Magnolia,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0036,Exact duplicate row,91,KUNSAN AB,O'Malley,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0037,Exact duplicate row,93,KUNSAN AB,D-Pad,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0038,Exact duplicate row,95,"LANGLEY, JB",Crossbow,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0039,Exact duplicate row,96,"LANGLEY, JB",Crossbow,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0040,Exact duplicate row,98,"LANGLEY, JB",Raptor FK,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0041,Exact duplicate row,99,"LANGLEY, JB",Raptor FK,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0042,Exact duplicate row,103,LUKE AFB,TBD,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0043,Exact duplicate row,106,MALMSTROM AFB (2.0),Elkhorn DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0044,Exact duplicate row,108,MALMSTROM AFB (MAF),MAFFO,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0045,Exact duplicate row,110,MAXWELL AFB,OTS,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0046,Exact duplicate row,111,MAXWELL AFB,OTS,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0047,Exact duplicate row,113,MAXWELL AFB,River Front,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0048,Exact duplicate row,114,MAXWELL AFB,River Front,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0049,Exact duplicate row,121,MINOT AFB (2.0),Dakota Inn DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0050,Exact duplicate row,123,MINOT AFB (MAF),MAFFO,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0051,Exact duplicate row,125,MISAWA AB,Falcon Feeder,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0052,Exact duplicate row,127,MISAWA AB,Grissom,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0053,Exact duplicate row,132,NELLIS AFB,Crosswinds Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0054,Exact duplicate row,133,NELLIS AFB,Crosswinds Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0055,Exact duplicate row,134,NELLIS AFB,Crosswinds Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0056,Exact duplicate row,136,NELLIS AFB,Touch & Go,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0057,Exact duplicate row,137,NELLIS AFB,Touch & Go,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0058,Exact duplicate row,138,NELLIS AFB,Touch & Go,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0059,Exact duplicate row,142,OSAN AB,Ginkgo Tree,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0060,Exact duplicate row,143,OSAN AB,Ginkgo Tree,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0061,Exact duplicate row,145,OSAN AB,Pacific House,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0062,Exact duplicate row,146,OSAN AB,Pacific House,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0063,Exact duplicate row,149,RAF LAKENHEATH,Knights Table,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0064,Exact duplicate row,150,RAF LAKENHEATH,Knights Table,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0065,Exact duplicate row,152,RAMSTEIN AB,Rheinland Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0066,Exact duplicate row,153,RAMSTEIN AB,Rheinland Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0067,Exact duplicate row,154,RAMSTEIN AB,Rheinland Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0068,Exact duplicate row,156,RAMSTEIN AB,Lindberghof,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0069,Exact duplicate row,157,RAMSTEIN AB,Lindberghof,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0070,Exact duplicate row,158,RAMSTEIN AB,Lindberghof,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0071,Exact duplicate row,160,RAMSTEIN AB,Jawbone FK,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0072,Exact duplicate row,161,RAMSTEIN AB,Jawbone FK,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0073,Exact duplicate row,162,RAMSTEIN AB,Jawbone FK,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0074,Exact duplicate row,164,RAMSTEIN AB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0075,Exact duplicate row,165,RAMSTEIN AB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0076,Exact duplicate row,166,RAMSTEIN AB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0077,Exact duplicate row,169,SCHRIEVER SFB,Satellite Dish,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0078,Exact duplicate row,175,SHEPPARD AFB,Mesquite,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0079,Exact duplicate row,176,SHEPPARD AFB,Mesquite,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0080,Exact duplicate row,177,SHEPPARD AFB,Mesquite,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0081,Exact duplicate row,178,SHEPPARD AFB,Mesquite,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0082,Exact duplicate row,180,SHEPPARD AFB,Sagebrush,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0083,Exact duplicate row,181,SHEPPARD AFB,Sagebrush,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0084,Exact duplicate row,182,SHEPPARD AFB,Sagebrush,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0085,Exact duplicate row,183,SHEPPARD AFB,Sagebrush,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0086,Exact duplicate row,185,SHEPPARD AFB,Tumbleweed,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0087,Exact duplicate row,186,SHEPPARD AFB,Tumbleweed,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0088,Exact duplicate row,187,SHEPPARD AFB,Tumbleweed,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0089,Exact duplicate row,188,SHEPPARD AFB,Tumbleweed,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0090,Exact duplicate row,190,SPANGDAHLEM AB,Mosel Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0091,Exact duplicate row,192,SPANGDAHLEM AB,FK,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0092,Exact duplicate row,195,TRAVIS AFB,Sierra Inn DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0093,Exact duplicate row,197,TRAVIS AFB,Knucklbuster,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0094,Exact duplicate row,199,TYNDALL AFB,Berg Liles,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0095,Exact duplicate row,201,TYNDALL AFB,Raptor Quick Turn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0096,Exact duplicate row,203,TYNDALL AFB,Silver Flag,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0097,Exact duplicate row,206,VANDENBERG,Beachcombers DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0098,Exact duplicate row,208,VANDENBERG,Breakers DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0099,Exact duplicate row,211,WHITEMAN AFB,Ozark Inn,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0100,Exact duplicate row,213,WHITEMAN AFB,Touch & Go,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0101,Exact duplicate row,215,WRIGHT PATTERSON AFB,Pitsenbarger,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0102,Exact duplicate row,216,WRIGHT PATTERSON AFB,Pitsenbarger,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0103,Exact duplicate row,218,WRIGHT PATTERSON AFB,HPW Dining Facility,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0104,Exact duplicate row,219,WRIGHT PATTERSON AFB,HPW Dining Facility,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0105,Exact duplicate row,238,AL JABER AB,DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0106,Exact duplicate row,240,AB101 NIAMEY,DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0107,Exact duplicate row,242,AB201 AGADEZ,DFAC,Byte-identical to an earlier row. Excluded from the registry.
+DQ-0108,Missing portfolio,243,ARNOLD AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0109,Missing feeding type,243,ARNOLD AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0110,Missing portfolio,244,BOLLING AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0111,Missing feeding type,244,BOLLING AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0112,Missing portfolio,245,BUCKLEY SFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0113,Missing feeding type,245,BUCKLEY SFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0114,Missing portfolio,246,CAPE CANAVERAL SFS,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0115,Missing feeding type,246,CAPE CANAVERAL SFS,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0116,Missing portfolio,247,CAPE COD SFS,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0117,Missing feeding type,247,CAPE COD SFS,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0118,Missing portfolio,248,CAVALIER SFS,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0119,Missing feeding type,248,CAVALIER SFS,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0120,Missing portfolio,249,CHEYENNE MOUNTAIN SFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0121,Missing feeding type,249,CHEYENNE MOUNTAIN SFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0122,Missing portfolio,250,COLUMBUS AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0123,Missing feeding type,250,COLUMBUS AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0124,Missing portfolio,251,EARECKSON AFS,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0125,Missing feeding type,251,EARECKSON AFS,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0126,Missing portfolio,252,HANSCOM AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0127,Missing feeding type,252,HANSCOM AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0128,Missing portfolio,253,IZMIR AB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0129,Missing feeding type,253,IZMIR AB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0130,Missing portfolio,254,LAJES FIELD,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0131,Missing feeding type,254,LAJES FIELD,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0132,Missing portfolio,255,LAUGHLIN AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0133,Missing feeding type,255,LAUGHLIN AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0134,Missing portfolio,256,LOS ANGELES AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0135,Missing feeding type,256,LOS ANGELES AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0136,Missing portfolio,257,NEW BOSTON SFS,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0137,Missing feeding type,257,NEW BOSTON SFS,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0138,Missing portfolio,258,RAF FYLINGDALES SFS,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0139,Missing feeding type,258,RAF FYLINGDALES SFS,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0140,Missing portfolio,259,RAF MOLESWORTH,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0141,Missing feeding type,259,RAF MOLESWORTH,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0142,Missing portfolio,260,VANCE AFB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0143,Missing feeding type,260,VANCE AFB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0144,Missing portfolio,261,PITUFFIK SB,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0145,Missing feeding type,261,PITUFFIK SB,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0146,Missing portfolio,262,JBAB - ANACOSTIA,NO DFAC,Portfolio blank. Left NULL — do not assign.
+DQ-0147,Missing feeding type,262,JBAB - ANACOSTIA,NO DFAC,Cannot determine EOM applicability. No package generated.
+DQ-0148,Split installation,0,EGLIN AFB,,"Source carries 2 installation strings for one base: ['EGLIN AFB', 'EGLIN AFB (2.0)']. Operating model belongs on the facility."
+DQ-0149,Split installation,0,FE WARREN AFB,,"Source carries 2 installation strings for one base: ['FE WARREN AFB (2.0)', 'FE WARREN AFB (MAF)']. Operating model belongs on the facility."
+DQ-0150,Split installation,0,MALMSTROM AFB,,"Source carries 2 installation strings for one base: ['MALMSTROM AFB (2.0)', 'MALMSTROM AFB (MAF)']. Operating model belongs on the facility."
+DQ-0151,Split installation,0,MINOT AFB,,"Source carries 2 installation strings for one base: ['MINOT AFB (2.0)', 'MINOT AFB (MAF)']. Operating model belongs on the facility."

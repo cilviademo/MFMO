@@ -1,0 +1,196 @@
+{
+  "environmentVariables": [
+    {
+      "schemaName": "mfops_MF_SharePointSiteURL",
+      "displayName": "MF_SharePointSiteURL",
+      "type": "String",
+      "description": "DEV site collection URL for the MF Operations lists",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio1_SiteURL",
+      "displayName": "MF_Portfolio1_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 1. The four portfolios are four SEPARATE site collections with inconsistent slugs \u2014 bind each one from what is on the site, never by pattern from another. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio2_SiteURL",
+      "displayName": "MF_Portfolio2_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 2. THIS IS THE ODD ONE: its slug carries a 'Legacy_' prefix the other three do not. A URL built by pattern 404s here and nowhere else. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio3_SiteURL",
+      "displayName": "MF_Portfolio3_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 3. The four portfolios are four SEPARATE site collections with inconsistent slugs \u2014 bind each one from what is on the site, never by pattern from another. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_Portfolio4_SiteURL",
+      "displayName": "MF_Portfolio4_SiteURL",
+      "type": "String",
+      "description": "Site collection URL for Portfolio 4. The four portfolios are four SEPARATE site collections with inconsistent slugs \u2014 bind each one from what is on the site, never by pattern from another. Blank in source.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_PilotSite_SiteURL",
+      "displayName": "MF_PilotSite_SiteURL",
+      "type": "String",
+      "description": "Site collection hosting the four PILOT destinations. All four pilot rows share this one site and differ by root folder, so routing still exercises four destinations rather than a simplified single one. Blank in source. Retire it when the production PORT#-EOM rows are activated.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_RequirementList",
+      "displayName": "MF_RequirementList",
+      "type": "String",
+      "description": "MF EOM Requirement",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_ItemList",
+      "displayName": "MF_ItemList",
+      "type": "String",
+      "description": "MF EOM Item",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_SubmissionList",
+      "displayName": "MF_SubmissionList",
+      "type": "String",
+      "description": "MF EOM Submission",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_UnmatchedList",
+      "displayName": "MF_UnmatchedList",
+      "type": "String",
+      "description": "MF Unmatched File",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_SecurityList",
+      "displayName": "MF_SecurityList",
+      "type": "String",
+      "description": "MF Security Mapping",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_AuditList",
+      "displayName": "MF_AuditList",
+      "type": "String",
+      "description": "MF EOM Audit",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_PowerBIReportURL",
+      "displayName": "MF_PowerBIReportURL",
+      "type": "String",
+      "description": "COP report deep link for the Home screen button",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_CurrentFiscalYear",
+      "displayName": "MF_CurrentFiscalYear",
+      "type": "String",
+      "description": "FY2027",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_NotificationsEnabled",
+      "displayName": "MF_NotificationsEnabled",
+      "type": "Boolean",
+      "description": "Master switch. Ship FALSE; enable after UAT.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_EscalationDaysOverdue",
+      "displayName": "MF_EscalationDaysOverdue",
+      "type": "Number",
+      "description": "Days past suspense before escalation. Default 5.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_StatusList",
+      "displayName": "MF_StatusList",
+      "type": "String",
+      "description": "MF EOM Status - the canonical Power BI fact",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_ConfigList",
+      "displayName": "MF_ConfigList",
+      "type": "String",
+      "description": "MF App Config - read first, environment variables second",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_InstallationList",
+      "displayName": "MF_InstallationList",
+      "type": "String",
+      "description": "MF Installation - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_FacilityList",
+      "displayName": "MF_FacilityList",
+      "type": "String",
+      "description": "MF Facility - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_NonDutyDayList",
+      "displayName": "MF_NonDutyDayList",
+      "type": "String",
+      "description": "MF Non Duty Day - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_DestinationList",
+      "displayName": "MF_DestinationList",
+      "type": "String",
+      "description": "MF Document Destination - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_NotificationRuleList",
+      "displayName": "MF_NotificationRuleList",
+      "type": "String",
+      "description": "MF Notification Rule - the list name, bound at import. No list name is hard-coded in a flow or a formula.",
+      "defaultValue": "",
+      "required": true
+    },
+    {
+      "schemaName": "mfops_MF_TenantCloud",
+      "displayName": "MF_TenantCloud",
+      "type": "String",
+      "description": "UsGov | UsGovHigh | UsGovDod. This deployment is UsGovDod. Confirm the Power Platform environment is in the same tenant as the SharePoint sites.",
+      "defaultValue": "",
+      "required": true
+    }
+  ]
+}

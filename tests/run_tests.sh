@@ -14,6 +14,27 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "== schema =="
+# Dependency preflight FIRST. A missing yaml module surfacing mid-validator
+# reads like a schema failure, which is the wrong way to find out. Say what is
+# missing and how to fix it, then stop.
+python3 - <<'DEPS'
+import sys
+missing = []
+for mod, pkg in (("yaml", "pyyaml"), ("jsonschema", "jsonschema"),
+                 ("referencing", "referencing")):
+    try:
+        __import__(mod)
+    except ImportError:
+        missing.append(pkg)
+if missing:
+    print("MISSING DEV DEPENDENCIES:", ", ".join(missing))
+    print()
+    print("This is an environment problem, not a schema problem. Fix it with:")
+    print("    python3 -m venv .venv && source .venv/bin/activate")
+    print("    pip install -r requirements-dev.txt")
+    sys.exit(1)
+DEPS
+
 python3 scripts/eom_schema.py --validate
 python3 scripts/eom_schema.py --summary
 

@@ -1,0 +1,19 @@
+# Development and validation dependencies for Mission Feeding Operations.
+#
+# A fresh clone without these produced errors that READ like schema failures
+# (a missing yaml module surfacing mid-validator), which is exactly the wrong
+# way to discover a missing dependency. tests/run_tests.sh checks these up
+# front and says what to install instead.
+#
+# Fresh-clone sequence:
+#     python3 -m venv .venv
+#     source .venv/bin/activate
+#     pip install -r requirements-dev.txt
+#     bash tests/run_tests.sh
+#
+# The runtime product has NO Python dependency at all -- these exist only to
+# validate the repository. Version floors are the ones the suite was proven
+# on; anything newer within the same major is expected to work.
+pyyaml>=6.0
+jsonschema>=4.18       # needs the `referencing` resolver API
+referencing>=0.30

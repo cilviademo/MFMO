@@ -1,0 +1,29 @@
+Config_Key,Config_Value,Config_Type,Description,Admin_Only,Active_Flag
+CurrentFiscalYear,FY26,String,"DAF fiscal year, Oct-Sep. FY26 = Oct 2025 through Sep 2026.",TRUE,TRUE
+OpenReportingPeriod,2026-08,String,The period the app defaults to. Advance monthly.,TRUE,TRUE
+MaintenanceMode,False,Boolean,Kill switch. Locks the app except developers and admins. Publishing is deploying in a single-environment tenant; flip this rather than racing to unpublish.,TRUE,TRUE
+ReadOnlyMode,False,Boolean,"Status visible, writes blocked. Enforced in the app AND in the flows.",TRUE,TRUE
+AppVersion,1.0.0,String,Stamped on every telemetry event,TRUE,TRUE
+SchemaVersion,5.0,String,Schema this app expects. scrDiagnostics warns if it does not match scripts/eom_schema.py.,TRUE,TRUE
+MinimumSupportedVersion,1.0.0,String,Older cached clients are told to reload.,TRUE,TRUE
+SupportMessage,Mission Feeding Operations is briefly unavailable for maintenance.,String,Shown on scrMaintenance,TRUE,TRUE
+SupportContact,,String,Shown on scrNoAccess and scrMaintenance. Set at deploy.,TRUE,TRUE
+RequireQC,True,Boolean,Whether submissions need review to reach Accepted. Accept means the reviewer opened the file and verified it - substantive review, not presence checking.,TRUE,TRUE
+TenantCloud,UsGovDod,String,"DoD. SharePoint tenant usaf.dps.mil, Teams dod.teams.microsoft.us. NOT GCC High - every GCC High endpoint in a document dated before 31 Aug 2026 is wrong for this deployment. Commercial cloud is not supported.",TRUE,TRUE
+PacCliAuthorized,UNKNOWN,String,TRUE | FALSE | UNKNOWN. Microsoft supports PAC CLI in DoD; local governance may still forbid it.,TRUE,TRUE
+EnableAIBuilder,False,Boolean,Never a dependency. Availability differs by government cloud.,TRUE,TRUE
+EnableDocumentContentAI,False,Boolean,Tier 2 content classification. No code path exists in R1.,TRUE,TRUE
+PowerBIReportURL,,String,Government Power BI service URL differs by cloud. Never hard-code a commercial endpoint.,TRUE,TRUE
+EscalationDaysOverdue,5,Number,Days past the final call before portfolio escalation,TRUE,TRUE
+AccessRequestDefaultDays,60,Number,Default expiry for a requested installation grant. A departing member needs a handover window, not permanent rights to a base they left.,TRUE,TRUE
+PendingReviewAgingDays,5,Number,Days a submission may sit in Pending Review before it is flagged. Review throughput is a real metric because Accept means opening the file.,TRUE,TRUE
+MaxUploadSizeMB,50,Number,Rejected in the app before the flow is called and again inside the flow,TRUE,TRUE
+DelegationWarningThreshold,2000,Number,scrDiagnostics warns when a result set approaches this. The hard non-delegable ceiling is 2000 rows.,TRUE,TRUE
+ReconciliationStaleHours,36,Number,System Health flags items whose Last_Reconciled_DateTime is older than this,TRUE,TRUE
+BulkAcceptEnabled,True,Boolean,"Bulk accept must be an explicit multi-select, never a select-all button. Accept means the reviewer opened each file.",TRUE,TRUE
+ReviewAgeHighlightDays,4,Number,"A submission waiting this many days or more is highlighted in the review queue. It also DERIVES the age bands - 0 to n-3, n-2 to n-1, n to n+1, n+2 and over - so an admin retunes one number instead of a developer editing four hardcoded buckets that no longer line up with the threshold beside them.",TRUE,TRUE
+BackfillFromPeriod,2026-08,String,"Earliest period EOM-01 may generate. PILOT: 2026-08, so the first run creates ~737 rows rather than ~3,618. Nothing is lost by starting narrow - EOM-01 is idempotent, so widening this later fills in the earlier periods without disturbing what exists. A list you can read while verifying is worth more than a complete one you cannot, and the 5,000-item threshold stops being a same-day concern.",TRUE,TRUE
+BackfillToPeriod,2026-09,String,Latest period EOM-01 may generate.,TRUE,TRUE
+NotificationsEnabled,False,Boolean,"OFF for the pilot by programme decision, 31 Aug 2026.",TRUE,TRUE
+PilotMode,True,Boolean,"Shows the PILOT ENVIRONMENT banner and stamps every submission Is_Pilot at write time. MUST be False before any production use - and turning it off does not retag the rows already written, which is the point of stamping rather than deriving.",TRUE,TRUE
+PilotDestinationOverride,,String,Blank. The pilot uses four PILOT-P#-EOM rows keyed on Portfolio_ID so routing exercises the real multi-destination path rather than a simplified single-destination one. Set only to force everything to one destination for a narrow test.,TRUE,TRUE

@@ -706,11 +706,19 @@ class TheMsappSourceIsFreshAndValid(unittest.TestCase):
                           broken)
             self.assertEqual(r.returncode, 1, r.stdout)
 
-    def test_the_donor_is_the_vendored_bytes(self):
+    def test_the_scaffolding_is_the_pinned_bytes(self):
+        # The RAW donor is no longer tracked -- it carried the residue. The
+        # tracked artifact is the neutralised scaffolding, pinned by hash.
         import hashlib
-        p = os.path.join(ROOT, "canvas-app", "donor",
-                         "AlmTestApp-asManyEntitiesAsPossible.msapp")
-        h = hashlib.sha256(open(p, "rb").read()).hexdigest()
-        self.assertEqual(
-            h,
-            "08a80c3d2686ddbd9acd18774cc66a35ae3059d89e80d22444aef94a5598baf9")
+        d = os.path.join(ROOT, "canvas-app", "donor")
+        h = hashlib.sha256(
+            open(os.path.join(d, "scaffolding.msapr"), "rb").read()).hexdigest()
+        pinned = open(os.path.join(d, "scaffolding.sha256")).read().split()[0]
+        self.assertEqual(h, pinned)
+
+    def test_the_raw_donor_is_not_in_the_tree(self):
+        import glob
+        raw = [p for p in glob.glob(os.path.join(
+                   ROOT, "canvas-app", "donor", "*.msapp"))]
+        self.assertEqual(raw, [], "the raw donor carries the residue and "
+                                  "must never be tracked again")
