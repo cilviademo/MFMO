@@ -36,6 +36,11 @@ second one fails every non-owner's submission at runtime:
       not a person.
 - [ ] SharePoint list permissions granted per the security model — app
       sharing grants nothing in SharePoint (`docs/security-open-issue.md`).
+- [ ] **Preview smoke test** (a PM with `Can_QC`): pick an installation on
+      Overview → "Preview as base user" → confirm the blue PREVIEW banner,
+      the base nav rail (Home / My Package / Calendar only), and that
+      opening any item to submit bounces back with "Preview is read-only".
+      Exit preview returns to Overview.
 
 ## 9 — EOM-01, alone, twice
 
