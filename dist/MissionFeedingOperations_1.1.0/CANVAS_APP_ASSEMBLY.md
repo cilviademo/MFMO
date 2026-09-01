@@ -275,6 +275,43 @@ start-screen formula in step 6 has something to resolve to.
 - Run the **Accessibility checker** and clear anything it raises. The source
   declares a label on every interactive control; the checker verifies Studio
   agrees.
+- Set the app **icon and description** (App settings) before publish. The
+  description is read aloud by screen readers in the app list and is the one
+  piece of app metadata this repo cannot ship — it is minted per-environment.
+
+---
+
+## After publish — sharing and access (ALL paths, before any pilot user)
+
+Four platform steps no local artifact can carry, in order. Skipping the
+second one fails every non-owner's submission with a formula-level
+permission error that looks like a broken app.
+
+1. **Share the app with a security group, as User — never Co-owner, never
+   individuals.** Membership changes then never touch the app. Co-owner is
+   for the build/admin team only.
+2. **Share the EOM-02 Submission flow with the same group as Run-only.**
+   The app calls `EOM02_Submission.Run(...)`; a user without run
+   permission on the flow gets a runtime failure the app cannot catch
+   gracefully. In the flow's Run-only settings, connections must be
+   **"Use this connection"** (the bound connection references), not
+   "Provided by run-only user" — submissions must write as the service
+   identity, uniformly.
+3. **Bind the three connection references to the designated service
+   account**, not a person. A personal binding dies with that person's
+   departure, password rotation, or CAC turnover, and takes all five flows
+   with it. `deployment/site-bindings.md` already requires the service
+   account to hold write on the destination roots.
+4. **Grant SharePoint list permissions separately.** Sharing the app
+   grants NOTHING in SharePoint and vice versa — the lists are the real
+   security boundary (`docs/security-open-issue.md`, OPEN). Users need
+   read/write on the lists per the security model, or the app opens onto
+   empty galleries and failing patches.
+
+Licensing note: every connector in this solution is **standard**
+(SharePoint, Office 365 Users, Outlook), so pilot users need only the
+base Microsoft 365 licence in the DoD tenant — no premium Power Apps
+licence, by design. Keep it that way; the connector allowlist enforces it.
 
 ---
 

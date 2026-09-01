@@ -23,7 +23,7 @@ not occurred and the data-layer scope issue is open.
 
 | Artifact | What it is |
 |---|---|
-| **Artifact 1** — `MissionFeedingOperations_1.0.0.zip` | Backend bootstrap: 5 flows (disabled), 24 blank env vars, 3 connection refs. **Canvas app: NO, by design.** Built reproducibly from a tag by `scripts/build_release.sh`; same tag, same bytes. |
+| **Artifact 1** — `MissionFeedingOperations_1.0.0.zip` | Backend bootstrap: 5 flows (disabled), 24 blank env vars, 3 connection refs. **Canvas app present in solution: NO — by design.** Built reproducibly from a tag by `scripts/build_release.sh`; same tag, same bytes. |
 | **`MissionFeedingOperations_REFERENCE_ONLY.msapp`** | Sanitized engineering artifact: schema-validated source packed by pac 2.11.2 over neutralised scaffolding. **Never a deployment artifact.** |
 | **Assembled 1.1.0 candidate** | Produced tenant-side by `assemble_full_solution.sh` from the operator's own wrapper export, through nine fail-closed gates. A candidate, not the release. |
 | **Platform re-export** | Studio's own export after import → open → zero errors → Accessibility Checker → publish. **The canonical DEV/PILOT release artifact**, promoted only by `validate_final_export.sh`. |

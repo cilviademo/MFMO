@@ -21,6 +21,22 @@ Then verify what arrived:
       list, most of its columns and none of its indexes and report success.
 - [ ] The app opens and `gblSchemaVersion` reads `5.0`.
 
+## 8b — sharing and access, before any pilot user touches the app
+
+The four platform steps in `CANVAS_APP_ASSEMBLY.md` → "After publish —
+sharing and access". They are repeated here as boxes because forgetting the
+second one fails every non-owner's submission at runtime:
+
+- [ ] App shared with the pilot **security group** as **User** (not
+      Co-owner, not individuals).
+- [ ] **EOM-02 Submission flow shared Run-only** with the same group, with
+      connections set to **"Use this connection"** — not "Provided by
+      run-only user".
+- [ ] All three connection references bound to the **service account**,
+      not a person.
+- [ ] SharePoint list permissions granted per the security model — app
+      sharing grants nothing in SharePoint (`docs/security-open-issue.md`).
+
 ## 9 — EOM-01, alone, twice
 
 - [ ] Enable **EOM-01 only**. Every other flow stays off.
