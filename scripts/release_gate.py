@@ -147,6 +147,22 @@ def provenance():
         check("SHA256SUMS.txt accompanies the artifact", False,
               "absent — the artifact has no provenance record")
 
+    # Artifact 2, if one is present. A Studio export in dist/ that has NOT
+    # passed validate_solution.py --export is a stop condition: its provenance
+    # is the export itself, so an unvalidated one is a ZIP with a hash and no
+    # evidence.
+    exports = [p for p in glob.glob(os.path.join(ROOT, "dist", "*", "*.zip"))
+               if "_1.1" in os.path.basename(p)]
+    if exports:
+        r = run(os.path.join(ROOT, "scripts", "validate_solution.py"),
+                "--export", exports[0])
+        check("the Studio export passes structural validation",
+              r.returncode == 0,
+              os.path.basename(exports[0]))
+    else:
+        print("  --   no Artifact 2 present            "
+              "  Studio export not built yet; Artifact 1 only")
+
     tag = git("rev-parse", "v1.0.0^{commit}")
     check("the release tag resolves locally", bool(tag),
           tag[:12] if tag else "v1.0.0 does not resolve")

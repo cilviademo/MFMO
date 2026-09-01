@@ -26,6 +26,7 @@ a judgement call that must be recorded in the CHANGELOG if it ships.
 from __future__ import annotations
 
 import argparse
+import io
 import glob
 import json
 import os
@@ -387,12 +388,147 @@ def reconcile_fact(items_path, fact_path):
         ok(f"the app and MF_EOM_Status agree on all {len(items)} rows")
 
 
+
+# ---------------------------------------------------------------------------
+# Artifact 2: a Studio-exported solution ZIP.
+#
+# This is a DIFFERENT provenance path from Artifact 1, and pretending otherwise
+# would be the whole problem. Artifact 1 is built from a tagged commit by a
+# reproducible script, so the commit IS the evidence. Artifact 2 comes out of
+# Studio, which mints control identities this repository cannot predict -- so
+# the evidence has to be the export itself, unpacked and read.
+#
+# What is checked here is STRUCTURAL. Nothing here runs the app.
+# ---------------------------------------------------------------------------
+
+APPROVED_SCREENS = {
+    "scrHome", "scrMyPackage", "scrOverview", "scrInstallations",
+    "scrExceptions", "scrUpload", "scrReview", "scrInstallation",
+    "scrCalendar", "scrActivity", "scrAdminRequirements", "scrUnmatched",
+    "scrDiagnostics", "scrMaintenance", "scrNoAccess", "scrAccessRequest",
+}
+
+
+def validate_export(zip_path):
+    """Validate a Studio-exported solution ZIP. Returns 0 or 1."""
+    import zipfile
+
+    if not os.path.exists(zip_path):
+        fail(f"export not found: {zip_path}")
+        return 1
+
+    with zipfile.ZipFile(zip_path) as z:
+        names = z.namelist()
+        blob = {n: z.read(n) for n in names
+                if n.endswith((".xml", ".json", ".msapp"))}
+
+        cust = next((v for k, v in blob.items()
+                     if k.endswith("Customizations.xml")), b"")
+        cust_text = cust.decode("utf-8", "ignore")
+
+        # 1. exactly one canvas app
+        canvas_components = re.findall(r"<CanvasApp[\s>]", cust_text)
+        msapps = [n for n in names if n.lower().endswith(".msapp")]
+        if len(msapps) == 1:
+            ok(f"exactly one canvas app: {os.path.basename(msapps[0])}")
+        else:
+            fail(f"expected exactly one .msapp in the export, found "
+                 f"{len(msapps)}")
+            return 1
+
+        # 2. the screen set
+        with zipfile.ZipFile(io.BytesIO(z.read(msapps[0]))) as app:
+            inner = app.namelist()
+            found = set()
+            for n in inner:
+                m = re.search(r"(scr[A-Za-z]+)", os.path.basename(n))
+                if m:
+                    found.add(m.group(1))
+            missing = APPROVED_SCREENS - found
+            extra = found - APPROVED_SCREENS
+            if missing:
+                fail(f"export is missing screens: {sorted(missing)}")
+            else:
+                ok(f"all {len(APPROVED_SCREENS)} approved screens present")
+            if extra:
+                warn(f"export carries screens not in the approved set: "
+                     f"{sorted(extra)}")
+
+            app_blob = b" ".join(app.read(n) for n in inner
+                                 if n.endswith((".json", ".yaml", ".xml")))
+        app_text = app_blob.decode("utf-8", "ignore")
+
+        # 3. every data source is one of ours
+        import eom_schema as _S
+        titles = {l.title for l in _S.LISTS}
+        referenced = set(re.findall(r"'(MF [A-Za-z ]+)'", app_text))
+        unknown = {r for r in referenced if r not in titles}
+        if unknown:
+            fail(f"export references lists not in the schema: "
+                 f"{sorted(unknown)}")
+        else:
+            ok(f"every referenced list is in the schema "
+               f"({len(referenced)} referenced)")
+
+        # 4. every flow reference resolves
+        wf_names = set(re.findall(r'<Workflow WorkflowId="[^"]+" Name="([^"]+)"',
+                                  cust_text))
+        if wf_names:
+            ok(f"{len(wf_names)} workflows in the export")
+        else:
+            fail("the export carries no workflows")
+
+        # 5. THE ONE PLACE A URL LEGITIMATELY APPEARS.
+        #
+        # Studio embeds the bound dataset in the app. So unlike every other
+        # artifact in this repository, a site URL here is not automatically a
+        # leak -- but it must be an ENVIRONMENT VARIABLE REFERENCE, not a
+        # literal. A literal means the app was bound to a site by hand and the
+        # binding will not travel to the next environment.
+        url_hits = re.findall(
+            r"https://[a-z0-9.-]+\.(?:sharepoint\.[a-z]{2,}|dps\.mil)/(?:sites|teams)/\S*",
+            app_text)
+        env_refs = re.findall(r"mfops_MF_[A-Za-z0-9_]*SiteURL", app_text)
+        if url_hits and not env_refs:
+            fail(f"the export embeds {len(url_hits)} literal site URL(s) and "
+                 f"references no site environment variable. The app was bound "
+                 f"by hand and the binding will not travel.")
+        elif url_hits:
+            warn(f"the export embeds {len(url_hits)} site URL(s) alongside "
+                 f"{len(set(env_refs))} environment-variable reference(s). "
+                 f"Studio does this when a data source is bound; confirm each "
+                 f"one resolves through a variable.")
+        else:
+            ok("no literal site URL embedded in the exported app")
+
+    return 1 if results["fail"] else 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--reconcile-fact", action="store_true")
     p.add_argument("--items")
     p.add_argument("--fact")
+    p.add_argument("--export", metavar="ZIP",
+                   help="validate a Studio-exported solution ZIP "
+                        "(Artifact 2) instead of the source tree")
     args = p.parse_args(argv)
+
+    if args.export:
+        code = validate_export(args.export)
+        for m in results["ok"]:
+            print(f"  OK   {m}")
+        for m in results["warn"]:
+            print(f"  WARN {m}")
+        for m in results["fail"]:
+            print(f"  FAIL {m}")
+        print()
+        print(f"{len(results['ok'])} passed, {len(results['warn'])} warnings, "
+              f"{len(results['fail'])} failures")
+        print()
+        print("STRUCTURAL only. Nothing here ran the app; runtime behaviour is")
+        print("NOT TESTABLE LOCALLY.")
+        return code
 
     check_schema()
     check_generated_docs()

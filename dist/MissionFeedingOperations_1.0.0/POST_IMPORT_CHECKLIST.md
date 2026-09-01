@@ -1,78 +1,107 @@
-# Post-import checklist — 1.0.0
+# Post-import checklist — the pilot, in order
 
-In order. Do not reorder, and **do not build screens before EOM-01 produces
-correct rows** — every downstream decision depends on the shape of that data.
+`IMPORT_CHECKLIST.md` gets the solution in. This gets the pilot running, and it
+stops at the first box that does not tick.
 
-## 1. Rebind
+**Notifications are LAST and only when approved.** `NotificationsEnabled` is
+FALSE by programme decision, and EOM-04 ships disabled. A notification storm
+against 103 installations is not recoverable by turning the flag back off.
 
-- [ ] Re-point each canvas data source to the provisioned lists. Canvas data
-      sources bind to list ids, and the lists were provisioned separately.
-- [ ] Confirm `MF_App_Config.SchemaVersion` reads **5.0**. On a mismatch the app
-      disables writes for everyone, developers included, and shows
-      `CONFIGURATION_REQUIRED`. That is the gate working, not a fault.
-- [ ] Confirm `MF_App_Config.AppVersion` reads **1.0.0** and `TenantCloud` reads
-      **UsGovDod**.
+---
 
-## 2. Prove the data before the app
+## 1-8 — provisioning and import
 
-- [ ] Onboard 3–5 pilot bases: populate facilities and operating models,
-      validate them, record `Registry_Validated_By` and `_Date`, then set
-      `Generation_Enabled = TRUE`.
-- [ ] Run EOM-01 for the open period.
-- [ ] **Installation- and Contract-scope rows have `Facility_ID` null**, not
-      empty string. Verify with a two-view count comparison.
-- [ ] The 1119-1 generated **nothing**.
-- [ ] Re-run. **Row count unchanged.**
-- [ ] Nominal and effective dates are both populated, and a weekend suspense
-      rolled with `Due_Date_Adjusted` set.
+Those are `IMPORT_CHECKLIST.md` steps 1 to 8. Do not start here until step 9 of
+that file is the next thing left.
 
-## 3. Prove the routing before anyone relies on it
+Then verify what arrived:
 
-- [ ] One upload per portfolio lands in the **matched** month folder on that
-      portfolio's own site.
-- [ ] Upload for a period whose month folder does not exist: the file lands at
-      the Monthly Data Call root, `Needs_Filing = TRUE`, `Filing_Note` says what
-      was searched for, and Admin shows the count.
-- [ ] **Compare the folder listing before and after. Nothing was created.**
-- [ ] An upload to a portfolio whose destination is inactive is refused, and the
-      message shows no path, no site URL and no connector text.
-- [ ] `SharePoint_Unique_ID` is populated on every submission row.
-- [ ] Press Submit twice on one file. **One file, one submission row.**
-- [ ] Move a filed document by hand and re-run EOM-02b. It is **not**
-      rediscovered as a stray.
+- [ ] `python3 scripts/verify_provisioning.py <tenant-export.json>` returns 0.
+      **"The provisioning run said OK" is not evidence.** A run can create a
+      list, most of its columns and none of its indexes and report success.
+- [ ] The app opens and `gblSchemaVersion` reads `5.0`.
 
-## 4. Then the app
+## 9 — EOM-01, alone, twice
 
-- [ ] Upload with an arbitrary filename — `Copy of copy FINAL(2).xlsx`.
-- [ ] Correction cycle end to end: submit → return with comment and suspense →
-      resubmit → accept. **v1 survives with its QC comment.**
-- [ ] Wrong Document before and after the due date: `NOT_SATISFIED` then
-      `OVERDUE`, not permanently red.
-- [ ] Three people who did not build the app tell amber and yellow apart at a
-      glance, on the real screen, at the real size.
+- [ ] Enable **EOM-01 only**. Every other flow stays off.
+- [ ] Run it. **Expect 737 `MF EOM Item` rows** — 268 for `2026-08`, 469 for
+      `2026-09`.
+- [ ] Run it **again, unchanged**. **Expect 737.**
 
-## 5. Flows, one at a time
+      A second run that adds rows means the deterministic `EOM_Item_ID` check
+      is not working, and every count downstream is wrong from here on.
 
-- [ ] EOM-03 first. Reconcile **every row, not a sample**, against the app.
-- [ ] Then EOM-02 and the classification queue.
-- [ ] EOM-02b **four times**, once per site collection. One instance does not
-      cover four sites.
-- [ ] EOM-04 last, notifications **off**. Read `MF_EOM_Audit` for a full cycle —
-      every intended send is recorded as `Notification Suppressed` — before
-      enabling anything.
+- [ ] Two views: one filtered `Facility_ID is empty`, one filtered
+      `Requirement_Scope is Installation or Contract`. **The counts must agree
+      exactly.** A mismatch means empty strings were written where nulls
+      belong, and every `Filter()` in the app is wrong.
 
-## 6. Accept
+## 10 — one pilot document, end to end
 
-- [ ] `docs/DEPLOYMENT.md` acceptance tests, all sections.
-- [ ] `docs/accessibility.md` gates, including the Power Apps Accessibility
-      Checker, which cannot be run outside the maker portal.
-- [ ] `security/SECURITY_PROMPTS.md` §15.
+Enable **EOM-02**. One document, and then check five things — not four.
 
-## What is still not done after all of this
+- [ ] Submit one document from the app for a facility you can see.
+- [ ] **Where it landed.** The configured `Root_Folder`, inside the FY26 folder,
+      inside the month folder. Not the root. If it is at the root, the month
+      folder did not match: `Needs_Filing` will be TRUE and it appears on
+      Exceptions.
+- [ ] **The file ID.** `SharePoint_Unique_ID` on the submission is populated.
+- [ ] **The URL.** `File_URL` resolves, and it was derived from the unique ID
+      rather than assembled from a path.
+- [ ] **The submission row.** One row. `Is_Current` TRUE, `Version_No` 1,
+      `Submission_Request_ID` populated.
+- [ ] **The item row.** `Current_Submission_ID` points at it,
+      `Received_Flag` TRUE, `Final_Status` moved to `RECEIVED_PENDING_QC`.
 
-- The data layer still does not enforce installation scope.
-- 98 installations are still not onboarded — **not compliant, not yet asked.**
-- Four rulings on requirement scope are still open, and changing scope after
-  items exist means regenerating a period.
+- [ ] **Retry the same submission.** Same `Submission_Request_ID`. **Expect one
+      submission, not two.** This is the idempotency the whole upload design
+      exists for.
 
-**Import success is not authorisation to operate.**
+## 11 — review, correction, versioning
+
+- [ ] Accept it. `Final_Status` becomes `ACCEPTED`, the item leaves the
+      reviewer's queue.
+- [ ] Submit a second document for a different requirement, then **Return** it
+      with a reason and a correction suspense.
+- [ ] Confirm a correction ticket exists with the reason, the comment and the
+      due date, and that the item is now the *base's* action, not AFSVC's.
+- [ ] Re-submit against the returned item. **Expect `Version_No` 2, the first
+      version `Is_Current` FALSE and `Superseded_By` populated.** The first
+      version is still there — nothing is deleted.
+
+## 12 — reconciliation
+
+- [ ] Enable **EOM-03**. Run it.
+- [ ] Confirm `Final_Status` and `Status_Code` are unchanged for items nobody
+      touched. EOM-03 is the only writer of those outside the app's QC action,
+      and a reconciliation that moves a status nobody changed is a bug.
+- [ ] Confirm `MF EOM Status` was rebuilt and its row count matches
+      `MF EOM Item`.
+
+## 13 — legacy intake, one copy at a time
+
+- [ ] Enable **one** EOM-02b copy, for a portfolio whose site you have
+      verified.
+- [ ] Drop a file into that site's watched folder by hand.
+- [ ] Confirm it appears on Exceptions under **Unmatched files**, and that
+      **no `MF EOM Item` was created**. Never invent a requirement.
+- [ ] Repeat per portfolio, enabling one copy at a time. Four copies pointed at
+      the same site looks exactly like working.
+
+## 14 — notifications, LAST, and only when approved
+
+- [ ] Get explicit programme approval. This is not a technical decision.
+- [ ] Set `NotificationsEnabled` TRUE.
+- [ ] Enable **EOM-04**.
+- [ ] Confirm the first run sends a **digest**, not one message per item.
+
+---
+
+## Before anyone calls this production
+
+- [ ] EOM-01 has run twice at 737.
+- [ ] One pilot document landed in the right folder on the real tenant.
+- [ ] The installation-scope data-layer question in `KNOWN_LIMITATIONS.md` has
+      an answer from the SharePoint administrator.
+
+Until all three, the recommendation stays **DEV/PILOT**.

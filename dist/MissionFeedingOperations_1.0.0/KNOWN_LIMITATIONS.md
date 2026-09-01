@@ -1,99 +1,92 @@
 # Known limitations — 1.0.0
 
-Stated plainly. None of these is hidden behind a caveat elsewhere.
+Everything here is stated because it is true, not because it is comfortable.
+Nothing in this list is a surprise waiting for an inspection.
 
-## 1. This is not yet an importable solution
+---
 
-The ZIP is the solution envelope. The canvas app has not been authored in Power
-Apps and the five flows have not been built, so the package declares components
-it does not contain. **Power Platform build: NOT STARTED.**
+## OPEN — installation-scope data-layer security
 
-## 2. Tenant validation has not occurred
+**Power Apps `Visible` and `Filter` are not a security boundary.** They shape
+what a screen renders. They do not stop a determined user reading rows the app
+chose not to show, because the connector fetches with the *user's* permissions
+and the filtering happens client-side.
 
-Nothing in this release has touched a Power Platform environment. PAC CLI could
-not authenticate here and `MF_App_Config.PacCliAuthorized` is still `UNKNOWN`.
+Every query in this build filters by `Installation_ID` / `Portfolio_ID` from
+`MF Security Mapping`, and that is the right thing to do — but it is a
+presentation control, not an authorisation one. **The data layer must enforce
+installation scope independently**, through SharePoint item-level permissions,
+a security-trimmed view, or an equivalent the SharePoint administrator owns.
 
-Ten things are **NOT TESTABLE LOCALLY** and are listed with an owner in
-`docs/TEST_MATRIX.md`. None is reported as passing.
+`docs/security-open-issue.md` carries the detail. `security-manifest.yaml`
+records `data_layer_permissions_verified: false` and will keep recording it
+until someone verifies it.
 
-## 3. The data layer does not enforce installation scope
+**This does not block a single-site pilot. It blocks widening one.** An ISSM
+will find it, and finding it in a review is much better than finding it after.
 
-The open security issue. `docs/security-open-issue.md`.
+---
 
-Power Apps `Visible` and `Filter()` are not access control. A base user who can
-reach a portfolio's library can reach every other installation's documents in
-it, through any client. The app will show a Lackland manager only Lackland;
-SharePoint will still serve them Creech's 1119.
+## UNKNOWN — production month-folder naming
 
-**Narrowed, not closed.** The four portfolios turned out to be four separate
-site collections, so a portfolio boundary is now a site boundary that SharePoint
-enforces natively. What remains is installation scope *within* a portfolio site.
+EOM-02 **finds** folders and never creates them. That is deliberate: creating a
+folder on a production site because a match failed is how a document ends up
+somewhere nobody looks.
 
-`security-manifest.yaml` carries `data_layer_permissions_verified: false` and it
-stays false until a SharePoint-side change is made.
+The consequence is that the month-folder naming on each of the four production
+sites must be read off the site and recorded. It differs per site and cannot be
+guessed — `08 Aug`, `Aug`, `August`, `2026-08` and `08` are all in use
+somewhere.
 
-## 4. Audit authorship is not enforced at the data layer
+**Until it is recorded, the four production destinations stay inactive.** They
+ship `Active_Flag FALSE` with `Site_URL`, `Verified_By` and `Verified_Date`
+blank, and EOM-02 fails closed on them with `CONFIGURATION_REQUIRED`, which is
+correct.
 
-`Actor_UPN` and `Uploaded_By` are written from the signed-in session and cannot
-be forged from inside the app. A user with direct write access to
-`MF_EOM_Audit` could set them to anything. Same gap as above, same lists, same
-fix.
+If it is skipped, nothing errors. Submissions fall back to the configured root
+with `Needs_Filing TRUE` and pile up one level above where anyone looks. The
+Exceptions screen exists to make that visible.
 
-## 5. The four site bindings do not exist
+`deployment/site-bindings.md` section 4 is the worksheet.
 
-All four document destinations ship with `Site_URL` blank, `Verified_By` blank
-and `Active_Flag` FALSE. EOM-02 fails closed on all three, which means **nobody
-can upload anything** until somebody opens each of the four portfolio site
-collections and records what is actually there.
+---
 
-The item nobody will guess right is **how the month folders inside FY26 are
-named**. Four sites name their root folders four different ways; there is no
-reason to believe they agree about months. Without it EOM-02 files everything at
-the Monthly Data Call root and looks broken on day one.
+## NOT IN THE BOX — the canvas app
 
-Four sites, about ten minutes. `deployment/site-bindings.md`.
+Artifact 1 contains **no canvas app**, and the reason is architectural rather
+than a judgement call: `pac canvas pack` cannot originate an app from YAML.
+Both of its layouts require a seed artifact that only Studio or an
+authenticated environment can mint. `CANVAS_APP_ASSEMBLY.md` carries the CLI
+output that establishes this.
 
-## 6. No installation is onboarded
+The source is complete — 16 screens, 6 components, 4 formula files, 1,829
+formulas, all of which parse under Microsoft's own Power Fx engine. What is
+missing is one Studio session, and after it the exported ZIP carries the app
+permanently.
 
-All 103 ship `Generation_Enabled = FALSE`. EOM-01 generates nothing until a
-base's facilities and operating models are populated and validated.
+---
 
-**A base with the flag FALSE reads as *not yet onboarded*, never as compliant**,
-and every completion figure states its denominator so the un-asked are never
-counted clean.
+## NOT TESTABLE LOCALLY
 
-## 7. Facility types are unknown
+Every one of these is a real gap in the evidence, not a formality.
 
-The QRG carries no facility type for any row, so every type-scoped requirement
-applies to every facility until a base confirms one. That over-generates on
-purpose: an extra expected row is visible and a reviewer can waive it; a missing
-one is invisible until an inspection. EOM-01 reports the count.
+| | Why it cannot be tested here |
+|---|---|
+| Whether the solution ZIP imports | No Power Platform environment. The package matches a structure taken from documentation; if that reading is wrong, 67 structural tests pass and the import still fails naming an internal file. |
+| Whether the flows run | 118 actions across five flows, all verified structurally, none executed. The status expression is the exception: it is evaluated against the engine's fixtures and that found two real defects. |
+| Whether a SharePoint write lands | No tenant. Folder resolution is tested against constructed listings, not against a site. |
+| Whether the canvas app opens in Studio | No Studio. The formulas parse; the control tree has never been rendered. |
+| Whether tenant security holds | The open issue above. |
+| Whether provisioning created every index | `scripts/verify_provisioning.py` compares a tenant export against the schema, and is proven against fixtures. The tenant export has to come from the tenant. |
+| Whether a query delegates past 5,000 items | Two predicates sit on unindexed columns inside an `OR` behind indexed leading predicates. SharePoint can usually resolve those through the leading index, and *usually* is not good enough. `scripts/canvas_delegation_check.py` reports them rather than rounding up. |
 
-## 8. Four rulings are still open
+---
 
-Getting these wrong is not cosmetic, and changing scope after items exist means
-regenerating a period.
+## Recommendation
 
-* The grain of SF 1080, GPC and 1038 — all `Proposed`. Facility scope on a
-  three-DFAC base means three uploads; installation scope means one.
-* Whether the 1119-1 is conditional or a monthly companion to the 1119.
-* Whether the 5-day suspense is programme policy or derived from DAFMAN.
-* Whether the 5th and the 10th are calendar or duty days.
+**DEV or PILOT only.** Not production.
 
-`docs/handoffs/RECONCILIATION.md`.
-
-## 9. EOY is only partially defined
-
-The two documents and their citations are settled. The expected-row grain, the
-QC checklist, whether count sheets are retained or submitted, and the closeout
-rules are not. Do not implement a complete EOY workflow until they are.
-
-## 10. Delegation is proven by construction, not at volume
-
-Every production query filters server-side on an indexed column, and the
-patterns are enforced by `scripts/validate_solution.py`. None of it has been run
-against a SharePoint list holding more than 5,000 rows, because no such list
-exists yet.
-
-**Indexes are created at provisioning time or never.** Verify them before
-seeding anything.
+It becomes a production candidate when, on the real tenant: EOM-01 has run
+twice for the same period and produced 737 rows both times, one pilot document
+has landed in the folder it was supposed to land in, and the data-layer scope
+question above has an answer.

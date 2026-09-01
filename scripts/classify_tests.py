@@ -113,6 +113,10 @@ CLASSIFICATION = {
         "LegacyIntakeShipsUnbound":         (P, "EOM-02b ships as an unbound template"),
         "ImportChecklistIsSequenced":       (P, "the import order and its gates are settled"),
         "TheAssemblyRunbookIsCurrent":      (S, "the runbook's counts and the solution agree"),
+        "TheExportValidatorWorks":          (B, "the export validator run against five fixtures, four of them broken"),
+        "ReleaseNotesDistinguishTheTwoArtifacts": (P, "the two artifacts have different provenance and say so"),
+        "KnownLimitationsNamesWhatIsOpen":  (P, "the two open items stay named and NOT TESTABLE stays listed"),
+        "ThePilotOrderIsComplete":          (P, "the pilot sequence, with notifications last"),
     },
     "test_schema": {
         "TestSchemaItself":          (B, "schema invariants computed: nullability, index cap, key shape"),

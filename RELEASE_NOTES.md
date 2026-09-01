@@ -11,6 +11,48 @@ not occurred and the data-layer scope issue is open.
 
 ---
 
+## Two artifacts, and they are not the same kind of thing
+
+**Artifact 1 — `MissionFeedingOperations_1.0.0.zip`, the backend.**
+Built from a tag by `scripts/build_release.sh`, reproducibly. Five flows,
+24 environment variables, 3 connection references, solution metadata.
+**Canvas app present in solution: NO — see Artifact 2.**
+Its provenance is the commit: the same tag always yields the same bytes.
+
+**Artifact 2 — `MissionFeedingOperations_1.1.0.zip`, the full solution.**
+Exported from Studio by the operator after one assembly session
+(`CANVAS_APP_ASSEMBLY.md`). Everything in Artifact 1 plus one CanvasApp
+component with the 16 approved screens.
+**Its provenance is different in kind and must not be reported as the same.**
+It is hashed *after* validation, not before:
+
+```
+python3 scripts/validate_solution.py --export MissionFeedingOperations_1.1.0.zip
+sha256sum MissionFeedingOperations_1.1.0.zip
+```
+
+The validator asserts exactly one canvas app, the approved screen set, every
+data source in the schema, every flow reference resolving, and — the one place
+a URL legitimately appears, because Studio embeds the bound dataset — that any
+embedded site URL resolves through an environment variable rather than being a
+literal. A literal means the app was bound by hand and the binding will not
+travel to the next environment.
+
+Structural only. Nothing in it runs the app.
+
+## Pushing the tag — a human step
+
+No agent in this build can create a tag ref; the push returns HTTP 403. Artifact
+1 cannot be rebuilt from a tag that does not resolve, so this runs first:
+
+```
+git tag v1.0.0 <build-commit>
+git push origin v1.0.0
+```
+
+The build commit is named in `FINAL_RELEASE_REPORT.md` under **Build**. Do not
+build until `git ls-remote --tags origin` shows it.
+
 ## What this release is
 
 A consolidation, not a feature release. The build was correct in most places and

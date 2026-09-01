@@ -15,6 +15,7 @@ import os
 import re
 import unittest
 import xml.etree.ElementTree as ET
+import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SOLUTION = os.path.join(ROOT, "solution", "src", "Other")
@@ -569,3 +570,156 @@ class TheAssemblyRunbookIsCurrent(unittest.TestCase):
         flat = " ".join(self.text.split())
         self.assertIn("pac canvas unpack", flat)
         self.assertRegex(flat, r"(?i)the export wins")
+
+
+class TheExportValidatorWorks(unittest.TestCase):
+    """Artifact 2 has a different provenance path, and it needs its own check.
+
+    Artifact 1 is built from a tagged commit by a reproducible script, so the
+    commit is the evidence. Artifact 2 comes out of Studio, which mints control
+    identities this repository cannot predict -- so the evidence has to be the
+    export itself, unpacked and read. Everything here is STRUCTURAL; nothing
+    runs the app.
+    """
+
+    def _run(self, fixture):
+        import subprocess
+        return subprocess.run(
+            [sys.executable, os.path.join(ROOT, "scripts",
+                                          "validate_solution.py"),
+             "--export", os.path.join(ROOT, "tests", "fixtures", fixture)],
+            capture_output=True, text=True, cwd=ROOT)
+
+    def test_a_good_export_passes(self):
+        r = self._run("export-good.zip")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("all 16 approved screens present", r.stdout)
+        self.assertIn("exactly one canvas app", r.stdout)
+
+    def test_a_missing_screen_fails(self):
+        r = self._run("export-missing-screen.zip")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("missing screens: ['scrExceptions']", r.stdout)
+
+    def test_two_canvas_apps_fail(self):
+        r = self._run("export-two-apps.zip")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("expected exactly one .msapp", r.stdout)
+
+    def test_an_unknown_list_fails(self):
+        r = self._run("export-unknown-list.zip")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("MF Phantom List", r.stdout)
+
+    def test_a_hand_bound_literal_url_fails(self):
+        # THE ONE PLACE A URL LEGITIMATELY APPEARS -- Studio embeds the bound
+        # dataset. But it must resolve through an environment variable. A bare
+        # literal means the app was bound by hand and the binding will not
+        # travel to the next environment.
+        r = self._run("export-literal-url.zip")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("bound by hand", r.stdout)
+
+    def test_it_says_the_result_is_structural_only(self):
+        r = self._run("export-good.zip")
+        self.assertIn("STRUCTURAL only", r.stdout)
+        self.assertIn("NOT TESTABLE LOCALLY", r.stdout)
+
+
+class ReleaseNotesDistinguishTheTwoArtifacts(unittest.TestCase):
+    """POLICY. Artifact 1 and Artifact 2 have different provenance.
+
+    Artifact 1's evidence is a commit; Artifact 2's is the export, unpacked and
+    read. Reporting them the same way would let a Studio ZIP inherit a claim it
+    has not earned.
+    """
+
+    def setUp(self):
+        with open(os.path.join(ROOT, "RELEASE_NOTES.md"),
+                  encoding="utf-8") as fh:
+            self.text = " ".join(fh.read().split())
+
+    def test_artifact_one_states_the_canvas_app_is_absent(self):
+        self.assertIn("Canvas app present in solution: NO", self.text)
+
+    def test_artifact_two_is_hashed_after_validation(self):
+        self.assertIn("validate_solution.py --export", self.text)
+        self.assertRegex(self.text, r"(?i)hashed \*?after\*? validation")
+
+    def test_the_tag_push_is_named_as_a_human_step(self):
+        self.assertIn("git push origin v1.0.0", self.text)
+        self.assertRegex(self.text, r"(?i)403")
+
+
+class KnownLimitationsNamesWhatIsOpen(unittest.TestCase):
+    """POLICY. The two open items stay named, and NOT TESTABLE stays listed.
+
+    A limitations file that quietly drops an item is worse than none: it reads
+    as a considered all-clear.
+    """
+
+    def setUp(self):
+        with open(os.path.join(ROOT, "dist", "MissionFeedingOperations_1.0.0",
+                               "KNOWN_LIMITATIONS.md"), encoding="utf-8") as fh:
+            self.text = fh.read()
+        self.flat = " ".join(self.text.split())
+
+    def test_installation_scope_security_is_named_open(self):
+        self.assertRegex(self.flat, r"OPEN\s+—\s+installation-scope")
+        self.assertIn("not a security boundary", self.flat)
+        self.assertIn("docs/security-open-issue.md", self.flat)
+
+    def test_production_month_folder_naming_is_named_unknown(self):
+        self.assertRegex(self.flat, r"UNKNOWN\s+—\s+production month-folder")
+        self.assertIn("finds", self.flat)
+        self.assertIn("never creates", self.flat)
+
+    def test_it_lists_the_not_testable_items(self):
+        for item in ("solution ZIP imports", "flows run",
+                     "SharePoint write", "canvas app opens",
+                     "tenant security", "every index", "delegates"):
+            self.assertIn(item, self.flat, item)
+
+    def test_the_recommendation_is_dev_or_pilot(self):
+        self.assertRegex(self.flat, r"(?i)\*\*DEV or PILOT only\.\*\*")
+        self.assertRegex(self.flat, r"(?i)not production")
+
+
+class ThePilotOrderIsComplete(unittest.TestCase):
+    """POLICY. The pilot sequence, and notifications last.
+
+    A notification storm against 103 installations is not recoverable by
+    turning the flag back off, so its position in the order is a safety
+    property rather than a preference.
+    """
+
+    def setUp(self):
+        with open(os.path.join(ROOT, "dist", "MissionFeedingOperations_1.0.0",
+                               "POST_IMPORT_CHECKLIST.md"),
+                  encoding="utf-8") as fh:
+            self.text = fh.read()
+
+    def test_eom01_runs_twice_at_737(self):
+        flat = " ".join(self.text.split())
+        self.assertRegex(flat, r"(?i)Expect 737")
+        self.assertRegex(flat, r"(?i)again, unchanged")
+        self.assertIn("268", flat)
+        self.assertIn("469", flat)
+
+    def test_notifications_are_last(self):
+        order = [self.text.index(s) for s in (
+            "EOM-01, alone, twice",
+            "one pilot document, end to end",
+            "reconciliation",
+            "notifications, LAST")]
+        self.assertEqual(order, sorted(order))
+
+    def test_the_submission_check_covers_all_five_things(self):
+        flat = " ".join(self.text.split())
+        for thing in ("Where it landed", "The file ID", "The URL",
+                      "The submission row", "The item row"):
+            self.assertIn(thing, flat, thing)
+
+    def test_it_requires_the_retry_to_produce_one_submission(self):
+        flat = " ".join(self.text.split())
+        self.assertRegex(flat, r"(?i)Expect one submission, not two")
