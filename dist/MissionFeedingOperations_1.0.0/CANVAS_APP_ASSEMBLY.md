@@ -1,30 +1,58 @@
-# Canvas app assembly — the one Studio session
+# Canvas app assembly
 
-**This session runs ONCE.** After it, you export the solution and the exported
-ZIP carries the app. Every later import of that ZIP brings the app with it and
-needs no Studio work at all.
-
-Budget an hour. Nothing here is a design decision: every screen, formula and
-component already exists in `canvas-app/src`, and this is a paste sequence.
+**The hour of pasting is gone.** The app is now BUILT from source by
+Microsoft's own toolchain; what remains for a person is minted identity and a
+validation open. Three paths, best first.
 
 ---
 
-## Why this session is necessary
+## Path A — assemble against your own export (~15 minutes, recommended)
 
-`pac canvas pack` cannot originate an app from YAML. Verified against
-Microsoft's own CLI 2.11.2:
+1. Import `MissionFeedingOperations_1.0.0.zip` (Artifact 1).
+2. In the solution: **New → App → Canvas (tablet)**, name it
+   **Mission Feeding Operations**. While you are in Studio, **add the 19 data
+   sources listed in step 2 of Path C below** — your environment then mints the
+   real SharePoint data-source metadata and the assembled app opens with
+   sources already bound. Save. Do not build anything.
+3. **Export the solution** (unmanaged).
+4. On a machine with the Power Platform CLI:
 
-| Layout | Requires | What the CLI said |
-|---|---|---|
-| `SourceCode` | exactly one `.msapr` archive; the `.pa.yaml` is an *edit layer* over it | *"Call to ValidateSources should've ensured the sources directory contains exactly one .msapr file."* |
-| `Experimental` | the full PAModel tree, control trees in **JSON not YAML** | *"The sources directory is invalid."* |
+       scripts/assemble_full_solution.sh <your-export>.zip
 
-A canvas app's control identities live in a binary archive. Studio mints that
-archive; nothing offline does. So the app is created **inside the imported
-solution**, once, and from then on it travels in the export.
+   It unpacks *your* app with `pac canvas unpack`, keeps **your identity and
+   your environment's scaffolding**, swaps in this repository's 16 screens,
+   6 components and 1,800+ formulas, re-packs with `pac canvas pack`, puts the
+   app back into *your* export, and validates the result structurally
+   (`validate_solution.py --export`). Nothing in the output is fabricated:
+   wrapper and identity are the platform's, scaffolding is Studio's, content
+   is this repository's, assembly is Microsoft's packer.
+5. Import the assembled `MissionFeedingOperations_1.1.0.zip`.
+6. **Open the app for edit once.** Microsoft's packer states on every run that
+   a SourceCode-packed app is validated by that open. Add any data source
+   still missing, save, **publish**, and **re-export** — the re-export is the
+   final, permanent artifact. No further Studio work, ever.
 
-`scripts/build_canvas.sh` automates the *repeat* of this against a seed app,
-but the first app still has to be born in Studio.
+This path was dry-run end to end here — unpack, swap, pack, re-zip,
+validate: 16 screens, 5 workflows, no literal URLs — against a simulated
+export. Your export differs only in being real.
+
+## Path B — the pre-built .msapp (already built, not Studio-validated)
+
+`scripts/build_msapp.py` builds `dist/canvas/MissionFeedingOperations.msapp`
+from the same source, using a genuine Studio-built donor app for format
+scaffolding (see `canvas-app/donor/README.md`), neutralised entry by entry —
+the build **fails** if a single commercial-cloud string survives. It
+round-trips byte-identically through `pac canvas unpack`.
+
+**It has never been opened by Studio, and no solution component metadata is
+fabricated for it** — a CanvasApp component without platform-minted metadata
+is exactly the fabrication this project refuses. Use it as reference or for a
+side-by-side diff; Path A supersedes it.
+
+## Path C — the paste runbook (fallback, no CLI anywhere)
+
+The original one-sitting session. Everything below this line is Path C, and
+its step 2 data-source list is also Path A's step 2 list.
 
 ---
 
@@ -63,7 +91,7 @@ export will not carry your later edits back into this repository's lineage.
 
 ---
 
-## Step 2 — add the 17 data sources, in this order
+## Step 2 — add the 19 data sources, in this order
 
 Order matters: a formula pasted before its data source exists shows an error
 that clears itself later, and you cannot tell those from real ones.
@@ -86,10 +114,12 @@ that clears itself later, and you cannot tell those from real ones.
   15. MF Access Request
   16. MF Notification Rule
   17. MF Document Destination
+  18. EOM-02 Submission        (the Power Automate flow, via Power Automate)
+  19. Office365Users           (the Office 365 Users connector)
 ```
 
-The two at the end are not SharePoint lists: the Power Automate flow and the
-Office 365 Users connector.
+The last two are not SharePoint lists: the flow is added from the Power
+Automate pane, and Office 365 Users from Connectors.
 
 **When you add the flow, note the identifier Studio generates for it.** The
 source calls it `EOM02_Submission.Run(...)`. If Studio names it differently,

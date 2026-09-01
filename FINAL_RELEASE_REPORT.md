@@ -606,7 +606,7 @@ inside the imported solution.
 
 ```
 branch    main
-commit    d33501b790606d620e04bf36a500ec917e290cbb
+commit    c10bf0d0ff6021b029a936e2047e3f7f9b7baea5
 tag       v1.0.0, local only
 tree      clean
 history   fast-forward from claude/mission-feeding-eom-build-98fbsi
@@ -622,7 +622,7 @@ that commit, so the ZIP, the commit and the checksum describe one build.
 origin v1.0.0` is refused with HTTP 403 — this session's credentials permit
 pushing a branch and not creating a tag ref. The commit is on the remote;
 only the ref is missing. Recreate it with `git tag -a v1.0.0
-d33501b790606d620e04bf36a500ec917e290cbb` from a session that can, or from the
+c10bf0d0ff6021b029a936e2047e3f7f9b7baea5` from a session that can, or from the
 GitHub releases UI. Nothing depends on it: the build takes any commit-ish.
 
 One caveat on the hash, stated rather than hidden: this file is inside the
@@ -656,7 +656,7 @@ same tag always yields the same checksum. Version, commit and checksum describe
 the same build.
 
 ```
-commit   d33501b790606d620e04bf36a500ec917e290cbb
+commit   c10bf0d0ff6021b029a936e2047e3f7f9b7baea5
 branch   main
 tag      v1.0.0 (local only — see below)
 ```
@@ -683,7 +683,7 @@ See **Result** above for exactly what is in it and what is not.
 
 | | |
 |---|---|
-| Unit tests | **493 passed**, 0 failed — 211 behavioural, 151 structural, 131 policy |
+| Unit tests | **501 passed**, 0 failed — 217 behavioural, 153 structural, 131 policy |
 | Solution validations | 14 passed, 0 warnings, 0 failures |
 | Pre-release security scan | **PASS**, 6 warnings — 4 findings, 2 of them this report quoting those 4 |
 | Routing dry run, PRODUCTION | **PASS** — 4 happy paths, 7 failure paths |
