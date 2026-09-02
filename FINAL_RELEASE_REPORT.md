@@ -494,7 +494,7 @@ fails the release gate — a new test cannot join the total unlabelled.
 | Kind | Tests | Share | What a pass means |
 |---|---:|---:|---|
 | **BEHAVIOURAL** | 247 | 44% | Logic exercised against data, or against an external standard. Something is computed and compared to an answer that did not come out of the code under test. |
-| **STRUCTURAL** | 173 | 31% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
+| **STRUCTURAL** | 173 | 30% | Two things this repository generates agree. Catches drift; cannot tell you the shared premise is right. |
 | **POLICY** | 140 | 25% | A settled decision stays applied. These outlive the decisions they encode. |
 | **TOTAL** | **560** | | |
 
@@ -740,7 +740,7 @@ inside the imported solution.
 
 ```
 branch    main
-commit    6ed9fc70af2def7dc752c65d1fab0fbe7201788e
+commit    a055c2c8a606dcd7be605eb37e1fb57f7b07789b
 tag       v1.0.0, local only
 tree      clean
 history   fast-forward from claude/mission-feeding-eom-build-98fbsi
@@ -756,12 +756,12 @@ that commit, so the ZIP, the commit and the checksum describe one build.
 origin v1.0.0` is refused with HTTP 403 — this session's credentials permit
 pushing a branch and not creating a tag ref. The commit is on the remote;
 only the ref is missing. Recreate it with `git tag -a v1.0.0
-6ed9fc70af2def7dc752c65d1fab0fbe7201788e` from a session that can, or from the
+a055c2c8a606dcd7be605eb37e1fb57f7b07789b` from a session that can, or from the
 GitHub releases UI. Nothing depends on it: the build takes any commit-ish.
 
 One caveat on the hash, stated rather than hidden: this file is inside the
 commit that follows the one it names, because a file cannot contain its own
-commit's hash. `6ed9fc7` is the commit the artifact was **built from** and is
+commit's hash. `a055c2c` is the commit the artifact was **built from** and is
 the one to check the checksum against. The commit that records it is its child,
 and changes no file the ZIP is packed from — verified by rebuilding after this
 was written and confirming the checksum is byte-identical.
@@ -790,7 +790,7 @@ same tag always yields the same checksum. Version, commit and checksum describe
 the same build.
 
 ```
-commit   6ed9fc70af2def7dc752c65d1fab0fbe7201788e
+commit   a055c2c8a606dcd7be605eb37e1fb57f7b07789b
 branch   main
 tag      v1.0.0 (local only — see below)
 ```
