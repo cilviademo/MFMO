@@ -92,6 +92,9 @@ CLASSIFICATION = {
     "test_manual_kit": {
         "ManualKitMatchesTheSchema": ("STRUCTURAL", "every hand-typeable number re-derived from the schema, the engine and the flow JSON"),
     },
+    "test_blankslate_kit": {
+        "BlankSlateKitReplays": ("BEHAVIOURAL", "every payload replayed against a mock enforcing SharePoint's own creation rules; the mock proven fallible"),
+    },
     "test_assembler": {
         "AssemblerFailsClosed":        (B, "nine failure simulations against the real script with a pac shim"),
         "FinalExportValidatorWorks":   (B, "the final validator run against a good export and three broken ones"),

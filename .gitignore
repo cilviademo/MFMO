@@ -34,3 +34,4 @@ dist/*.zip
 # release gate's child-commit allowance names them explicitly and
 # the archive scanner sweeps their every entry on every run.
 !dist/MFOps_manual-kit_1.0.zip
+!dist/MFOps_blankslate-provisioning_1.0.zip

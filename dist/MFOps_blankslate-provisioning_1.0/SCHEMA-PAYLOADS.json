@@ -1,0 +1,5771 @@
+[
+ {
+  "listTitle": "MF Installation",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Installation",
+   "Description": "One row per installation",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 18,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Source_Installation_String",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Source_Installation_String",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Location",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Location",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "MAJCOM",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "MAJCOM",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Component",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Component",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Active",
+       "ANG",
+       "AFRC"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "EOM_Folder_URL",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUrl"
+     },
+     "Title": "EOM_Folder_URL",
+     "FieldTypeKind": 11,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Generation_Enabled",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Generation_Enabled",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Registry_Validated_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Registry_Validated_By",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Registry_Validated_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Registry_Validated_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Source_System",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Source_System",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Needs_Review_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Needs_Review_Flag",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "DODAAC",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "DODAAC",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "DODAAD",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "DODAAD",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Org_Box_Email",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Org_Box_Email",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Official_POC_UPN",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Official_POC_UPN",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Generation_Enabled",
+    "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Generation_Enabled')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF Installation')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Facility",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Facility",
+   "Description": "One row per feeding facility",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 19,
+  "indexesExpected": 5,
+  "fields": [
+   {
+    "internalName": "Facility_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Designation",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Designation",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Unit",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Unit",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Facility_Type",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Main DFAC",
+       "Flight Kitchen",
+       "Kiosk",
+       "Satellite",
+       "MAF",
+       "Contract Cafe"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Operating_Model",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Operating_Model",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Legacy/APF",
+       "Food 2.0",
+       "MAFFO/MAF",
+       "AOR/CDS"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Source_Operating_Model",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Source_Operating_Model",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Program_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Program_Type",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Contract_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Contract_Type",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Primary_PV",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Primary_PV",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "POS_Terminals_Raw",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "POS_Terminals_Raw",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "POC_Display_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "POC_Display_Name",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "In_R1_Scope",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "In_R1_Scope",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Source_Row",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Source_Row",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Source_System",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Source_System",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_DODAAC",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_DODAAC",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Contract_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Contract_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Facility_ID",
+    "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Facility_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Operating_Model",
+    "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Operating_Model')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "In_R1_Scope",
+    "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('In_R1_Scope')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF Facility')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF EOM Requirement",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF EOM Requirement",
+   "Description": "One row per document requirement per operating model",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 23,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Requirement_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requirement_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Document_Code",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Document_Code",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Document_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Document_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Applicable_Model",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Applicable_Model",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Legacy/APF",
+       "Food 2.0",
+       "MAFFO/MAF",
+       "AOR/CDS",
+       "All"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Requirement_Scope",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Requirement_Scope",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Facility",
+       "Installation",
+       "Contract"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Scope_Confidence",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Scope_Confidence",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Verified",
+       "High",
+       "Medium",
+       "Low",
+       "Proposed"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Scope_Basis",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Scope_Basis",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   },
+   {
+    "internalName": "Applicable_Facility_Types",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Applicable_Facility_Types",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Applicable_Period_Month",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Applicable_Period_Month",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Routing_Org",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Routing_Org",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "AFSVC/VMF",
+       "NGB/A1X",
+       "AFRC/A1S",
+       "Installation"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Frequency",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Frequency",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Monthly",
+       "Quarterly",
+       "Semiannual",
+       "Annual",
+       "Conditional"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Required_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Required_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Due_Day",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Due_Day",
+     "FieldTypeKind": 9,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Due_Basis",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Due_Basis",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "CALENDAR",
+       "DUTY_DAY"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Final_Due_Day",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Final_Due_Day",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Final_Due_Basis",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Final_Due_Basis",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "CALENDAR",
+       "DUTY_DAY"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "NonDutyDay_Policy",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "NonDutyDay_Policy",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "NEXT_DUTY_DAY",
+       "PREVIOUS_DUTY_DAY",
+       "NO_ADJUSTMENT"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "QC_Required",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "QC_Required",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Accepted_File_Types",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Accepted_File_Types",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Authority_Reference",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Authority_Reference",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Authority_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Authority_Status",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "VERIFIED",
+       "MANAGEMENT_RULE",
+       "PROPOSED",
+       "UNVERIFIED",
+       "RETIRED_OR_NOT_APPLICABLE"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Sort_Order",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Sort_Order",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Requirement_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Requirement_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Frequency",
+    "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Frequency')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Authority_Status",
+    "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Authority_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF EOM Requirement')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF EOM Item",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF EOM Item",
+   "Description": "One PERSISTENT row per expected submission per reporting period",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 32,
+  "indexesExpected": 13,
+  "fields": [
+   {
+    "internalName": "EOM_Item_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "EOM_Item_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "EOM_Item_Key",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "EOM_Item_Key",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Contract_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Contract_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Reporting_Period",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Reporting_Period",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requirement_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requirement_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requirement_Scope",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Requirement_Scope",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Facility",
+       "Installation",
+       "Contract"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Authority_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Authority_Status",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "VERIFIED",
+       "MANAGEMENT_RULE",
+       "PROPOSED",
+       "UNVERIFIED",
+       "RETIRED_OR_NOT_APPLICABLE"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Required_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Required_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Nominal_Due_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Nominal_Due_Date",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Effective_Due_Date",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Effective_Due_Date",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Nominal_Final_Call_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Nominal_Final_Call_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Effective_Final_Call_Date",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Effective_Final_Call_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Due_Date_Adjusted",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Due_Date_Adjusted",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Initial_Submitted_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Initial_Submitted_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Initial_Submission_On_Time",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Initial_Submission_On_Time",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Acceptable_Evidence_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Acceptable_Evidence_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Final_Evidence_On_Time",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Final_Evidence_On_Time",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Current_Submission_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Current_Submission_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Received_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Received_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Final_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Final_Status",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "NOT_APPLICABLE",
+       "NOT_DUE",
+       "PENDING_VALIDATION",
+       "LATE",
+       "OVERDUE",
+       "RETURNED",
+       "NOT_SATISFIED",
+       "RECEIVED_PENDING_QC",
+       "ACCEPTED"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Status_Code",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Status_Code",
+     "FieldTypeKind": 9,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Action_Owner",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Action_Owner",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Facility",
+       "Reviewer",
+       "Admin",
+       "None"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Action_Required",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Action_Required",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Days_Late",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Days_Late",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Last_Reconciled_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Last_Reconciled_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Exception_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Exception_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Correction_Due",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Correction_Due",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Waived_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Waived_Flag",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Waiver_Reason",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Waiver_Reason",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "EOM_Item_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('EOM_Item_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "EOM_Item_Key",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('EOM_Item_Key')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Facility_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Facility_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Reporting_Period",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Reporting_Period')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Requirement_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Requirement_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Authority_Status",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Authority_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Effective_Due_Date",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Effective_Due_Date')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Effective_Final_Call_Date",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Effective_Final_Call_Date')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Final_Status",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Final_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Status_Code",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Status_Code')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Action_Required",
+    "path": "_api/web/lists/getbytitle('MF EOM Item')/fields/getbyinternalnameortitle('Action_Required')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF EOM Submission",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF EOM Submission",
+   "Description": "One row per uploaded file version",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 33,
+  "indexesExpected": 13,
+  "fields": [
+   {
+    "internalName": "Submission_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Submission_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Submission_Request_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Submission_Request_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "EOM_Item_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "EOM_Item_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Version_No",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Version_No",
+     "FieldTypeKind": 9,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "File_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "File_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "File_URL",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUrl"
+     },
+     "Title": "File_URL",
+     "FieldTypeKind": 11,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "File_Size_KB",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "File_Size_KB",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Uploaded_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUser"
+     },
+     "Title": "Uploaded_By",
+     "FieldTypeKind": 20,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "SelectionMode": 0
+    }
+   },
+   {
+    "internalName": "Uploaded_DateTime",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Uploaded_DateTime",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Submitted_On_Behalf_Of",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Submitted_On_Behalf_Of",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Intake_Method",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Intake_Method",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "App upload",
+       "Folder drop",
+       "Manual classification"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Classification_Method",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Classification_Method",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Declared at upload",
+       "Folder context",
+       "Document content",
+       "AI Builder",
+       "Manual"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Classification_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Classification_Status",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Pending",
+       "Classified",
+       "Needs Review",
+       "Failed"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Classification_Confidence",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Classification_Confidence",
+     "FieldTypeKind": 6,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Declared",
+       "High",
+       "Low",
+       "Unresolved"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Last_Error_Code",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Last_Error_Code",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Last_Error_Message",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Last_Error_Message",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   },
+   {
+    "internalName": "Last_Processing_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Last_Processing_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Retry_Count",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Retry_Count",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Destination_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Destination_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Source_Library",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Source_Library",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Source_Path",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Source_Path",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Is_Pilot",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Is_Pilot",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Needs_Filing",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Needs_Filing",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Filing_Note",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Filing_Note",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "SharePoint_Unique_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "SharePoint_Unique_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "SharePoint_File_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "SharePoint_File_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Is_Current",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Is_Current",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Superseded_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Superseded_By",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "QC_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "QC_Status",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Pending Review",
+       "Accepted",
+       "Correction Required",
+       "Incomplete",
+       "Wrong Document",
+       "Wrong Reporting Period",
+       "Wrong Facility",
+       "Recalled",
+       "Not Applicable"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "QC_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUser"
+     },
+     "Title": "QC_By",
+     "FieldTypeKind": 20,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "SelectionMode": 0
+    }
+   },
+   {
+    "internalName": "QC_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "QC_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "QC_Comment",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "QC_Comment",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Submission_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Submission_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Submission_Request_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Submission_Request_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "EOM_Item_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('EOM_Item_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Uploaded_DateTime",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Uploaded_DateTime')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Classification_Status",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Classification_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Destination_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Destination_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Is_Pilot",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Is_Pilot')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Needs_Filing",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Needs_Filing')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "SharePoint_Unique_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('SharePoint_Unique_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "SharePoint_File_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('SharePoint_File_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Is_Current",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('Is_Current')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "QC_Status",
+    "path": "_api/web/lists/getbytitle('MF EOM Submission')/fields/getbyinternalnameortitle('QC_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Unmatched File",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Unmatched File",
+   "Description": "One row per file found in the FY folder that could not be resolved",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 13,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Unmatched_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Unmatched_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "File_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "File_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "File_URL",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUrl"
+     },
+     "Title": "File_URL",
+     "FieldTypeKind": 11,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Fiscal_Year",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Fiscal_Year",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Discovered_DateTime",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Discovered_DateTime",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Uploaded_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUser"
+     },
+     "Title": "Uploaded_By",
+     "FieldTypeKind": 20,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "SelectionMode": 0
+    }
+   },
+   {
+    "internalName": "Suggested_Installation_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Suggested_Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Suggested_Document_Code",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Suggested_Document_Code",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Resolution_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Resolution_Status",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Needs Classification",
+       "Classified",
+       "Not an EOM document",
+       "Duplicate"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Resolved_Submission_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Resolved_Submission_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Resolved_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUser"
+     },
+     "Title": "Resolved_By",
+     "FieldTypeKind": 20,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "SelectionMode": 0
+    }
+   },
+   {
+    "internalName": "Resolved_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Resolved_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Unmatched_ID",
+    "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Unmatched_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Discovered_DateTime",
+    "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Discovered_DateTime')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Resolution_Status",
+    "path": "_api/web/lists/getbytitle('MF Unmatched File')/fields/getbyinternalnameortitle('Resolution_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Security Mapping",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Security Mapping",
+   "Description": "One row per user per granted scope",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 20,
+  "indexesExpected": 8,
+  "fields": [
+   {
+    "internalName": "Security_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Security_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "UPN",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "UPN",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Scope_Type",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Scope_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Enterprise",
+       "Portfolio",
+       "Installation",
+       "Facility"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Role",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Role",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "BASE_USER",
+       "PORTFOLIO_MANAGER"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Job_Title",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Job_Title",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Can_QC",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Can_QC",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Can_Submit_On_Behalf",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Can_Submit_On_Behalf",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Can_Edit_Requirements",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Can_Edit_Requirements",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Can_Grant_Access",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Can_Grant_Access",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Grant_Scope",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Grant_Scope",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "None",
+       "Portfolio",
+       "Enterprise"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Grant_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Grant_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "GAL derived",
+       "Requested",
+       "Manual"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Granted_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Granted_By",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Granted_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Granted_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Expires_Date",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Expires_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Developer_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Developer_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Tester_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Tester_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Security_ID",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Security_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "UPN",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('UPN')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Scope_Type",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Scope_Type')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Facility_ID",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Facility_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Expires_Date",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Expires_Date')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF Security Mapping')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF EOM Audit",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF EOM Audit",
+   "Description": "One row per state change",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 9,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Audit_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Audit_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Entity_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Entity_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "EOM_Item",
+       "EOM_Submission",
+       "Requirement"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Entity_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Entity_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Action",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Action",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Generated",
+       "Uploaded",
+       "QC Accepted",
+       "QC Correction Required",
+       "QC Wrong Document",
+       "QC Not Applicable",
+       "Waived",
+       "Reclassified",
+       "Status Recalculated",
+       "Notification Suppressed",
+       "Notification Sent"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Actor_UPN",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Actor_UPN",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Action_DateTime",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Action_DateTime",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Old_Value",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Old_Value",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "New_Value",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "New_Value",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Detail",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Detail",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Audit_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Audit_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Entity_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Entity_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Action",
+    "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Action')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Action_DateTime",
+    "path": "_api/web/lists/getbytitle('MF EOM Audit')/fields/getbyinternalnameortitle('Action_DateTime')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF App Config",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF App Config",
+   "Description": "One row per configuration key",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 6,
+  "indexesExpected": 2,
+  "fields": [
+   {
+    "internalName": "Config_Key",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Config_Key",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Config_Value",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Config_Value",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Config_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Config_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "String",
+       "Boolean",
+       "Number",
+       "Date"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Description",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Description",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   },
+   {
+    "internalName": "Admin_Only",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Admin_Only",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Config_Key",
+    "path": "_api/web/lists/getbytitle('MF App Config')/fields/getbyinternalnameortitle('Config_Key')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF App Config')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Feature Flags",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Feature Flags",
+   "Description": "One row per feature",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 7,
+  "indexesExpected": 1,
+  "fields": [
+   {
+    "internalName": "Feature_Key",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Feature_Key",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Feature_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Feature_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Enabled_Prod",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Enabled_Prod",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Enabled_Testers",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Enabled_Testers",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Minimum_Role",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Minimum_Role",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "BASE_USER",
+       "PORTFOLIO_MANAGER",
+       "DEVELOPER"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Effective_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Effective_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Notes",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Notes",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Feature_Key",
+    "path": "_api/web/lists/getbytitle('MF Feature Flags')/fields/getbyinternalnameortitle('Feature_Key')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF App Event Log",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF App Event Log",
+   "Description": "One row per meaningful business event",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 13,
+  "indexesExpected": 6,
+  "fields": [
+   {
+    "internalName": "Event_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Event_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Event_DateTime",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Event_DateTime",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "User_UPN",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "User_UPN",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Role",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Role",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Event_Type",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Event_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "AppOpened",
+       "DocumentDiscovered",
+       "SubmissionCreated",
+       "VersionSuperseded",
+       "ClassificationSucceeded",
+       "ClassificationUncertain",
+       "ManualClassification",
+       "ExpectedItemMatched",
+       "QCAccepted",
+       "QCCorrectionRequired",
+       "QCWrongDocument",
+       "ExpectedGenerationFailed",
+       "ReconciliationMismatch",
+       "FlowFailure",
+       "PermissionDenied",
+       "MaintenanceModeBlocked"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Record_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Record_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Result",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Result",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Success",
+       "Warning",
+       "Failure"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Error_Code",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Error_Code",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Error_Message",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Error_Message",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   },
+   {
+    "internalName": "App_Version",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "App_Version",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Event_ID",
+    "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Event_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Event_DateTime",
+    "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Event_DateTime')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "User_UPN",
+    "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('User_UPN')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Event_Type",
+    "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Event_Type')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Record_ID",
+    "path": "_api/web/lists/getbytitle('MF App Event Log')/fields/getbyinternalnameortitle('Record_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF EOM Status",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF EOM Status",
+   "Description": "One flat row per EOM item \u2014 the canonical Power BI fact",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 39,
+  "indexesExpected": 8,
+  "fields": [
+   {
+    "internalName": "Status_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Status_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "EOM_Item_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "EOM_Item_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Reporting_Period",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Reporting_Period",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Fiscal_Year",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Fiscal_Year",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Installation_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Installation_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Facility_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Facility_Name",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Operating_Model",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Operating_Model",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Contract_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Contract_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requirement_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requirement_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requirement_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requirement_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Document_Code",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Document_Code",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requirement_Scope",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requirement_Scope",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Authority_Status",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Authority_Status",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Scope_Confidence",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Scope_Confidence",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Routing_Org",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Routing_Org",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Component",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Component",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Required_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Required_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Nominal_Due_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Nominal_Due_Date",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Effective_Due_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Effective_Due_Date",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Nominal_Final_Call_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Nominal_Final_Call_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Effective_Final_Call_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Effective_Final_Call_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Due_Date_Adjusted",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Due_Date_Adjusted",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Received_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Received_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Initial_Submitted_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Initial_Submitted_DateTime",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Initial_Submission_On_Time",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Initial_Submission_On_Time",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Final_Evidence_On_Time",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Final_Evidence_On_Time",
+     "FieldTypeKind": 8,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Version_No",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Version_No",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "QC_Status",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "QC_Status",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Final_Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Final_Status",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Status_Code",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Status_Code",
+     "FieldTypeKind": 9,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Action_Owner",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Action_Owner",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Action_Required",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Action_Required",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Package_State",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Package_State",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Days_Late",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Days_Late",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Current_File_URL",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUrl"
+     },
+     "Title": "Current_File_URL",
+     "FieldTypeKind": 11,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Generated_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Generated_DateTime",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Status_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Status_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "EOM_Item_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('EOM_Item_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Reporting_Period",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Reporting_Period')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Facility_ID",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Facility_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Final_Status",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Final_Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Status_Code",
+    "path": "_api/web/lists/getbytitle('MF EOM Status')/fields/getbyinternalnameortitle('Status_Code')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Non Duty Day",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Non Duty Day",
+   "Description": "One row per non-duty date",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 6,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Non_Duty_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Non_Duty_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Date",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Date",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Scope_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Scope_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Enterprise",
+       "Portfolio",
+       "Installation"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Scope_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Scope_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Non_Duty_ID",
+    "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Non_Duty_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Date",
+    "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Date')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Scope_ID",
+    "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Scope_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF Non Duty Day')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Calendar Event",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Calendar Event",
+   "Description": "One row per authored calendar entry",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 13,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Event_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Event_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Event_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Event_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Suspense",
+       "Correction due",
+       "Assessment",
+       "Data call",
+       "Reminder"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Title",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Title",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Event_Date",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Event_Date",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "End_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "End_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "All_Day",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "All_Day",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Scope_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Scope_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Enterprise",
+       "Portfolio",
+       "Installation",
+       "Facility"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Scope_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Scope_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Linked_Item_ID",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Linked_Item_ID",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Status_Code",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Status_Code",
+     "FieldTypeKind": 9,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Created_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldUser"
+     },
+     "Title": "Created_By",
+     "FieldTypeKind": 20,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "SelectionMode": 0
+    }
+   },
+   {
+    "internalName": "Created_DateTime",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Created_DateTime",
+     "FieldTypeKind": 4,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Event_ID",
+    "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Event_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Event_Date",
+    "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Event_Date')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Scope_ID",
+    "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Scope_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Active_Flag",
+    "path": "_api/web/lists/getbytitle('MF Calendar Event')/fields/getbyinternalnameortitle('Active_Flag')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Access Request",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Access Request",
+   "Description": "One row per request for access to an installation the requester is not posted to",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 11,
+  "indexesExpected": 4,
+  "fields": [
+   {
+    "internalName": "Request_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Request_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requester_UPN",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requester_UPN",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requester_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requester_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Home_Installation",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Home_Installation",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Requested_Installation_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Requested_Installation_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Justification",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Justification",
+     "FieldTypeKind": 3,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   },
+   {
+    "internalName": "Requested_Until",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Requested_Until",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Status",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Status",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Pending",
+       "Approved",
+       "Denied",
+       "Expired"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Decided_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Decided_By",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Decided_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Decided_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Decision_Comment",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Decision_Comment",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Request_ID",
+    "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Request_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Requester_UPN",
+    "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Requester_UPN')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Requested_Installation_ID",
+    "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Requested_Installation_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Status",
+    "path": "_api/web/lists/getbytitle('MF Access Request')/fields/getbyinternalnameortitle('Status')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Notification Rule",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Notification Rule",
+   "Description": "One row per notification trigger",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 9,
+  "indexesExpected": 3,
+  "fields": [
+   {
+    "internalName": "Rule_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Rule_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Trigger_Event",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Trigger_Event",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "SubmissionCreated",
+       "StatusChanged",
+       "DueSoon",
+       "FirstSuspensePassed",
+       "FinalSuspensePassed",
+       "CorrectionSuspensePassed",
+       "PendingReviewAging",
+       "AccessRequested"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Recipient_Type",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Recipient_Type",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "Submitter",
+       "Portfolio org box",
+       "Installation POC",
+       "Reviewer",
+       "Portfolio Manager",
+       "AFSVC"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Recipient_Address",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Recipient_Address",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Enabled",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Enabled",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Digest",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Digest",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Cadence_Days",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldNumber"
+     },
+     "Title": "Cadence_Days",
+     "FieldTypeKind": 9,
+     "Required": false,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Subject_Template",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Subject_Template",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Notes",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldMultiLineText"
+     },
+     "Title": "Notes",
+     "FieldTypeKind": 3,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "NumberOfLines": 6,
+     "RichText": false,
+     "AppendOnly": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Rule_ID",
+    "path": "_api/web/lists/getbytitle('MF Notification Rule')/fields/getbyinternalnameortitle('Rule_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Trigger_Event",
+    "path": "_api/web/lists/getbytitle('MF Notification Rule')/fields/getbyinternalnameortitle('Trigger_Event')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Enabled",
+    "path": "_api/web/lists/getbytitle('MF Notification Rule')/fields/getbyinternalnameortitle('Enabled')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ },
+ {
+  "listTitle": "MF Document Destination",
+  "createListPayload": {
+   "__metadata": {
+    "type": "SP.List"
+   },
+   "BaseTemplate": 100,
+   "Title": "MF Document Destination",
+   "Description": "One row per portfolio per document domain",
+   "ContentTypesEnabled": false
+  },
+  "fieldsExpected": 15,
+  "indexesExpected": 3,
+  "fields": [
+   {
+    "internalName": "Destination_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Destination_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Portfolio_ID",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Portfolio_ID",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Document_Domain",
+    "indexed": true,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Document_Domain",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "EOM",
+       "EOY",
+       "FMAT",
+       "Other"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Site_URL",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Site_URL",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Library_Name",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Library_Name",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Library_Url_Segment",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Library_Url_Segment",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Root_Folder",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Root_Folder",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Folder_Template",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Folder_Template",
+     "FieldTypeKind": 2,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Create_Missing_Folders",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Create_Missing_Folders",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   },
+   {
+    "internalName": "Fallback_Policy",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldChoice"
+     },
+     "Title": "Fallback_Policy",
+     "FieldTypeKind": 6,
+     "Required": true,
+     "EnforceUniqueValues": false,
+     "Choices": {
+      "__metadata": {
+       "type": "Collection(Edm.String)"
+      },
+      "results": [
+       "FIND_OR_ROOT",
+       "FIND_OR_FAIL"
+      ]
+     },
+     "EditFormat": 0,
+     "FillInChoice": false
+    }
+   },
+   {
+    "internalName": "Month_Folder_Pattern_Note",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Month_Folder_Pattern_Note",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Site_Note",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Site_Note",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Verified_By",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Verified_By",
+     "FieldTypeKind": 2,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "MaxLength": 255
+    }
+   },
+   {
+    "internalName": "Verified_Date",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.FieldDateTime"
+     },
+     "Title": "Verified_Date",
+     "FieldTypeKind": 4,
+     "Required": false,
+     "EnforceUniqueValues": false,
+     "DisplayFormat": 0
+    }
+   },
+   {
+    "internalName": "Active_Flag",
+    "indexed": false,
+    "createPayload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Title": "Active_Flag",
+     "FieldTypeKind": 8,
+     "Required": true,
+     "EnforceUniqueValues": false
+    }
+   }
+  ],
+  "indexOps": [
+   {
+    "field": "Destination_ID",
+    "path": "_api/web/lists/getbytitle('MF Document Destination')/fields/getbyinternalnameortitle('Destination_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Portfolio_ID",
+    "path": "_api/web/lists/getbytitle('MF Document Destination')/fields/getbyinternalnameortitle('Portfolio_ID')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   },
+   {
+    "field": "Document_Domain",
+    "path": "_api/web/lists/getbytitle('MF Document Destination')/fields/getbyinternalnameortitle('Document_Domain')",
+    "method": "MERGE",
+    "payload": {
+     "__metadata": {
+      "type": "SP.Field"
+     },
+     "Indexed": true
+    }
+   }
+  ]
+ }
+]

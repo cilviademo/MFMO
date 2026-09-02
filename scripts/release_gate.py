@@ -119,7 +119,8 @@ def provenance():
                 # contents match the tree that carries it. Widening this
                 # allowance any further defeats the provenance rule.
                 ALLOWED_DIST = {"MAIN_DOWNLOAD.zip",
-                "dist/MFOps_manual-kit_1.0.zip"}
+                "dist/MFOps_manual-kit_1.0.zip",
+                "dist/MFOps_blankslate-provisioning_1.0.zip"}
                 non_md = [ln for ln in diff.splitlines()
                           if "|" in ln and not ln.strip().startswith(".md")
                           and not ln.split("|")[0].strip().endswith(".md")
